@@ -9,10 +9,8 @@ class MathEngine:
     """
 
     def __init__(self, elo_csv_path: str, name_mapping: dict = None):
-        # Laden der Elo-Daten als Klassen-Attribut
+        self.elo_csv_path = elo_csv_path
         self.elo_df = pd.read_csv(elo_csv_path)
-        
-        # Ein einfaches Dictionary für Namens-Mapping, falls die API andere Namen nutzt
         self.name_mapping = name_mapping or {}
 
     @staticmethod
@@ -60,10 +58,11 @@ class MathEngine:
             away_norm = self.name_mapping.get(away_team, away_team)
             
             # 2. Elo-Ratings aus dem Dataframe extrahieren
-            if home_norm not in self.elo_df['team_name'].values:
-                raise ValueError(f"CRITICAL: Team '{home_norm}' fehlt in der elo_ratings.csv!")
-            if away_norm not in self.elo_df['team_name'].values:
-                raise ValueError(f"CRITICAL: Team '{away_norm}' fehlt in der elo_ratings.csv!")
+            for team in [home_norm, away_norm]:
+                if team not in self.elo_df['team_name'].values:
+                    new_row = pd.DataFrame([{"team_code": team[:3].upper(), "team_name": team, "elo_rating": 1500}])
+                    self.elo_df = pd.concat([self.elo_df, new_row], ignore_index=True)
+                    self.elo_df.to_csv(self.elo_csv_path, index=False)
             
             elo_home = self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'].values[0]
             elo_away = self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'].values[0] 
@@ -257,25 +256,29 @@ class MathEngine:
                 home_norm = self.name_mapping.get(home_team, home_team)
                 away_norm = self.name_mapping.get(away_team, away_team)
                 
-                if home_norm in self.elo_df['team_name'].values and away_norm in self.elo_df['team_name'].values:
-                    elo_home = self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'].values[0]
-                    elo_away = self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'].values[0]
-                    
-                    if home_score > away_score:
-                        result_home = 1.0
-                    elif home_score < away_score:
-                        result_home = 0.0
-                    else:
-                        result_home = 0.5
+                for team in [home_norm, away_norm]:
+                    if team not in self.elo_df['team_name'].values:
+                        new_row = pd.DataFrame([{"team_code": team[:3].upper(), "team_name": team, "elo_rating": 1500}])
+                        self.elo_df = pd.concat([self.elo_df, new_row], ignore_index=True)
                         
-                    new_elo_home, new_elo_away = self._calculate_new_elo(elo_home, elo_away, result_home)
+                elo_home = self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'].values[0]
+                elo_away = self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'].values[0]
                     
-                    self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'] = new_elo_home
-                    self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'] = new_elo_away
+                if home_score > away_score:
+                    result_home = 1.0
+                elif home_score < away_score:
+                    result_home = 0.0
+                else:
+                    result_home = 0.5
                     
-                    processed_set.add(match_id)
-                    processed_ids.append(match_id)
-                    updates_made += 1
+                new_elo_home, new_elo_away = self._calculate_new_elo(elo_home, elo_away, result_home)
+                
+                self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'] = new_elo_home
+                self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'] = new_elo_away
+                
+                processed_set.add(match_id)
+                processed_ids.append(match_id)
+                updates_made += 1
                 
         if updates_made > 0:
             os.makedirs(os.path.dirname(os.path.abspath(processed_matches_file)), exist_ok=True)

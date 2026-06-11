@@ -81,7 +81,14 @@ async function updatePrediction() {
             body: JSON.stringify({ match: matchData.raw_match, is_ko: isKo })
         });
         
-        if (!res.ok) throw new Error("API Error");
+        if (!res.ok) {
+            let errorMsg = "API Error";
+            try {
+                const errorData = await res.json();
+                errorMsg = errorData.detail || errorMsg;
+            } catch(e) {}
+            throw new Error(errorMsg);
+        }
         const data = await res.json();
 
         renderDashboard(matchData, data);
