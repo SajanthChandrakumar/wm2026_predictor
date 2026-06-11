@@ -85,20 +85,25 @@ def extract_odds(match):
         raise ValueError("Keine Quoten für diesen Markt verfügbar")
     return odds
 
-# --- Globaler Cache Setup ---
-MATCHES_CACHE = {"timestamp": 0, "data": None}
 CACHE_TTL = 3600  # 1 Stunde in Sekunden
+cache_file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'matches_cache.json')
 
 @app.get("/api/matches")
 def get_matches(force: bool = False):
     """
     Holt die Spiele. Nutzt den Cache, es sei denn, force=True wird übergeben.
     """
-    global MATCHES_CACHE
-    
     # 1. Cache prüfen (Wenn Daten da sind, nicht älter als 1 Stunde und kein Force-Refresh verlangt wird)
-    if not force and MATCHES_CACHE["data"] is not None and (time.time() - MATCHES_CACHE["timestamp"] < CACHE_TTL):
-        return MATCHES_CACHE["data"]
+    if not force and os.path.exists(cache_file_path):
+        try:
+            with open(cache_file_path, "r", encoding="utf-8") as f:
+                cached_data = json.load(f)
+                timestamp = cached_data.get("timestamp", 0)
+                data = cached_data.get("data")
+                if data is not None and (time.time() - timestamp < CACHE_TTL):
+                    return data
+        except json.JSONDecodeError:
+            pass
         
     # 2. API Call (Nur wenn der Cache leer/abgelaufen ist oder der User den Button drückt)
     engine = OddsApiEngine()
@@ -152,8 +157,12 @@ def get_matches(force: bool = False):
             continue
             
     # 3. Cache aktualisieren
-    MATCHES_CACHE["timestamp"] = time.time()
-    MATCHES_CACHE["data"] = results
+    try:
+        os.makedirs(os.path.dirname(cache_file_path), exist_ok=True)
+        with open(cache_file_path, "w", encoding="utf-8") as f:
+            json.dump({"timestamp": time.time(), "data": results}, f, indent=4)
+    except Exception as e:
+        print(f"Fehler beim Speichern des Caches: {e}")
     
     return results
 
