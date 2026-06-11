@@ -1,15 +1,16 @@
 let currentMatches = [];
 let maxProb = 0;
+let selectedMatchId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchQuota();
-    fetchMatches(); // Normaler Load (Nutzt den Cache)
+    fetchMatches(); 
 
-    // Event Listener für den manuellen Refresh-Button
     document.getElementById('refresh-btn').addEventListener('click', () => {
         document.getElementById('layout-grid').style.display = 'none';
+        document.getElementById('matches-view').style.display = 'none';
         document.getElementById('loading-spinner').style.display = 'flex';
-        fetchMatches(true); // true = Force Refresh (Zieht Credits!)
+        fetchMatches(true); 
     });
 
     document.getElementById('sync-elo-btn').addEventListener('click', async () => {
@@ -27,8 +28,17 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = false;
     });
 
-    document.getElementById('ko-toggle').addEventListener('change', updatePrediction);
-    document.getElementById('match-selector').addEventListener('change', updatePrediction);
+    document.getElementById('ko-toggle').addEventListener('change', () => {
+        if (selectedMatchId !== null) {
+            updatePrediction();
+        }
+    });
+
+    document.getElementById('back-btn').addEventListener('click', () => {
+        document.getElementById('layout-grid').style.display = 'none';
+        document.getElementById('matches-view').style.display = 'block';
+        selectedMatchId = null;
+    });
 });
 
 async function fetchQuota() {
@@ -44,34 +54,44 @@ async function fetchQuota() {
 
 async function fetchMatches(force = false) {
     try {
-        // Wenn force true ist, hängen wir den Parameter an die URL
         const url = force ? '/api/matches?force=true' : '/api/matches';
         const res = await fetch(url);
         currentMatches = await res.json();
         
-        const selector = document.getElementById('match-selector');
-        selector.innerHTML = '<option value="">Wähle ein Spiel...</option>';
+        renderMatchGrid(currentMatches);
         
-        currentMatches.forEach(match => {
-            const option = document.createElement('option');
-            option.value = match.id;
-            option.textContent = `${match.home_team} vs ${match.away_team}`;
-            selector.appendChild(option);
-        });
-        
-        selector.disabled = false;
         document.getElementById('loading-spinner').style.display = 'none';
-        fetchQuota(); // Quota updaten, um zu sehen, ob Credits gezogen wurden
+        document.getElementById('matches-view').style.display = 'block';
+        fetchQuota(); 
     } catch (e) {
         document.getElementById('loading-spinner').innerHTML = `<p style="color:red">Fehler: ${e.message}</p>`;
     }
 }
 
-async function updatePrediction() {
-    const matchId = document.getElementById('match-selector').value;
-    if (!matchId) return;
+function renderMatchGrid(matches) {
+    const grid = document.getElementById('matches-grid');
+    grid.innerHTML = '';
+    
+    matches.forEach(match => {
+        const card = document.createElement('div');
+        card.className = 'match-card';
+        card.innerHTML = `${match.home_disp} <div class="vs">vs</div> ${match.away_disp}`;
+        
+        card.addEventListener('click', () => {
+            selectedMatchId = match.id;
+            document.getElementById('matches-view').style.display = 'none';
+            document.getElementById('loading-spinner').style.display = 'flex';
+            updatePrediction();
+        });
+        
+        grid.appendChild(card);
+    });
+}
 
-    const matchData = currentMatches.find(m => m.id === matchId);
+async function updatePrediction() {
+    if (!selectedMatchId) return;
+
+    const matchData = currentMatches.find(m => m.id === selectedMatchId);
     const isKo = document.getElementById('ko-toggle').checked;
 
     document.getElementById('layout-grid').style.display = 'none';

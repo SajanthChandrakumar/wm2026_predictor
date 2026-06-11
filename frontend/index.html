@@ -39,9 +39,6 @@
                 <span class="slider"></span>
                 K.O.-Phase (Doppelte Punkte)
             </label>
-            <select id="match-selector" disabled>
-                <option value="">Loading Matches...</option>
-            </select>
         </aside>
 
         <!-- Main Content -->
@@ -52,7 +49,14 @@
             </header>
             <hr>
 
+            <div id="matches-view">
+                <h2>Bevorstehende Spiele</h2>
+                <div id="matches-grid" class="matches-grid"></div>
+            </div>
+
             <div class="layout-grid" id="layout-grid" style="display: none;">
+                <button id="back-btn" class="action-btn" style="width: auto; margin-bottom: 20px; grid-column: 1 / -1;">⬅ Zurück zur Übersicht</button>
+                
                 <!-- Matrix Section -->
                 <section class="matrix-section">
                     <h3 id="match-title">Team A vs Team B</h3>
