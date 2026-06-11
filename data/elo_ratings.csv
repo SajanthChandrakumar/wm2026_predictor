@@ -1,49 +1,49 @@
 team_code,team_name,elo_rating
+FRA,France,2110
+ESP,Spain,2090
+ENG,England,2050
+COL,Colombia,2060
 ARG,Argentina,2140
-FRA,France,2090
-ESP,Spain,2075
-BRA,Brazil,2120
-ENG,England,2060
 POR,Portugal,2040
-NED,Netherlands,2010
-ITA,Italy,1990
-BEL,Belgium,1960
-COL,Colombia,1950
-URU,Uruguay,1930
-CRO,Croatia,1920
-SUI,Switzerland,1880
-JPN,Japan,1860
-MEX,Mexico,1858
-USA,United States,1840
-KOR,South Korea,1830
-CZE,Czech Republic,1810
-SEN,Senegal,1790
-MAR,Morocco,1780
-DEN,Denmark,1820
-GER,Germany,1980
-AUT,Austria,1870
-TUR,Turkey,1770
-ECU,Ecuador,1760
-CHI,Chile,1740
-PER,Peru,1730
-NGA,Nigeria,1720
-EGY,Egypt,1710
-TUN,Tunisia,1700
-ALG,Algeria,1700
-SRB,Serbia,1690
-NOR,Norway,1680
-POL,Poland,1670
-HUN,Hungary,1660
-SWE,Sweden,1650
-GHA,Ghana,1640
-CIV,Ivory Coast,1630
-IRN,Iran,1620
-AUS,Australia,1610
-RSA,South Africa,1590
-CAN,Canada,1580
-CRC,Costa Rica,1550
-JAM,Jamaica,1540
-PAN,Panama,1520
-QAT,Qatar,1480
-KSA,Saudi Arabia,1470
-NZL,New Zealand,1420
+BRA,Brazil,2030
+NED,Netherlands,2020
+GER,Germany,2010
+CRO,Croatia,2000
+BEL,Belgium,1980
+USA,United States,1930
+MAR,Morocco,1910
+MEX,Mexico,1900
+URU,Uruguay,1990
+NOR,Norway,1830
+ECU,Ecuador,1950
+JPN,Japan,1940
+SUI,Switzerland,1920
+KOR,South Korea,1870
+TUR,Türkiye,1850
+CAN,Canada,1810
+SEN,Senegal,1880
+AUT,Austria,1860
+SWE,Sweden,1820
+PAR,Paraguay,1790
+SCO,Scotland,1800
+GHA,Ghana,1730
+CZE,Czech Republic,1740
+IRN,Iran,1840
+KSA,Saudi Arabia,1720
+BIH,Bosnia and Herzegovina,1690
+ALG,Algeria,1770
+EGY,Egypt,1760
+CIV,Ivory Coast,1780
+AUS,Australia,1750
+JOR,Jordan,1640
+TUN,Tunisia,1710
+COD,DR Congo,1630
+UZB,Uzbekistan,1680
+QAT,Qatar,1660
+IRQ,Iraq,1650
+NZL,New Zealand,1600
+CPV,Cape Verde,1620
+RSA,South Africa,1670
+PAN,Panama,1700
+CUW,Curaçao,1550
+HAI,Haiti,1500
