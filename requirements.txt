@@ -1,0 +1,7 @@
+pandas
+requests
+streamlit
+python-dotenv
+scipy
+numpy
+matplotlib

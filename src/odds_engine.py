@@ -1,0 +1,42 @@
+import os
+import requests
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+class OddsApiEngine:
+    """
+    A client for the Odds API.
+    """
+    BASE_URL = "https://api.the-odds-api.com/v4/sports"
+
+    def __init__(self):
+        self.api_key = os.getenv("ODDS_API_KEY")
+        if not self.api_key or self.api_key == "your_key_here":
+            raise ValueError("ODDS_API_KEY is missing or invalid in the environment variables. Please set it in the .env file.")
+
+    def get_world_cup_odds(self, market: str = "h2h") -> list[dict]:
+        """
+        Fetches odds for the FIFA World Cup.
+        
+        Args:
+            market (str): The betting market to fetch (e.g., 'h2h', 'spreads', 'totals').
+            
+        Returns:
+            list[dict]: A list of JSON objects containing the odds data.
+        """
+        sport_key = "soccer_fifa_world_cup"
+        url = f"{self.BASE_URL}/{sport_key}/odds"
+        
+        params = {
+            "apiKey": self.api_key,
+            "regions": "eu",
+            "markets": market,
+            "oddsFormat": "decimal"
+        }
+        
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        
+        return response.json()
