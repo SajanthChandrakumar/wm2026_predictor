@@ -53,30 +53,64 @@ st.set_page_config(layout="wide", page_title="WC PREDICTOR 2026", page_icon="�
 def inject_custom_css():
     st.markdown("""
     <style>
-    /* Hide main menu and footer */
+    /* Global Backgrounds */
+    .stApp {
+        background-color: #1A1D24;
+    }
+    
+    /* Hide Streamlit Chrome */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Make metrics look like dark cards */
-    div[data-testid="metric-container"] {
-        background-color: #232730;
-        border-radius: 8px;
-        padding: 15px;
-        border: 1px solid #333945;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: #1A1D24 !important;
+        border-right: 1px solid #333945;
     }
     
-    /* Heatmap styling */
+    /* Right Side Card Styling (Matches & Odds) */
+    .odds-card {
+        background-color: #232730;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #333945;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        color: #E2E8F0;
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .team-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        font-size: 16px;
+        font-weight: 500;
+    }
+    
+    .odds-pill {
+        background-color: #1A1D24;
+        padding: 5px 12px;
+        border-radius: 6px;
+        border: 1px solid #333945;
+        font-weight: bold;
+        color: #FACC15;
+    }
+    
+    /* Heatmap Table Reset */
     table {
-        font-family: 'Inter', sans-serif !important;
         color: white !important;
         background-color: transparent !important;
+        border-collapse: separate;
+        border-spacing: 4px;
     }
     th {
         background-color: #1A1D24 !important;
-        border-bottom: 2px solid #333945 !important;
+        border: none !important;
         text-align: center !important;
+        font-weight: 500 !important;
+        color: #94A3B8 !important;
     }
     td {
         text-align: center !important;
@@ -85,6 +119,37 @@ def inject_custom_css():
         width: 60px !important;
         height: 60px !important;
         border-radius: 4px !important;
+    }
+    
+    /* Custom Odds Card Styling */
+    .odds-card {
+        background-color: #232730;
+        border-radius: 8px;
+        padding: 15px;
+        border: 1px solid #333945;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    .team-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        font-weight: 600;
+    }
+    .odds-pill {
+        background-color: #1A1D24;
+        padding: 4px 12px;
+        border-radius: 20px;
+        color: #FACC15;
+    }
+    
+    /* Metric Cards Override */
+    div[data-testid="metric-container"] {
+        background-color: #232730;
+        border-radius: 8px;
+        padding: 10px 15px;
+        border: 1px solid #333945;
+        border-left: 4px solid #FACC15;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -277,39 +342,54 @@ def main():
             score_matrix = math_engine.generate_exact_score_matrix(xg_home, xg_away, max_goals=5)
             xp_df = math_engine.calculate_expected_points(score_matrix, is_ko_phase=is_ko)
             
-            # Split Layout: Matrix (Left) and Odds/Tips (Right)
-            main_col, side_col = st.columns([3, 1])
+            # Layout Setup
+            main_col, side_col = st.columns([2.5, 1])
             
             with main_col:
-                st.markdown(f"**{home_team_disp}** vs **{away_team_disp}**")
+                st.markdown(f"### {home_team_disp} vs {away_team_disp}")
                 
-                # Custom Colormap: Dark Blue -> Blue -> Green -> Lime -> Yellow
-                colors = ['#1D3557', '#457B9D', '#2A9D8F', '#8bc34a', '#FACC15']
+                # Mockup Colormap: Deep Blue -> Emerald Green -> Yellow
+                colors = ['#1E293B', '#3B82F6', '#10B981', '#FACC15']
                 cmap_custom = mcolors.LinearSegmentedColormap.from_list('mockup_cmap', colors)
                 
-                # Heatmap formatting
+                # Format to 1 decimal place to mimic the clean look, set max explicitly
                 styled_matrix = score_matrix.style.background_gradient(
-                    cmap=cmap_custom, vmin=0, vmax=0.15
+                    cmap=cmap_custom, vmin=0, vmax=score_matrix.values.max()
                 ).format("{:.1%}")
                 
-                st.dataframe(styled_matrix, use_container_width=True, height=500)
+                st.dataframe(styled_matrix, use_container_width=True, height=550)
                 
             with side_col:
-                st.markdown("#### Matches & Odds")
-                st.markdown(f"**{home_team_disp}**")
-                st.markdown(f"Odds: **{odds['home']:.2f}**")
-                st.markdown(f"**{away_team_disp}**")
-                st.markdown(f"Odds: **{odds['away']:.2f}**")
-                st.markdown(f"Draw: **{odds['draw']:.2f}**")
+                st.markdown("### Matches & Odds")
                 
-                st.markdown("#### Die Value-Empfehlungen (xP)")
+                # Custom HTML Injection for the right card
+                odds_html = f"""
+                <div class="odds-card">
+                    <div class="team-row">
+                        <span>{home_team_disp}</span>
+                        <span class="odds-pill">{odds['home']:.2f}</span>
+                    </div>
+                    <div class="team-row">
+                        <span style="color: #94A3B8; font-size: 14px;">Draw</span>
+                        <span class="odds-pill" style="color: #94A3B8;">{odds['draw']:.2f}</span>
+                    </div>
+                    <div class="team-row" style="margin-bottom: 0;">
+                        <span>{away_team_disp}</span>
+                        <span class="odds-pill">{odds['away']:.2f}</span>
+                    </div>
+                </div>
+                """
+                st.markdown(odds_html, unsafe_allow_html=True)
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown("#### Value Predictions (xP)")
                 if not xp_df.empty:
                     top_tip = xp_df.iloc[0]
-                    st.success(f"🎯 Optimaler Lock-in Tipp: **{top_tip['Tipp']}** ({top_tip['xP']:.2f} xP)")
+                    st.success(f"🎯 **Top Pick: {top_tip['Tipp']}** ({top_tip['xP']:.1f} xP)")
                     
                     for i in range(1, min(4, len(xp_df))):
                         row = xp_df.iloc[i]
-                        st.metric(label=f"Rang {i+1}: {row['Tipp']}", value=f"{row['xP']:.2f} xP")
+                        st.metric(label=f"Rank {i+1} | Score {row['Tipp']}", value=f"{row['xP']:.1f} xP")
                     
         except ValueError as ve:
             if "Keine Quoten für diesen Markt verfügbar" in str(ve):
