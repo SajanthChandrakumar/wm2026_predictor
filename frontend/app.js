@@ -3,12 +3,13 @@ let maxProb = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchQuota();
-    fetchMatches();
+    fetchMatches(); // Normaler Load (Nutzt den Cache)
 
+    // Event Listener für den manuellen Refresh-Button
     document.getElementById('refresh-btn').addEventListener('click', () => {
         document.getElementById('layout-grid').style.display = 'none';
         document.getElementById('loading-spinner').style.display = 'flex';
-        fetchMatches();
+        fetchMatches(true); // true = Force Refresh (Zieht Credits!)
     });
 
     document.getElementById('sync-elo-btn').addEventListener('click', async () => {
@@ -41,9 +42,11 @@ async function fetchQuota() {
     }
 }
 
-async function fetchMatches() {
+async function fetchMatches(force = false) {
     try {
-        const res = await fetch('/api/matches');
+        // Wenn force true ist, hängen wir den Parameter an die URL
+        const url = force ? '/api/matches?force=true' : '/api/matches';
+        const res = await fetch(url);
         currentMatches = await res.json();
         
         const selector = document.getElementById('match-selector');
@@ -58,7 +61,7 @@ async function fetchMatches() {
         
         selector.disabled = false;
         document.getElementById('loading-spinner').style.display = 'none';
-        fetchQuota(); // update quota after matches request
+        fetchQuota(); // Quota updaten, um zu sehen, ob Credits gezogen wurden
     } catch (e) {
         document.getElementById('loading-spinner').innerHTML = `<p style="color:red">Fehler: ${e.message}</p>`;
     }

@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import time
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -84,8 +85,22 @@ def extract_odds(match):
         raise ValueError("Keine Quoten für diesen Markt verfügbar")
     return odds
 
+# --- Globaler Cache Setup ---
+MATCHES_CACHE = {"timestamp": 0, "data": None}
+CACHE_TTL = 3600  # 1 Stunde in Sekunden
+
 @app.get("/api/matches")
-def get_matches():
+def get_matches(force: bool = False):
+    """
+    Holt die Spiele. Nutzt den Cache, es sei denn, force=True wird übergeben.
+    """
+    global MATCHES_CACHE
+    
+    # 1. Cache prüfen (Wenn Daten da sind, nicht älter als 1 Stunde und kein Force-Refresh verlangt wird)
+    if not force and MATCHES_CACHE["data"] is not None and (time.time() - MATCHES_CACHE["timestamp"] < CACHE_TTL):
+        return MATCHES_CACHE["data"]
+        
+    # 2. API Call (Nur wenn der Cache leer/abgelaufen ist oder der User den Button drückt)
     engine = OddsApiEngine()
     try:
         data = engine.get_world_cup_odds(market="h2h,totals")
@@ -109,6 +124,11 @@ def get_matches():
             })
         except ValueError:
             continue
+            
+    # 3. Cache aktualisieren
+    MATCHES_CACHE["timestamp"] = time.time()
+    MATCHES_CACHE["data"] = results
+    
     return results
 
 @app.post("/api/predict")
