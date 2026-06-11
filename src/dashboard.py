@@ -173,7 +173,27 @@ def main():
         st.warning("Keine aktuellen Spiele in der API gefunden.")
         return
 
-    # 2. Sidebar Navigation (Fake)
+    # 2. API Quota Tracker
+    st.sidebar.markdown("### 📊 API Quota")
+    quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota.json')
+    try:
+        import json
+        if os.path.exists(quota_path):
+            with open(quota_path, 'r', encoding='utf-8') as f:
+                quota_data = json.load(f)
+            st.sidebar.metric(
+                label="API Requests Remaining", 
+                value=quota_data.get('remaining', 'Unknown'), 
+                delta=f"-{quota_data.get('used', 'Unknown')} used", 
+                delta_color="inverse"
+            )
+        else:
+            st.sidebar.info("Waiting for first request...")
+    except Exception:
+        pass
+    st.sidebar.markdown("---")
+
+    # 3. Sidebar Navigation (Fake)
     st.sidebar.markdown("### 🏆 WC PREDICTOR 2026")
     st.sidebar.markdown("---")
     st.sidebar.radio("Navigation", [
@@ -194,7 +214,7 @@ def main():
         
         with st.spinner("Synchronisiere abgeschlossene Spiele..."):
             try:
-                completed_matches = odds_engine.get_completed_scores(days_from=5)
+                completed_matches = odds_engine.get_completed_scores(days_from=3)
                 updates = math_engine.update_elo_from_api_scores(
                     api_scores=completed_matches, 
                     processed_matches_file=processed_json_path
@@ -213,17 +233,21 @@ def main():
     # Header Area
     col_head1, col_head2, col_head3 = st.columns([3, 1, 1])
     with col_head1:
-        st.markdown("### Tournament Heatmap | Match Predictions")
+        st.markdown("### Turnier-Heatmap | Match Predictions")
     with col_head2:
-        is_ko_phase = st.toggle("K.O. Round (120m)")
+        pass # Moved toggle to sidebar
     with col_head3:
         if st.button("🔄 Refresh Data"):
+            fetch_odds_data.clear()
             st.rerun()
             
     st.markdown("---")
     
     match_options = {f"{m.get('home_team', 'Unbekannt')} vs {m.get('away_team', 'Unbekannt')}": m for m in api_matches}
-    selected_match_str = st.sidebar.selectbox("Select Match:", list(match_options.keys()))
+    
+    st.sidebar.markdown("### Spieleinstellungen")
+    is_ko = st.sidebar.toggle("K.O.-Phase (Doppelte Punkte)")
+    selected_match_str = st.sidebar.selectbox("Wähle ein Spiel:", list(match_options.keys()))
     
     if selected_match_str:
         match_data = match_options[selected_match_str]
@@ -246,12 +270,12 @@ def main():
                 prob_home=prob_home, prob_draw=prob_draw, prob_away=prob_away, prob_over25=prob_over25
             )
             
-            if is_ko_phase:
+            if is_ko:
                 xg_home *= 1.33
                 xg_away *= 1.33
                 
             score_matrix = math_engine.generate_exact_score_matrix(xg_home, xg_away, max_goals=5)
-            xp_df = math_engine.calculate_expected_points(score_matrix, is_ko_phase=is_ko_phase)
+            xp_df = math_engine.calculate_expected_points(score_matrix, is_ko_phase=is_ko)
             
             # Split Layout: Matrix (Left) and Odds/Tips (Right)
             main_col, side_col = st.columns([3, 1])
@@ -278,19 +302,22 @@ def main():
                 st.markdown(f"Odds: **{odds['away']:.2f}**")
                 st.markdown(f"Draw: **{odds['draw']:.2f}**")
                 
-                st.markdown("---")
-                st.markdown("#### Lock-in Tipps (xP)")
-                for i in range(min(3, len(xp_df))):
-                    row = xp_df.iloc[i]
-                    st.metric(label=f"Rank {i+1}: {row['Tipp']}", value=f"{row['xP']:.1f} pts")
+                st.markdown("#### Die Value-Empfehlungen (xP)")
+                if not xp_df.empty:
+                    top_tip = xp_df.iloc[0]
+                    st.success(f"🎯 Optimaler Lock-in Tipp: **{top_tip['Tipp']}** ({top_tip['xP']:.2f} xP)")
+                    
+                    for i in range(1, min(4, len(xp_df))):
+                        row = xp_df.iloc[i]
+                        st.metric(label=f"Rang {i+1}: {row['Tipp']}", value=f"{row['xP']:.2f} xP")
                     
         except ValueError as ve:
             if "Keine Quoten für diesen Markt verfügbar" in str(ve):
-                st.warning("No Odds available for this match.")
+                st.warning("Für dieses Spiel sind aktuell keine Quoten verfügbar.")
             else:
                 st.error(str(ve))
         except Exception as e:
-            st.warning(f"Error calculating model: {e}")
+            st.warning(f"Fehler bei der Modellberechnung: {e}")
 
 if __name__ == "__main__":
     main()

@@ -16,6 +16,18 @@ class OddsApiEngine:
         if not self.api_key or self.api_key == "your_key_here":
             raise ValueError("ODDS_API_KEY is missing or invalid in the environment variables. Please set it in the .env file.")
 
+    def _update_quota(self, headers: dict):
+        import json
+        import os
+        remaining = headers.get("x-requests-remaining", "Unknown")
+        used = headers.get("x-requests-used", "Unknown")
+        
+        quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota.json')
+        os.makedirs(os.path.dirname(quota_path), exist_ok=True)
+        
+        with open(quota_path, 'w', encoding='utf-8') as f:
+            json.dump({"remaining": remaining, "used": used}, f, indent=4)
+
     def get_world_cup_odds(self, market: str = "h2h") -> list[dict]:
         """
         Fetches odds for the FIFA World Cup.
@@ -38,6 +50,7 @@ class OddsApiEngine:
         
         response = requests.get(url, params=params)
         response.raise_for_status()
+        self._update_quota(response.headers)
         
         return response.json()
 
@@ -55,5 +68,6 @@ class OddsApiEngine:
         
         response = requests.get(url, params=params)
         response.raise_for_status()
+        self._update_quota(response.headers)
         
         return response.json()
