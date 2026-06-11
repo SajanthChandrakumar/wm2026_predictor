@@ -9,8 +9,26 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('refresh-btn').addEventListener('click', () => {
         document.getElementById('layout-grid').style.display = 'none';
         document.getElementById('matches-view').style.display = 'none';
+        document.getElementById('value-bets-view').style.display = 'none';
         document.getElementById('loading-spinner').style.display = 'flex';
         fetchMatches(true); 
+    });
+
+    document.getElementById('nav-dashboard').addEventListener('click', (e) => {
+        document.querySelectorAll('nav li').forEach(li => li.classList.remove('active'));
+        e.target.classList.add('active');
+        document.getElementById('layout-grid').style.display = 'none';
+        document.getElementById('value-bets-view').style.display = 'none';
+        document.getElementById('matches-view').style.display = 'block';
+    });
+
+    document.getElementById('nav-value-bets').addEventListener('click', (e) => {
+        document.querySelectorAll('nav li').forEach(li => li.classList.remove('active'));
+        e.target.classList.add('active');
+        document.getElementById('layout-grid').style.display = 'none';
+        document.getElementById('matches-view').style.display = 'none';
+        document.getElementById('value-bets-view').style.display = 'block';
+        renderValueBets(currentMatches);
     });
 
     document.getElementById('sync-elo-btn').addEventListener('click', async () => {
@@ -60,8 +78,17 @@ async function fetchMatches(force = false) {
         
         renderMatchGrid(currentMatches);
         
+        // Refresh the Value Bets view if it's currently active
+        if (document.getElementById('nav-value-bets').classList.contains('active')) {
+            document.getElementById('matches-view').style.display = 'none';
+            document.getElementById('value-bets-view').style.display = 'block';
+            renderValueBets(currentMatches);
+        } else {
+            document.getElementById('value-bets-view').style.display = 'none';
+            document.getElementById('matches-view').style.display = 'block';
+        }
+        
         document.getElementById('loading-spinner').style.display = 'none';
-        document.getElementById('matches-view').style.display = 'block';
         fetchQuota(); 
     } catch (e) {
         document.getElementById('loading-spinner').innerHTML = `<p style="color:red">Fehler: ${e.message}</p>`;
@@ -80,6 +107,36 @@ function renderMatchGrid(matches) {
         card.addEventListener('click', () => {
             selectedMatchId = match.id;
             document.getElementById('matches-view').style.display = 'none';
+            document.getElementById('loading-spinner').style.display = 'flex';
+            updatePrediction();
+        });
+        
+        grid.appendChild(card);
+    });
+}
+
+function renderValueBets(matches) {
+    const grid = document.getElementById('value-bets-grid');
+    grid.innerHTML = '';
+    
+    // Filter and sort by max_xp descending
+    const sortedMatches = matches
+        .filter(m => m.max_xp && m.max_xp > 0)
+        .sort((a, b) => b.max_xp - a.max_xp);
+        
+    sortedMatches.forEach(match => {
+        const card = document.createElement('div');
+        card.className = 'match-card';
+        card.style.borderColor = '#10B981';
+        card.innerHTML = `
+            <div style="font-size: 0.85rem; color: #94A3B8;">${match.home_disp} vs ${match.away_disp}</div>
+            <div style="margin: 15px 0; font-size: 1.5rem; font-weight: bold; color: #FACC15;">Tipp: ${match.top_tip}</div>
+            <div style="background: rgba(16, 185, 129, 0.1); color: #10B981; padding: 5px; border-radius: 4px;">Expected: ${match.max_xp.toFixed(2)} xP</div>
+        `;
+        
+        card.addEventListener('click', () => {
+            selectedMatchId = match.id;
+            document.getElementById('value-bets-view').style.display = 'none';
             document.getElementById('loading-spinner').style.display = 'flex';
             updatePrediction();
         });

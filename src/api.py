@@ -113,6 +113,30 @@ def get_matches(force: bool = False):
         away_raw = m.get("away_team")
         try:
             odds = extract_odds(m)
+            
+            try:
+                math_engine.merge_odds_and_elo([m])
+                prob_home = 1.0 / odds["home"]
+                prob_draw = 1.0 / odds["draw"]
+                prob_away = 1.0 / odds["away"]
+                prob_over25 = 1.0 / odds["over25"]
+                
+                xg_h, xg_a = math_engine.derive_xg_from_odds(
+                    prob_home, prob_draw, prob_away, prob_over25
+                )
+                sm = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=5)
+                df_xp = math_engine.calculate_expected_points(sm, is_ko_phase=False)
+                
+                if not df_xp.empty:
+                    top_tip = df_xp.iloc[0]["Tipp"]
+                    max_xp = float(df_xp.iloc[0]["xP"])
+                else:
+                    top_tip = "N/A"
+                    max_xp = 0.0
+            except Exception:
+                top_tip = "N/A"
+                max_xp = 0.0
+
             results.append({
                 "id": m.get("id"),
                 "home_team": home_raw,
@@ -120,6 +144,8 @@ def get_matches(force: bool = False):
                 "home_disp": DISPLAY_MAPPING.get(home_raw, home_raw),
                 "away_disp": DISPLAY_MAPPING.get(away_raw, away_raw),
                 "odds": odds,
+                "top_tip": top_tip,
+                "max_xp": max_xp,
                 "raw_match": m
             })
         except ValueError:

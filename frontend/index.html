@@ -21,7 +21,8 @@
             <hr>
             <nav>
                 <ul>
-                    <li class="active">⊞ Dashboard</li>
+                    <li id="nav-dashboard" class="active">⊞ Dashboard</li>
+                    <li id="nav-value-bets">🔥 Top Value Bets</li>
                     <li>☑️ My Predictions</li>
                     <li>🏆 Tournament View</li>
                     <li>🧮 Heatmap Matrix</li>
@@ -52,6 +53,11 @@
             <div id="matches-view">
                 <h2>Bevorstehende Spiele</h2>
                 <div id="matches-grid" class="matches-grid"></div>
+            </div>
+
+            <div id="value-bets-view" style="display: none;">
+                <h2>🔥 Top Value Bets (Global Ranking)</h2>
+                <div id="value-bets-grid" class="matches-grid"></div>
             </div>
 
             <div class="layout-grid" id="layout-grid" style="display: none;">
