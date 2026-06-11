@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import sys
 import os
+import matplotlib.colors as mcolors
 
 # Add the parent directory to sys.path to allow imports from src
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -9,105 +10,159 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from src.odds_engine import OddsApiEngine
 from src.math_engine import MathEngine
 
-# Konstantes Dictionary für robustes Team-Mapping.
-# Wird in Zukunft um weitere internationale Variationen erweitert.
 TEAM_MAPPING = {
+    "United States": "United States",
     "USA": "United States",
     "Korea Republic": "South Korea",
-    "IR Iran": "Iran",
+    "South Korea": "South Korea",
+    "Czech Republic": "Czech Republic",
     "Czechia": "Czech Republic",
-    "Côte d'Ivoire": "Ivory Coast"
+    "IR Iran": "Iran",
+    "Côte d'Ivoire": "Ivory Coast",
+    "Ivory Coast": "Ivory Coast",
+    "Saudi Arabia": "Saudi Arabia",
+    "KSA": "Saudi Arabia"
+}
+
+DISPLAY_MAPPING = {
+    "United States": "🇺🇸 USA",
+    "USA": "🇺🇸 USA",
+    "South Korea": "🇰🇷 South Korea",
+    "Korea Republic": "🇰🇷 South Korea",
+    "Iran": "🇮🇷 Iran",
+    "IR Iran": "🇮🇷 Iran",
+    "Czech Republic": "🇨🇿 Czech Republic",
+    "Czechia": "🇨🇿 Czech Republic",
+    "Ivory Coast": "🇨🇮 Ivory Coast",
+    "Côte d'Ivoire": "🇨🇮 Ivory Coast",
+    "Argentina": "🇦🇷 Argentina",
+    "France": "🇫🇷 France",
+    "Germany": "🇩🇪 Germany",
+    "Spain": "🇪🇸 Spain",
+    "England": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 England",
+    "Brazil": "🇧🇷 Brazil",
+    "Portugal": "🇵🇹 Portugal",
+    "Netherlands": "🇳🇱 Netherlands",
+    "Italy": "🇮🇹 Italy",
+    "Belgium": "🇧🇪 Belgium",
 }
 
 # Set page config
-st.set_page_config(layout="wide", page_title="🏆 WM 2026 Predictor")
+st.set_page_config(layout="wide", page_title="WC PREDICTOR 2026", page_icon="🏆")
+
+def inject_custom_css():
+    st.markdown("""
+    <style>
+    /* Hide main menu and footer */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Make metrics look like dark cards */
+    div[data-testid="metric-container"] {
+        background-color: #232730;
+        border-radius: 8px;
+        padding: 15px;
+        border: 1px solid #333945;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Heatmap styling */
+    table {
+        font-family: 'Inter', sans-serif !important;
+        color: white !important;
+        background-color: transparent !important;
+    }
+    th {
+        background-color: #1A1D24 !important;
+        border-bottom: 2px solid #333945 !important;
+        text-align: center !important;
+    }
+    td {
+        text-align: center !important;
+        vertical-align: middle !important;
+        border: 2px solid #1A1D24 !important;
+        width: 60px !important;
+        height: 60px !important;
+        border-radius: 4px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 @st.cache_data(ttl=3600)
 def fetch_odds_data():
-    """
-    Fetches odds data from the API and caches the result.
-    Fetching both h2h and totals markets to get Over/Under 2.5.
-    """
     engine = OddsApiEngine()
     try:
-        # In the Odds API, multiple markets can often be passed as comma-separated values
         data = engine.get_world_cup_odds(market="h2h,totals")
     except:
-        # Fallback to h2h only if multiple markets fail
         data = engine.get_world_cup_odds(market="h2h")
     return data
 
 @st.cache_data
 def load_elo_data():
-    """
-    Lädt die Elo-Ratings aus der CSV-Datei oder erstellt ein kleines Fallback-DataFrame.
-    """
     csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_ratings.csv')
     try:
         return pd.read_csv(csv_path)
     except Exception:
-        # Fallback Mock DataFrame
         return pd.DataFrame({
-            "team_code": ["GER", "ARG", "FRA", "ESP", "USA"],
-            "team_name": ["Deutschland", "Argentinien", "Frankreich", "Spanien", "United States"],
-            "elo_rating": [1980, 2140, 2090, 2075, 1600]
+            "team_code": ["GER", "ARG", "FRA"],
+            "team_name": ["Deutschland", "Argentinien", "Frankreich"],
+            "elo_rating": [1980, 2140, 2090]
         })
 
 def extract_odds(match):
-    """
-    Hilfsfunktion, um Quoten aus der API-Payload zu extrahieren.
-    """
     home_team = match.get("home_team")
     away_team = match.get("away_team")
+    odds = {}
     
-    # Default/Mock Quoten, falls die API bestimmte Werte nicht liefert
-    odds = {
-        "home": 2.50,
-        "draw": 3.20,
-        "away": 2.80,
-        "over25": 1.90,
-        "under25": 1.90
-    }
+    if "bookmakers" in match:
+        for bookie in match["bookmakers"]:
+            for market in bookie.get("markets", []):
+                if market["key"] == "h2h":
+                    for outcome in market.get("outcomes", []):
+                        if outcome["name"] == home_team and "home" not in odds:
+                            odds["home"] = outcome["price"]
+                        elif outcome["name"] == away_team and "away" not in odds:
+                            odds["away"] = outcome["price"]
+                        elif outcome["name"] == "Draw" and "draw" not in odds:
+                            odds["draw"] = outcome["price"]
+                elif market["key"] == "totals":
+                    for outcome in market.get("outcomes", []):
+                        if outcome["name"] == "Over" and outcome.get("point", 2.5) == 2.5 and "over25" not in odds:
+                            odds["over25"] = outcome["price"]
+                        elif outcome["name"] == "Under" and outcome.get("point", 2.5) == 2.5 and "under25" not in odds:
+                            odds["under25"] = outcome["price"]
+                            
+            # Wenn wir alle Quoten haben, können wir abbrechen
+            if all(k in odds for k in ["home", "draw", "away", "over25"]):
+                break
+                
+    # Fallback für Totals (over/under 2.5), falls diese fehlen, aber H2H da ist
+    if all(k in odds for k in ["home", "draw", "away"]) and "over25" not in odds:
+        odds["over25"] = 1.90
+        odds["under25"] = 1.90
     
-    # Versuche echte Quoten aus dem ersten Buchmacher zu extrahieren
-    if "bookmakers" in match and len(match["bookmakers"]) > 0:
-        bookie = match["bookmakers"][0]
-        for market in bookie.get("markets", []):
-            if market["key"] == "h2h":
-                for outcome in market.get("outcomes", []):
-                    if outcome["name"] == home_team:
-                        odds["home"] = outcome["price"]
-                    elif outcome["name"] == away_team:
-                        odds["away"] = outcome["price"]
-                    elif outcome["name"] == "Draw":
-                        odds["draw"] = outcome["price"]
-            elif market["key"] == "totals":
-                for outcome in market.get("outcomes", []):
-                    # Der Point bei Totals ist oft 2.5 für Over/Under
-                    if outcome["name"] == "Over" and outcome.get("point", 2.5) == 2.5:
-                        odds["over25"] = outcome["price"]
-                    elif outcome["name"] == "Under" and outcome.get("point", 2.5) == 2.5:
-                        odds["under25"] = outcome["price"]
+    required_keys = ["home", "draw", "away", "over25"]
+    missing_keys = [k for k in required_keys if k not in odds]
     
+    if missing_keys:
+        raise ValueError("Keine Quoten für diesen Markt verfügbar")
     return odds
 
 def main():
-    st.title("🏆 WM 2026 Predictor - Edge Analytics")
+    inject_custom_css()
     
     # 1. Daten laden
     elo_df = load_elo_data()
     elo_csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_ratings.csv')
     
-    # Initialisiere die MathEngine
-    # (Wir erstellen im Zweifel ein Dummy-CSV, damit die Initialisierung nicht fehlschlägt,
-    # falls elo_ratings.csv fehlt, aber in diesem Projekt ist es bereits angelegt).
     if not os.path.exists(elo_csv_path):
         os.makedirs(os.path.dirname(elo_csv_path), exist_ok=True)
         elo_df.to_csv(elo_csv_path, index=False)
         
     math_engine = MathEngine(elo_csv_path, TEAM_MAPPING)
     
-    with st.spinner("Zapfe Buchmacher-Modelle an..."):
+    with st.spinner("Fetching Data API..."):
         try:
             api_matches = fetch_odds_data()
         except Exception as e:
@@ -115,83 +170,127 @@ def main():
             return
             
     if not api_matches or not isinstance(api_matches, list):
-        st.warning("Keine aktuellen Spiele in der API gefunden oder das API-Limit wurde erreicht.")
+        st.warning("Keine aktuellen Spiele in der API gefunden.")
         return
 
-    # 2. Sidebar: Match Auswahl
-    st.sidebar.header("Spieleinstellungen")
+    # 2. Sidebar Navigation (Fake)
+    st.sidebar.markdown("### 🏆 WC PREDICTOR 2026")
+    st.sidebar.markdown("---")
+    st.sidebar.radio("Navigation", [
+        "⊞ Dashboard", 
+        "☑️ My Predictions", 
+        "🏆 Tournament View", 
+        "🧮 Heatmap Matrix", 
+        "📄 Bet Slip", 
+        "🏅 Rankings",
+        "⚙️ Settings"
+    ], index=3)
     
-    # Erstelle eine Liste von Match-Strings
+    st.sidebar.markdown("---")
+    
+    if st.sidebar.button("🔄 Elo-Ratings mit API synchronisieren"):
+        processed_json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'processed_matches.json')
+        odds_engine = OddsApiEngine() 
+        
+        with st.spinner("Synchronisiere abgeschlossene Spiele..."):
+            try:
+                completed_matches = odds_engine.get_completed_scores(days_from=5)
+                updates = math_engine.update_elo_from_api_scores(
+                    api_scores=completed_matches, 
+                    processed_matches_file=processed_json_path
+                )
+                
+                if updates > 0:
+                    math_engine.elo_df.to_csv(math_engine.elo_csv_path, index=False)
+                    st.sidebar.success(f"Erfolgreich! {updates} neue Spiele verarbeitet und Elo aktualisiert.")
+                else:
+                    st.sidebar.info("Keine neuen, unverarbeiteten Spiele gefunden.")
+            except Exception as e:
+                st.sidebar.error(f"Fehler bei der Synchronisation: {e}")
+                
+    st.sidebar.markdown("---")
+    
+    # Header Area
+    col_head1, col_head2, col_head3 = st.columns([3, 1, 1])
+    with col_head1:
+        st.markdown("### Tournament Heatmap | Match Predictions")
+    with col_head2:
+        is_ko_phase = st.toggle("K.O. Round (120m)")
+    with col_head3:
+        if st.button("🔄 Refresh Data"):
+            st.rerun()
+            
+    st.markdown("---")
+    
     match_options = {f"{m.get('home_team', 'Unbekannt')} vs {m.get('away_team', 'Unbekannt')}": m for m in api_matches}
-    
-    selected_match_str = st.sidebar.selectbox("Wähle ein Spiel:", list(match_options.keys()))
+    selected_match_str = st.sidebar.selectbox("Select Match:", list(match_options.keys()))
     
     if selected_match_str:
         match_data = match_options[selected_match_str]
-        home_team = match_data.get("home_team", "Heimteam")
-        away_team = match_data.get("away_team", "Auswärtsteam")
+        home_team_raw = match_data.get("home_team", "Heimteam")
+        away_team_raw = match_data.get("away_team", "Auswärtsteam")
         
-        st.header(f"⚽ {home_team} vs {away_team}")
+        home_team_disp = DISPLAY_MAPPING.get(home_team_raw, home_team_raw)
+        away_team_disp = DISPLAY_MAPPING.get(away_team_raw, away_team_raw)
         
         try:
-            # Trigger Elo Validation
             math_engine.merge_odds_and_elo([match_data])
-            
-            # Step A: Probabilities extrahieren
-            st.subheader("Schritt A: Rohdaten der Buchmacher")
             odds = extract_odds(match_data)
             
-            # Umwandlung der Quoten in Wahrscheinlichkeiten
             prob_home = 1.0 / odds["home"]
             prob_draw = 1.0 / odds["draw"]
             prob_away = 1.0 / odds["away"]
             prob_over25 = 1.0 / odds["over25"]
             
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric(label=f"Sieg {home_team} (1)", value=odds["home"], delta=f"{prob_home:.1%} Wahrsch.")
-            col2.metric(label="Unentschieden (X)", value=odds["draw"], delta=f"{prob_draw:.1%} Wahrsch.", delta_color="off")
-            col3.metric(label=f"Sieg {away_team} (2)", value=odds["away"], delta=f"{prob_away:.1%} Wahrsch.")
-            col4.metric(label="Über 2.5 Tore", value=odds["over25"], delta=f"{prob_over25:.1%} Wahrsch.")
+            xg_home, xg_away = math_engine.derive_xg_from_odds(
+                prob_home=prob_home, prob_draw=prob_draw, prob_away=prob_away, prob_over25=prob_over25
+            )
             
-            # Step B: xG Derivation
-            st.subheader("Schritt B: Erwartete Tore (xG) berechnet")
-            
-            with st.spinner("Optimiere Poisson-Verteilung..."):
-                xg_home, xg_away = math_engine.derive_xg_from_odds(
-                    prob_home=prob_home,
-                    prob_draw=prob_draw,
-                    prob_away=prob_away,
-                    prob_over25=prob_over25
-                )
-            
-            col_xg1, col_xg2 = st.columns(2)
-            col_xg1.metric(label=f"xG {home_team}", value=f"{xg_home:.2f}")
-            col_xg2.metric(label=f"xG {away_team}", value=f"{xg_away:.2f}")
-            
-            # Step C: The Matrix
-            st.subheader("Schritt C: Die Exakte Ergebnis-Matrix")
-            st.markdown("Farbkodierte Heatmap der wahrscheinlichsten Endstände basierend auf den berechneten xG-Werten.")
-            
-            score_matrix = math_engine.generate_exact_score_matrix(xg_home, xg_away, max_goals=5)
-            
-            # Wende Pandas Styling für die Heatmap an
-            styled_matrix = score_matrix.style.background_gradient(cmap='YlGnBu').format("{:.2%}")
-            st.dataframe(styled_matrix, use_container_width=True)
-            
-            # Step D: The Edge
-            st.subheader("Schritt D: Die Value-Empfehlungen")
-            top_3_scores = math_engine.find_contrarian_value(score_matrix)
-            
-            st.success("🎯 **Top 3 Empfohlene Exakte Ergebnisse:**")
-            
-            # Ergebnisse hübsch formatieren
-            for idx, (scoreline, prob) in enumerate(top_3_scores.items(), 1):
-                st.info(f"**Platz {idx}:** Ergebnis **{scoreline}** mit einer Wahrscheinlichkeit von **{prob:.2%}**")
+            if is_ko_phase:
+                xg_home *= 1.33
+                xg_away *= 1.33
                 
+            score_matrix = math_engine.generate_exact_score_matrix(xg_home, xg_away, max_goals=5)
+            xp_df = math_engine.calculate_expected_points(score_matrix, is_ko_phase=is_ko_phase)
+            
+            # Split Layout: Matrix (Left) and Odds/Tips (Right)
+            main_col, side_col = st.columns([3, 1])
+            
+            with main_col:
+                st.markdown(f"**{home_team_disp}** vs **{away_team_disp}**")
+                
+                # Custom Colormap: Dark Blue -> Blue -> Green -> Lime -> Yellow
+                colors = ['#1D3557', '#457B9D', '#2A9D8F', '#8bc34a', '#FACC15']
+                cmap_custom = mcolors.LinearSegmentedColormap.from_list('mockup_cmap', colors)
+                
+                # Heatmap formatting
+                styled_matrix = score_matrix.style.background_gradient(
+                    cmap=cmap_custom, vmin=0, vmax=0.15
+                ).format("{:.1%}")
+                
+                st.dataframe(styled_matrix, use_container_width=True, height=500)
+                
+            with side_col:
+                st.markdown("#### Matches & Odds")
+                st.markdown(f"**{home_team_disp}**")
+                st.markdown(f"Odds: **{odds['home']:.2f}**")
+                st.markdown(f"**{away_team_disp}**")
+                st.markdown(f"Odds: **{odds['away']:.2f}**")
+                st.markdown(f"Draw: **{odds['draw']:.2f}**")
+                
+                st.markdown("---")
+                st.markdown("#### Lock-in Tipps (xP)")
+                for i in range(min(3, len(xp_df))):
+                    row = xp_df.iloc[i]
+                    st.metric(label=f"Rank {i+1}: {row['Tipp']}", value=f"{row['xP']:.1f} pts")
+                    
         except ValueError as ve:
-            st.error(str(ve))
+            if "Keine Quoten für diesen Markt verfügbar" in str(ve):
+                st.warning("No Odds available for this match.")
+            else:
+                st.error(str(ve))
         except Exception as e:
-            st.warning(f"Das mathematische Modell konnte für dieses Spiel nicht vollständig ausgeführt werden. Fehlerdetails: {e}")
+            st.warning(f"Error calculating model: {e}")
 
 if __name__ == "__main__":
     main()

@@ -2,9 +2,8 @@ team_code,team_name,elo_rating
 ARG,Argentina,2140
 FRA,France,2090
 ESP,Spain,2075
-GER,Germany,1980
-ENG,England,2060
 BRA,Brazil,2120
+ENG,England,2060
 POR,Portugal,2040
 NED,Netherlands,2010
 ITA,Italy,1990
@@ -14,10 +13,37 @@ URU,Uruguay,1930
 CRO,Croatia,1920
 SUI,Switzerland,1880
 JPN,Japan,1860
+MEX,Mexico,1858
 USA,United States,1840
 KOR,South Korea,1830
 CZE,Czech Republic,1810
 SEN,Senegal,1790
 MAR,Morocco,1780
-MEX,Mexico,1858
+DEN,Denmark,1820
+GER,Germany,1980
+AUT,Austria,1870
+TUR,Turkey,1770
+ECU,Ecuador,1760
+CHI,Chile,1740
+PER,Peru,1730
+NGA,Nigeria,1720
+EGY,Egypt,1710
+TUN,Tunisia,1700
+ALG,Algeria,1700
+SRB,Serbia,1690
+NOR,Norway,1680
+POL,Poland,1670
+HUN,Hungary,1660
+SWE,Sweden,1650
+GHA,Ghana,1640
+CIV,Ivory Coast,1630
+IRN,Iran,1620
+AUS,Australia,1610
 RSA,South Africa,1590
+CAN,Canada,1580
+CRC,Costa Rica,1550
+JAM,Jamaica,1540
+PAN,Panama,1520
+QAT,Qatar,1480
+KSA,Saudi Arabia,1470
+NZL,New Zealand,1420

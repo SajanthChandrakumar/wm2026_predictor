@@ -40,3 +40,20 @@ class OddsApiEngine:
         response.raise_for_status()
         
         return response.json()
+
+    def get_completed_scores(self, days_from: int = 5) -> list[dict]:
+        """
+        Fetches scores for completed FIFA World Cup matches.
+        """
+        sport_key = "soccer_fifa_world_cup"
+        url = f"{self.BASE_URL}/{sport_key}/scores"
+        
+        params = {
+            "apiKey": self.api_key,
+            "daysFrom": days_from
+        }
+        
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        
+        return response.json()

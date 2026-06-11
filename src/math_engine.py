@@ -19,14 +19,6 @@ class MathEngine:
     def remove_margin(odds_home: float, odds_draw: float, odds_away: float) -> dict[str, float]:
         """
         Calculates the true probabilities by removing the bookmaker's margin from decimal odds.
-        
-        Args:
-            odds_home (float): Decimal odds for the home team to win.
-            odds_draw (float): Decimal odds for a draw.
-            odds_away (float): Decimal odds for the away team to win.
-            
-        Returns:
-            dict[str, float]: A dictionary with the true probabilities for home, draw, and away.
         """
         # Calculate implied probabilities
         prob_home = 1.0 / odds_home
@@ -97,15 +89,6 @@ class MathEngine:
         """
         Derives Expected Goals (xG) for home and away teams by minimizing the difference
         between bookmaker probabilities and Poisson-derived probabilities.
-        
-        Args:
-            prob_home: Bookmaker implied probability for home win.
-            prob_draw: Bookmaker implied probability for draw.
-            prob_away: Bookmaker implied probability for away win.
-            prob_over25: Bookmaker implied probability for over 2.5 goals.
-            
-        Returns:
-            tuple[float, float]: Optimized (lambda_home, lambda_away) representing Expected Goals.
         """
         def cost_function(lambdas):
             l_home, l_away = lambdas
@@ -148,14 +131,6 @@ class MathEngine:
     def generate_exact_score_matrix(lambda_home: float, lambda_away: float, max_goals: int = 5) -> pd.DataFrame:
         """
         Generates a matrix of exact score probabilities using independent Poisson distributions.
-        
-        Args:
-            lambda_home: Expected Goals for home team.
-            lambda_away: Expected Goals for away team.
-            max_goals: Maximum number of goals to compute probability for (default 5).
-            
-        Returns:
-            pd.DataFrame: Matrix with rows as home goals and columns as away goals.
         """
         goals_range = np.arange(max_goals + 1)
         prob_home = stats.poisson.pmf(goals_range, lambda_home)
@@ -174,22 +149,137 @@ class MathEngine:
         df.columns.name = "Away Goals"
         return df
 
-    @staticmethod
-    def find_contrarian_value(score_matrix: pd.DataFrame) -> dict:
+    def calculate_expected_points(self, score_matrix: pd.DataFrame, is_ko_phase: bool = False) -> pd.DataFrame:
         """
-        Finds the top 3 most probable exact scores from the score matrix.
-        
-        Args:
-            score_matrix: DataFrame containing joint probabilities for exact scores.
+        Calculates the Expected Points (xP) for tips from 0:0 up to 5:5 based on the specific ruleset.
+        """
+        def calc_points(tipped_home: int, tipped_away: int, actual_home: int, actual_away: int) -> int:
+            points = 0
             
-        Returns:
-            dict: Top 3 scorelines (e.g. '2-1') mapped to their probabilities.
-        """
-        # Flatten matrix into a Series with MultiIndex
-        stacked = score_matrix.stack()
-        # Create scoreline strings like "HomeGoals-AwayGoals"
-        stacked.index = [f"{home}-{away}" for home, away in stacked.index]
+            # Tendency
+            tipped_tendency = np.sign(tipped_home - tipped_away)
+            actual_tendency = np.sign(actual_home - actual_away)
+            tendency_correct = tipped_tendency == actual_tendency
+            
+            if tendency_correct:
+                points += 5
+                
+            # Exact goals
+            if tipped_home == actual_home:
+                points += 1
+            if tipped_away == actual_away:
+                points += 1
+                
+            # Goal difference
+            if tendency_correct and (tipped_home - tipped_away) == (actual_home - actual_away):
+                points += 3
+                
+            return points * 2 if is_ko_phase else points
+
+        results = []
+        max_tip_goals = 5
         
-        # Sort and get top 3 highest probabilities
-        top_3 = stacked.sort_values(ascending=False).head(3)
-        return top_3.to_dict()
+        # Iterating over all possible tips
+        for t_home in range(max_tip_goals + 1):
+            for t_away in range(max_tip_goals + 1):
+                xp = 0.0
+                
+                # Iterating over the probability matrix
+                for a_home_str in score_matrix.index:
+                    for a_away_str in score_matrix.columns:
+                        a_home = int(a_home_str)
+                        a_away = int(a_away_str)
+                        prob = score_matrix.loc[a_home_str, a_away_str]
+                        
+                        if prob > 0:
+                            pts = calc_points(t_home, t_away, a_home, a_away)
+                            xp += pts * prob
+                            
+                results.append({
+                    "Tipp": f"{t_home}:{t_away}",
+                    "xP": xp
+                })
+                
+        df_xp = pd.DataFrame(results)
+        df_xp = df_xp.sort_values(by="xP", ascending=False).head(5).reset_index(drop=True)
+        return df_xp
+
+    def _calculate_new_elo(self, rating_a: float, rating_b: float, actual_result_a: float, k_factor: int = 40) -> tuple[float, float]:
+        """ Helper for standard Elo calculation """
+        expected_a = self.get_elo_probability(rating_a, rating_b)
+        expected_b = 1 - expected_a
+        
+        new_rating_a = rating_a + k_factor * (actual_result_a - expected_a)
+        new_rating_b = rating_b + k_factor * ((1 - actual_result_a) - expected_b)
+        return new_rating_a, new_rating_b
+
+    def update_elo_from_api_scores(self, api_scores: list, processed_matches_file: str = 'data/processed_matches.json') -> int:
+        """
+        Updates Elo ratings based on completed matches from the API, 
+        ensuring idempotency by tracking processed match IDs.
+        """
+        import os
+        import json
+        processed_ids = []
+        if os.path.exists(processed_matches_file):
+            with open(processed_matches_file, 'r', encoding='utf-8') as f:
+                try:
+                    processed_ids = json.load(f)
+                except json.JSONDecodeError:
+                    processed_ids = []
+                    
+        processed_set = set(processed_ids)
+        updates_made = 0
+        
+        for match in api_scores:
+            match_id = match.get("id")
+            if not match_id or match_id in processed_set or not match.get("completed"):
+                continue
+                
+            home_team = match.get("home_team")
+            away_team = match.get("away_team")
+            scores = match.get("scores")
+            
+            if not scores:
+                continue
+                
+            # Parse scores
+            home_score = next((s["score"] for s in scores if s["name"] == home_team), None)
+            away_score = next((s["score"] for s in scores if s["name"] == away_team), None)
+            
+            if home_score is not None and away_score is not None:
+                try:
+                    home_score = int(home_score)
+                    away_score = int(away_score)
+                except ValueError:
+                    continue
+                    
+                home_norm = self.name_mapping.get(home_team, home_team)
+                away_norm = self.name_mapping.get(away_team, away_team)
+                
+                if home_norm in self.elo_df['team_name'].values and away_norm in self.elo_df['team_name'].values:
+                    elo_home = self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'].values[0]
+                    elo_away = self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'].values[0]
+                    
+                    if home_score > away_score:
+                        result_home = 1.0
+                    elif home_score < away_score:
+                        result_home = 0.0
+                    else:
+                        result_home = 0.5
+                        
+                    new_elo_home, new_elo_away = self._calculate_new_elo(elo_home, elo_away, result_home)
+                    
+                    self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'] = new_elo_home
+                    self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'] = new_elo_away
+                    
+                    processed_set.add(match_id)
+                    processed_ids.append(match_id)
+                    updates_made += 1
+                
+        if updates_made > 0:
+            os.makedirs(os.path.dirname(os.path.abspath(processed_matches_file)), exist_ok=True)
+            with open(processed_matches_file, 'w', encoding='utf-8') as f:
+                json.dump(processed_ids, f, indent=4)
+                
+        return updates_made
