@@ -8,6 +8,9 @@ Während klassische Tippspieler auf Intuition vertrauen, nutzt dieses System ein
 
 ## Kern-Features
 
+* **🔥 Automated Value Finder:** Das System berechnet im Hintergrund automatisch die xP-Matrizen für alle anstehenden Spiele und präsentiert dir in der "Top Value Bets"-Ansicht ein globales Ranking der absolut besten Tipps mit dem höchsten mathematischen Edge.
+* **⚡ File-Based Production Cache:** Ein robustes, festplattenbasiertes Caching-System (`matches_cache.json`) speichert fertige API-Daten für eine Stunde. Das ermöglicht den fehlerfreien Betrieb über mehrere Server-Worker (z.B. Uvicorn/Gunicorn) in der Cloud, ohne jemals Rate-Limits bei *The Odds API* zu triggern.
+* **Sleek Match Grid UI:** Ein modernes, kachelbasiertes Grid-System für die Spieleauswahl anstelle von altbackenen Dropdown-Menüs.
 * **Reverse-Engineering von Expected Goals (xG):** Ein mathematischer Solver optimiert asymmetrische Poisson-Verteilungen gegen die Live-Quoten der Buchmacher (1X2 und Over/Under 2.5), um die exakten xG-Werte beider Teams zu extrahieren.
 * **Poisson Score Matrix:** Generierung einer vollständigen Wahrscheinlichkeitsmatrix für alle exakten Spielergebnisse (von 0:0 bis 5:5).
 * **Expected Points (xP) Calculator:** Eine spezialisierte Regel-Engine, die das punktespezifische Regelwerk einer Tippgruppe (Tendenz, Tordifferenz, Exaktes Ergebnis) auf die Poisson-Matrix anwendet, um den Tipp mit der mathematisch höchsten Punkte-Erwartung zu berechnen ("Hedge-Betting").
