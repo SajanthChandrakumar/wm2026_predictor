@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WM 2026 Predictor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2>🏆 WC PREDICTOR</h2>
+            <hr>
+            <div id="quota-container" class="quota-container">
+                <span class="label">API Requests Remaining</span>
+                <div class="quota-value" id="quota-value">--</div>
+                <div class="quota-delta" id="quota-delta">-- used</div>
+            </div>
+            <hr>
+            <nav>
+                <ul>
+                    <li class="active">⊞ Dashboard</li>
+                    <li>☑️ My Predictions</li>
+                    <li>🏆 Tournament View</li>
+                    <li>🧮 Heatmap Matrix</li>
+                    <li>📄 Bet Slip</li>
+                    <li>🏅 Rankings</li>
+                    <li>⚙️ Settings</li>
+                </ul>
+            </nav>
+            <hr>
+            <button id="sync-elo-btn" class="action-btn">🔄 Sync Elo (API)</button>
+            <hr>
+            <h3>Spieleinstellungen</h3>
+            <label class="toggle-container">
+                <input type="checkbox" id="ko-toggle">
+                <span class="slider"></span>
+                K.O.-Phase (Doppelte Punkte)
+            </label>
+            <select id="match-selector" disabled>
+                <option value="">Loading Matches...</option>
+            </select>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header>
+                <h1>Turnier-Heatmap | Match Predictions</h1>
+                <button id="refresh-btn" class="action-btn">🔄 Refresh Data</button>
+            </header>
+            <hr>
+
+            <div class="layout-grid" id="layout-grid" style="display: none;">
+                <!-- Matrix Section -->
+                <section class="matrix-section">
+                    <h3 id="match-title">Team A vs Team B</h3>
+                    <div class="matrix-container" id="matrix-container">
+                        <!-- Heatmap will be generated here -->
+                    </div>
+                </section>
+
+                <!-- Odds Section -->
+                <section class="odds-section">
+                    <h3>Matches & Odds</h3>
+                    <div class="odds-card" id="odds-card">
+                        <!-- Odds injected here -->
+                    </div>
+
+                    <h4 class="mt-4">Die Value-Empfehlungen (xP)</h4>
+                    <div id="xp-container">
+                        <!-- XP Tips injected here -->
+                    </div>
+                </section>
+            </div>
+            
+            <div id="loading-spinner" class="spinner-container">
+                <div class="spinner"></div>
+                <p>Fetching Data API...</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
