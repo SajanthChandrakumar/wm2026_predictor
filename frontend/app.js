@@ -99,10 +99,18 @@ function renderMatchGrid(matches) {
     const grid = document.getElementById('matches-grid');
     grid.innerHTML = '';
     
-    matches.forEach(match => {
+    const sortedMatches = [...matches].sort((a, b) => new Date(a.raw_match.commence_time) - new Date(b.raw_match.commence_time));
+    
+    sortedMatches.forEach(match => {
+        const dateObj = new Date(match.raw_match.commence_time);
+        const timeString = dateObj.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
         const card = document.createElement('div');
         card.className = 'match-card';
-        card.innerHTML = `${match.home_disp} <div class="vs">vs</div> ${match.away_disp}`;
+        card.innerHTML = `
+            <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 8px;">🕒 ${timeString}</div>
+            ${match.home_disp} <div class="vs">vs</div> ${match.away_disp}
+        `;
         
         card.addEventListener('click', () => {
             selectedMatchId = match.id;
@@ -125,11 +133,17 @@ function renderValueBets(matches) {
         .sort((a, b) => b.max_xp - a.max_xp);
         
     sortedMatches.forEach(match => {
+        const dateObj = new Date(match.raw_match.commence_time);
+        const timeString = dateObj.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
         const card = document.createElement('div');
         card.className = 'match-card';
         card.style.borderColor = '#10B981';
         card.innerHTML = `
-            <div style="font-size: 0.85rem; color: #94A3B8;">${match.home_disp} vs ${match.away_disp}</div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #94A3B8;">
+                <span>${match.home_disp} vs ${match.away_disp}</span>
+                <span>🕒 ${timeString}</span>
+            </div>
             <div style="margin: 15px 0; font-size: 1.5rem; font-weight: bold; color: #FACC15;">Tipp: ${match.top_tip}</div>
             <div style="background: rgba(16, 185, 129, 0.1); color: #10B981; padding: 5px; border-radius: 4px;">Expected: ${match.max_xp.toFixed(2)} xP</div>
         `;
