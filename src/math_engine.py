@@ -302,11 +302,11 @@ class MathEngine:
                         
                 elo_home = self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'].values[0]
                 elo_away = self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'].values[0]
-                
+                    
                 hosts = ["United States", "Canada", "Mexico"]
                 is_home_host = home_norm in hosts
                 is_away_host = away_norm in hosts
-                    
+
                 if home_score > away_score:
                     result_home = 1.0
                 elif home_score < away_score:
@@ -314,10 +314,7 @@ class MathEngine:
                 else:
                     result_home = 0.5
                     
-                new_elo_home, new_elo_away = self._calculate_new_elo(
-                    elo_home, elo_away, result_home, 
-                    is_a_host=is_home_host, is_b_host=is_away_host
-                )
+                new_elo_home, new_elo_away = self._calculate_new_elo(elo_home, elo_away, result_home, is_a_host=is_home_host, is_b_host=is_away_host)
                 
                 self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'] = new_elo_home
                 self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'] = new_elo_away
