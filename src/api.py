@@ -6,6 +6,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.odds_engine import OddsApiEngine
@@ -220,8 +221,8 @@ def get_quota():
             return json.load(f)
     return {"remaining": "Unknown", "used": "Unknown"}
 
-@app.post("/api/sync_elo")
-def sync_elo():
+def perform_elo_sync() -> dict:
+    print("Automated Elo sync triggered...")
     odds_engine = OddsApiEngine()
     processed_json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'processed_matches.json')
     try:
@@ -232,11 +233,28 @@ def sync_elo():
         )
         if updates > 0:
             math_engine.elo_df.to_csv(math_engine.elo_csv_path, index=False)
+            print(f"Automated Elo sync completed: {updates} updates.")
             return {"status": "success", "updates": updates}
         else:
+            print("Automated Elo sync completed: No new matches.")
             return {"status": "info", "message": "No new matches."}
     except Exception as e:
+        print(f"Automated Elo sync failed: {str(e)}")
+        raise e
+
+@app.post("/api/sync_elo")
+def sync_elo():
+    try:
+        return perform_elo_sync()
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.on_event("startup")
+def startup_event():
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(perform_elo_sync, 'cron', hour=4, minute=0)
+    scheduler.start()
+    print("Scheduler started. Elo sync scheduled for 04:00 AM daily.")
 
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend'))
 os.makedirs(frontend_dir, exist_ok=True)
