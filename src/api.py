@@ -99,6 +99,7 @@ def get_matches(force: bool = False):
     """
     Holt die Spiele. Nutzt den Cache, es sei denn, force=True wird übergeben.
     """
+    math_engine.reload_elo_data()
     # 1. Cache prüfen (Wenn Daten da sind, nicht älter als 1 Stunde und kein Force-Refresh verlangt wird)
     if not force and os.path.exists(cache_file_path):
         try:
@@ -180,6 +181,7 @@ def get_matches(force: bool = False):
 
 @app.post("/api/predict")
 def predict_match(payload: dict):
+    math_engine.reload_elo_data()
     match_data = payload.get("match")
     is_ko = payload.get("is_ko", False)
     home_resting = payload.get("home_resting", False)

@@ -24,13 +24,13 @@ By using this software you agree that the author cannot be held liable for any l
 | | |
 |---|---|
 | **Odds ingestion** | Live H2H + Over/Under 2.5 odds via The Odds API; margin-removed using proportional normalisation; consensus median across all bookmakers |
-| **Elo ratings** | Dynamic Elo system for all 48 nations; K=60 with margin-of-victory multiplier; host nation bonus (+80) for USA, Canada, Mexico |
+| **Elo ratings** | Dynamic Elo system for all 48 nations; K=60 with margin-of-victory multiplier; host nation bonus (+80) for USA, Canada, Mexico applied exclusively to post-match updates |
 | **xG solver** | SciPy L-BFGS-B minimiser reverse-engineers Expected Goals from odds probabilities; Dixon-Coles corrected (ρ = −0.15) |
 | **Score matrix** | Full bivariate Poisson probability matrix (0–9 goals); Dixon-Coles low-score correction applied |
 | **xP calculator** | Simulates every possible tip against the score matrix using the exact SRF Tippspiel ruleset (5/1/1/3 pts, ×2 in K.O.) |
 | **Pool strategy** | Contrarian mode maximises E[advantage vs field] + λ·σ[advantage] instead of raw xP — designed to finish #1 in a pool, not just average well |
 | **K.O. phase** | Extra-time xG inflation is weighted by P(draw after 90 min), not a flat multiplier |
-| **Auto Elo sync** | Idempotent background job (APScheduler, 04:00 daily) updates ratings from completed match scores |
+| **Auto Elo sync** | Idempotent background job (APScheduler, 04:00 daily) updates ratings from completed match scores and strictly reloads global memory state |
 
 ---
 

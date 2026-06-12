@@ -92,7 +92,7 @@ Where:
 | 4 | 1.875 |
 | +n beyond 3 | +0.125 per extra goal |
 
-**Host nation advantage**: USA, Canada, and Mexico receive a **+80 Elo bonus** in all their matches. This is applied before computing `E_A`, not baked into the stored rating, so it only affects predictions and not the post-match rating update.
+**Host nation advantage**: USA, Canada, and Mexico receive a **+80 Elo bonus** in all their matches. This is applied retroactively during the post-match Elo update to correctly evaluate host performance against expectations, but is explicitly omitted from pre-match predictions, as the blended bookmaker odds already fully price in the home advantage.
 
 ---
 

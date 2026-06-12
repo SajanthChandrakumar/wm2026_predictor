@@ -48,6 +48,11 @@ class MathEngine:
         diff = rating_a - rating_b
         return 1 / (10 ** (-diff / 400) + 1)
 
+    def reload_elo_data(self):
+        """ Reloads the latest Elo dataframe from the CSV file to ensure global state is up-to-date """
+        if os.path.exists(self.elo_csv_path):
+            self.elo_df = pd.read_csv(self.elo_csv_path)
+
     def get_match_elo_probabilities(self, home_team: str, away_team: str, home_resting: bool = False, away_resting: bool = False) -> tuple[float, float]:
         home_norm = self.name_mapping.get(home_team, home_team)
         away_norm = self.name_mapping.get(away_team, away_team)
@@ -65,11 +70,7 @@ class MathEngine:
         if home_resting: elo_home -= 100
         if away_resting: elo_away -= 100
 
-        hosts = ["United States", "Canada", "Mexico"]
-        is_home_host = home_norm in hosts
-        is_away_host = away_norm in hosts
-
-        prob_home = self.get_elo_probability(elo_home, elo_away, is_a_host=is_home_host, is_b_host=is_away_host)
+        prob_home = self.get_elo_probability(elo_home, elo_away)
 
         return float(prob_home), float(1.0 - prob_home)
 
