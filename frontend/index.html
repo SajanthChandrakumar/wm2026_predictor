@@ -6,6 +6,7 @@
     <title>WM 2026 Predictor</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -23,6 +24,7 @@
                 <ul>
                     <li id="nav-dashboard" class="active">📊 Dashboard</li>
                     <li id="nav-value-bets">🔥 Top Value Bets</li>
+                    <li id="nav-elo-history">📈 Team Form</li>
                     <li>🎯 My Predictions</li>
                     <li>🏆 Tournament View</li>
                     <li>🎲 Bet Slip</li>
@@ -67,6 +69,17 @@
             <div id="value-bets-view" class="fade-in" style="display: none;">
                 <h2 style="margin-bottom: 10px; color: var(--text-muted); font-size: 1.1rem; font-weight: 500;">🔥 Top Value Bets (Global Ranking)</h2>
                 <div id="value-bets-grid" class="matches-grid"></div>
+            </div>
+
+            <div id="elo-history-view" class="fade-in" style="display: none;">
+                <h2 style="margin-bottom: 20px;">📈 Team Formkurve (Elo-Trend)</h2>
+                <div class="odds-card" style="margin-bottom: 20px;">
+                    <label for="history-team-selector" style="display:block; margin-bottom:8px; color:var(--text-muted);">Wähle ein Team:</label>
+                    <select id="history-team-selector" style="width:100%; padding: 8px 12px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem;"></select>
+                </div>
+                <div class="odds-card" style="background-color: var(--bg-card); padding: 20px;">
+                    <canvas id="eloChart" style="width: 100%; height: 400px;"></canvas>
+                </div>
             </div>
 
             <div class="layout-grid fade-in" id="layout-grid" style="display: none;">

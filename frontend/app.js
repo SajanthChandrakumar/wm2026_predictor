@@ -1,6 +1,7 @@
 let currentMatches = [];
 let maxProb = 0;
 let selectedMatchId = null;
+let eloChartInstance = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchQuota();
@@ -27,8 +28,19 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.classList.add('active');
         document.getElementById('layout-grid').style.display = 'none';
         document.getElementById('matches-view').style.display = 'none';
+        document.getElementById('elo-history-view').style.display = 'none';
         document.getElementById('value-bets-view').style.display = 'block';
         renderValueBets(currentMatches);
+    });
+
+    document.getElementById('nav-elo-history').addEventListener('click', (e) => {
+        document.querySelectorAll('nav li').forEach(li => li.classList.remove('active'));
+        e.target.classList.add('active');
+        document.getElementById('layout-grid').style.display = 'none';
+        document.getElementById('matches-view').style.display = 'none';
+        document.getElementById('value-bets-view').style.display = 'none';
+        document.getElementById('elo-history-view').style.display = 'block';
+        loadEloHistoryView();
     });
 
     document.getElementById('sync-elo-btn').addEventListener('click', async () => {

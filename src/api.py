@@ -238,6 +238,17 @@ def get_quota():
             return json.load(f)
     return {"remaining": "Unknown", "used": "Unknown"}
 
+@app.get("/api/elo_history")
+def get_elo_history():
+    history_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_history.json')
+    if os.path.exists(history_path):
+        try:
+            with open(history_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return {}
+    return {}
+
 def perform_elo_sync() -> dict:
     print("Automated Elo sync triggered...")
     odds_engine = OddsApiEngine()

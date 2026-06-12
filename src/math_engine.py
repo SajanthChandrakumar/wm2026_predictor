@@ -347,6 +347,36 @@ class MathEngine:
                 self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'] = new_elo_home
                 self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'] = new_elo_away
                 
+                # Elo History Logging
+                history_json_path = os.path.join(os.path.dirname(os.path.abspath(processed_matches_file)), 'elo_history.json')
+                history = {}
+                if os.path.exists(history_json_path):
+                    try:
+                        with open(history_json_path, 'r', encoding='utf-8') as hf:
+                            history = json.load(hf)
+                    except json.JSONDecodeError:
+                        history = {}
+                
+                for team_name, new_elo in [(home_norm, new_elo_home), (away_norm, new_elo_away)]:
+                    if team_name not in history:
+                        # Insert baseline entry using current CSV value before this update
+                        baseline_rows = self.elo_df.loc[self.elo_df['team_name'] == team_name, 'elo_rating']
+                        baseline_elo = float(baseline_rows.values[0]) if not baseline_rows.empty else 1500.0
+                        history[team_name] = [
+                            {"timestamp": 0, "match_id": "baseline", "elo": 1500.0}
+                        ]
+                    history[team_name].append({
+                        "timestamp": float(time.time()),
+                        "match_id": str(match_id),
+                        "elo": float(new_elo)
+                    })
+                
+                try:
+                    with open(history_json_path, 'w', encoding='utf-8') as hf:
+                        json.dump(history, hf, indent=4)
+                except Exception as e:
+                    print(f"Failed to write Elo history: {e}")
+                
                 processed_set.add(match_id)
                 processed_ids.append(match_id)
                 updates_made += 1

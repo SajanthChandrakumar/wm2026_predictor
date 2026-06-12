@@ -34,11 +34,13 @@ Während klassische Tippspieler auf Intuition vertrauen, nutzt dieses System ein
 
 ## Die mathematische Pipeline
 
-1. **Datensammlung:** Abruf der H2H- und Totals-Quoten über die REST-API.
-2. **Margen-Bereinigung:** Herausrechnen des "Vig" (Buchmacher-Vorteil), um die echten (impliziten) Wahrscheinlichkeiten zu erhalten.
-3. **Kostenfunktion & Solver:** Scipy.optimize minimiert die Fehlerquote zwischen den echten Wahrscheinlichkeiten und den theoretischen Ausgängen einer Poisson-Verteilung, um Lambda (xG) für Team A und B zu bestimmen.
-4. **xP-Simulation:** Das Skript simuliert jeden theoretisch möglichen Tipp gegen die Wahrscheinlichkeitsmatrix und summiert die Erwartungswerte basierend auf der Punktevergabe der Tippgruppe.
-5. **K.O.-Phasen-Anpassung:** Dynamische Skalierung der Expected Goals um den Faktor 1.33 bei Entscheidungsspielen, um die statistische Wahrscheinlichkeit von Toren in einer 120-minütigen Verlängerung korrekt einzupreisen.
+Die Vorhersage-Engine basiert nicht auf simplen Heuristiken, sondern auf einer mehrstufigen quantitativen Pipeline, die den aktuellen Branchenstandard der Sportdatenanalyse adaptiert:
+
+1. **Datensammlung & Margen-Bereinigung:** Abruf von H2H- und Totals-Live-Quoten über die REST-API. Die impliziten Wahrscheinlichkeiten der Buchmacher werden algorithmisch vom "Vig" (Buchmacher-Marge) bereinigt, um die wahren Eintrittswahrscheinlichkeiten zu extrahieren.
+2. **Dynamische Elo-Kalibrierung & Host Factor:** Die Grundstärke der Teams wird durch ein iteratives Elo-Rating-System abgebildet. Für die WM 2026 wendet das Modell einen systematischen *Host Nation Advantage* an: Nordamerikanische Gastgebernationen (USA, Kanada, Mexiko) erhalten vor der Wahrscheinlichkeitsberechnung einen dynamischen Boost von +80 Elo-Punkten, um den statistisch signifikanten Heimvorteil bei Weltmeisterschaften einzupreisen.
+3. **Kostenfunktion & Solver (xG Extraction):** Ein Scipy.optimize Solver minimiert die Fehlerquote (Sum of Squared Errors) zwischen den echten Quoten-Wahrscheinlichkeiten und den theoretischen Ausgängen einer Poisson-Verteilung. Dadurch werden die Expected Goals ($\lambda$, $\mu$) für beide Teams isoliert.
+4. **Dixon-Coles Korrektur:** Da unabhängige Poisson-Verteilungen die Häufigkeit von Low-Scoring-Draws im Fußball systematisch unterschätzen, interpoliert das Modell eine Dixon-Coles-Anpassung ($\rho = -0.15$). Dies korrigiert die Wahrscheinlichkeitsmatrix künstlich und kalibriert Ergebnisse wie 0:0 und 1:1 an die historische Realität des Fußballs.
+5. **Expected Points (xP) Simulation:** Das System simuliert jeden theoretisch möglichen Tippvektor gegen die Dixon-Coles-Matrix und berechnet über das spezifische Regelwerk der Tippgruppe den maximalen Erwartungswert ("Hedge-Betting").
 
 ## Installation & Setup
 

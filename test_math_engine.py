@@ -57,3 +57,29 @@ def test_calculate_expected_points(math_engine):
     # The best tip should be 2:1, earning exactly 10 points (5 for tendency, 1 for home, 1 for away, 3 for diff)
     assert xp_df.iloc[0]["Tipp"] == "2:1"
     assert xp_df.iloc[0]["xP"] == 10.0
+
+def test_host_advantage_elo(math_engine):
+    # Equal ratings without host advantage -> exactly 0.5
+    prob_neutral = math_engine.get_elo_probability(1500, 1500)
+    assert prob_neutral == 0.5
+
+    # With host advantage (+80 Elo applied to team A) -> must be > 0.5
+    prob_host = math_engine.get_elo_probability(1500, 1500, is_a_host=True)
+    assert prob_host > 0.5
+
+    # Mathematically verify the +80 Elo boost: 1 / (10^(-80/400) + 1) ≈ 0.613
+    assert round(prob_host, 3) == 0.613
+
+def test_dixon_coles_adjustment():
+    # rho=0.0 -> pure independent Poisson (no adjustment)
+    matrix_indep = MathEngine.generate_exact_score_matrix(1.2, 0.9, max_goals=3, rho=0.0)
+
+    # rho=-0.15 -> Dixon-Coles correction applied
+    matrix_dc = MathEngine.generate_exact_score_matrix(1.2, 0.9, max_goals=3, rho=-0.15)
+
+    # Low-scoring draws must be boosted by the correction
+    assert matrix_dc.loc["0", "0"] > matrix_indep.loc["0", "0"], "0:0 should be boosted by Dixon-Coles"
+    assert matrix_dc.loc["1", "1"] > matrix_indep.loc["1", "1"], "1:1 should be boosted by Dixon-Coles"
+
+    # Narrow wins (1:0) must be slightly penalized by the correction
+    assert matrix_dc.loc["1", "0"] < matrix_indep.loc["1", "0"], "1:0 should be penalized by Dixon-Coles"
