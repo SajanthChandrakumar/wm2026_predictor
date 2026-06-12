@@ -232,26 +232,40 @@ function renderDashboard(matchInfo, calcData) {
     document.getElementById('away-resting-label').textContent = matchInfo.away_disp + ' rotiert (B-Elf)';
     document.getElementById('match-title').textContent = `${matchInfo.home_disp} vs ${matchInfo.away_disp}`;
 
-    // Render Matrix
+    // Render Matrix with CSS Grid
     const matrixContainer = document.getElementById('matrix-container');
-    let tableHtml = '<table><thead><tr><th></th>';
+    let gridHtml = `
+        <div class="heatmap-wrapper">
+            <div class="heatmap-y-axis-label">${matchInfo.home_disp} Goals</div>
+            <div class="heatmap-x-axis-label">${matchInfo.away_disp} Goals</div>
+            <div class="heatmap-grid">
+                <!-- Top Left Empty Cell -->
+                <div class="heatmap-axis-cell empty"></div>
+    `;
     
-    // Columns (Away Goals)
-    for (let i = 0; i <= 5; i++) tableHtml += `<th>${i}</th>`;
-    tableHtml += '</tr></thead><tbody>';
+    // Top Row (X Axis - Away Goals)
+    for (let a = 0; a <= 5; a++) {
+        gridHtml += `<div class="heatmap-axis-cell x-axis">${a}</div>`;
+    }
 
     for (let h = 0; h <= 5; h++) {
-        tableHtml += `<tr><th>${h}</th>`;
+        // Y Axis (Home Goals)
+        gridHtml += `<div class="heatmap-axis-cell y-axis">${h}</div>`;
+        
         for (let a = 0; a <= 5; a++) {
             const prob = calcData.matrix[h] && calcData.matrix[h][a] ? calcData.matrix[h][a] : 0;
             const bgColor = getColorForProb(prob, calcData.max_prob);
             const probPercent = (prob * 100).toFixed(1) + '%';
-            tableHtml += `<td style="background-color: ${bgColor}">${probPercent}</td>`;
+            
+            gridHtml += `
+                <div class="heatmap-cell" style="background-color: ${bgColor}" title="${matchInfo.home_disp} ${h} : ${a} ${matchInfo.away_disp} (${probPercent})">
+                    <span class="cell-value">${probPercent}</span>
+                </div>
+            `;
         }
-        tableHtml += '</tr>';
     }
-    tableHtml += '</tbody></table>';
-    matrixContainer.innerHTML = tableHtml;
+    gridHtml += `</div></div>`;
+    matrixContainer.innerHTML = gridHtml;
 
     // Render Odds
     const oddsHtml = `
