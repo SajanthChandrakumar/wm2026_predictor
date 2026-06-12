@@ -47,6 +47,34 @@ class MathEngine:
         diff = rating_a - rating_b
         return 1 / (10 ** (-diff / 400) + 1)
 
+    def get_match_elo_probabilities(self, home_team: str, away_team: str, home_resting: bool = False, away_resting: bool = False) -> tuple[float, float]:
+        home_norm = self.name_mapping.get(home_team, home_team)
+        away_norm = self.name_mapping.get(away_team, away_team)
+        
+        if home_norm in self.elo_df['team_name'].values:
+            elo_home = self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'].values[0]
+        else:
+            elo_home = 1500.0
+            
+        if away_norm in self.elo_df['team_name'].values:
+            elo_away = self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'].values[0]
+        else:
+            elo_away = 1500.0
+            
+        hosts = ["United States", "Canada", "Mexico"]
+        is_home_host = home_norm in hosts
+        is_away_host = away_norm in hosts
+        
+        if is_home_host: elo_home += 80
+        if is_away_host: elo_away += 80
+        if home_resting: elo_home -= 100
+        if away_resting: elo_away -= 100
+        
+        diff = elo_home - elo_away
+        prob_home = 1 / (10 ** (-diff / 400) + 1)
+        
+        return float(prob_home), float(1.0 - prob_home)
+
     def merge_odds_and_elo(self, api_matches: list) -> pd.DataFrame:
         """
         Nimmt die JSON-Payload der API, extrahiert die Quoten,

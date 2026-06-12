@@ -171,6 +171,8 @@ def get_matches(force: bool = False):
 def predict_match(payload: dict):
     match_data = payload.get("match")
     is_ko = payload.get("is_ko", False)
+    home_resting = payload.get("home_resting", False)
+    away_resting = payload.get("away_resting", False)
     
     if not match_data:
         raise HTTPException(status_code=400, detail="Match data required")
@@ -179,10 +181,25 @@ def predict_match(payload: dict):
         math_engine.merge_odds_and_elo([match_data])
         odds = extract_odds(match_data)
         
-        prob_home = 1.0 / odds["home"]
-        prob_draw = 1.0 / odds["draw"]
-        prob_away = 1.0 / odds["away"]
+        b_prob_home = 1.0 / odds["home"]
+        b_prob_draw = 1.0 / odds["draw"]
+        b_prob_away = 1.0 / odds["away"]
         prob_over25 = 1.0 / odds["over25"]
+        
+        elo_prob_home, elo_prob_away = math_engine.get_match_elo_probabilities(
+            match_data.get("home_team"), 
+            match_data.get("away_team"), 
+            home_resting, 
+            away_resting
+        )
+        
+        blend_home = (b_prob_home * 0.7) + (elo_prob_home * 0.3)
+        blend_away = (b_prob_away * 0.7) + (elo_prob_away * 0.3)
+        
+        total = blend_home + blend_away + b_prob_draw
+        prob_home = blend_home / total
+        prob_away = blend_away / total
+        prob_draw = b_prob_draw / total
         
         xg_home, xg_away = math_engine.derive_xg_from_odds(
             prob_home=prob_home, prob_draw=prob_draw, prob_away=prob_away, prob_over25=prob_over25

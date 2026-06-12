@@ -47,9 +47,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('ko-toggle').addEventListener('change', () => {
-        if (selectedMatchId !== null) {
-            updatePrediction();
-        }
+        if (selectedMatchId) updatePrediction();
+    });
+
+    document.getElementById('home-resting-toggle').addEventListener('change', () => {
+        if (selectedMatchId) updatePrediction();
+    });
+
+    document.getElementById('away-resting-toggle').addEventListener('change', () => {
+        if (selectedMatchId) updatePrediction();
     });
 
     document.getElementById('back-btn').addEventListener('click', () => {
@@ -119,6 +125,8 @@ function renderMatchGrid(matches) {
         
         card.addEventListener('click', () => {
             selectedMatchId = match.id;
+            document.getElementById('home-resting-toggle').checked = false;
+            document.getElementById('away-resting-toggle').checked = false;
             document.getElementById('matches-view').style.display = 'none';
             document.getElementById('loading-spinner').style.display = 'flex';
             updatePrediction();
@@ -155,6 +163,8 @@ function renderValueBets(matches) {
         
         card.addEventListener('click', () => {
             selectedMatchId = match.id;
+            document.getElementById('home-resting-toggle').checked = false;
+            document.getElementById('away-resting-toggle').checked = false;
             document.getElementById('value-bets-view').style.display = 'none';
             document.getElementById('loading-spinner').style.display = 'flex';
             updatePrediction();
@@ -169,6 +179,8 @@ async function updatePrediction() {
 
     const matchData = currentMatches.find(m => m.id === selectedMatchId);
     const isKo = document.getElementById('ko-toggle').checked;
+    const homeResting = document.getElementById('home-resting-toggle').checked;
+    const awayResting = document.getElementById('away-resting-toggle').checked;
 
     document.getElementById('layout-grid').style.display = 'none';
     document.getElementById('loading-spinner').style.display = 'flex';
@@ -177,7 +189,12 @@ async function updatePrediction() {
         const res = await fetch('/api/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ match: matchData.raw_match, is_ko: isKo })
+            body: JSON.stringify({ 
+                match: matchData.raw_match, 
+                is_ko: isKo,
+                home_resting: homeResting,
+                away_resting: awayResting
+            })
         });
         
         if (!res.ok) {
@@ -199,6 +216,8 @@ async function updatePrediction() {
 }
 
 function renderDashboard(matchInfo, calcData) {
+    document.getElementById('home-resting-label').textContent = matchInfo.home_disp + ' rotiert (B-Elf)';
+    document.getElementById('away-resting-label').textContent = matchInfo.away_disp + ' rotiert (B-Elf)';
     document.getElementById('match-title').textContent = `${matchInfo.home_disp} vs ${matchInfo.away_disp}`;
 
     // Render Matrix
