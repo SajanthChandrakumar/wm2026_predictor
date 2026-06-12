@@ -4,116 +4,209 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WM 2026 Predictor</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=2">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar fade-in">
-            <h2>🏆 WC Predictor</h2>
-            <hr>
-            <div id="quota-container" class="quota-container">
-                <span class="label">API Remaining</span>
-                <div class="quota-value" id="quota-value">--</div>
-                <div class="quota-delta" id="quota-delta">-- used</div>
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <span class="logo-icon">⚽</span>
+                <span class="logo-text">WC <strong>2026</strong></span>
             </div>
-            <hr>
+
+            <div id="quota-container" class="quota-widget">
+                <span class="quota-label">API Remaining</span>
+                <div class="quota-value" id="quota-value">--</div>
+                <div class="quota-used" id="quota-delta">-- used</div>
+            </div>
+
             <nav>
+                <div class="nav-label">Views</div>
                 <ul>
-                    <li id="nav-dashboard" class="active">📊 Dashboard</li>
-                    <li id="nav-value-bets">🔥 Top Value Bets</li>
-                    <li id="nav-elo-history">📈 Team Form</li>
-                    <li>🎯 My Predictions</li>
-                    <li>🏆 Tournament View</li>
-                    <li>🎲 Bet Slip</li>
-                    <li>⚙️ Settings</li>
+                    <li id="nav-dashboard" class="active">
+                        <span class="nav-icon">📊</span> Dashboard
+                    </li>
+                    <li id="nav-value-bets">
+                        <span class="nav-icon">🔥</span> Top Value Bets
+                    </li>
+                    <li id="nav-elo-history">
+                        <span class="nav-icon">📈</span> Team Form
+                    </li>
                 </ul>
             </nav>
-            <hr>
-            <button id="sync-elo-btn" class="action-btn">🔄 Sync Elo API</button>
-            <hr>
-            <h3>Spieleinstellungen</h3>
-            <label class="toggle-container">
-                <input type="checkbox" id="ko-toggle">
-                <span class="slider"></span>
-                K.O.-Phase (Doppelte Punkte)
-            </label>
-            <label class="toggle-container">
-                <input type="checkbox" id="home-resting-toggle">
-                <span class="slider"></span>
-                <span id="home-resting-label">Heimteam rotiert</span>
-            </label>
-            <label class="toggle-container">
-                <input type="checkbox" id="away-resting-toggle">
-                <span class="slider"></span>
-                <span id="away-resting-label">Auswärtsteam rotiert</span>
-            </label>
-            <hr>
+
+            <div class="sidebar-divider"></div>
+
+            <div class="sidebar-section">
+                <div class="section-label">Match Settings</div>
+                <label class="toggle-row">
+                    <span class="toggle-text">
+                        <span class="toggle-icon">🏆</span>
+                        <span>
+                            <strong>K.O. Phase</strong>
+                            <small>Points doubled</small>
+                        </span>
+                    </span>
+                    <div class="toggle-wrap">
+                        <input type="checkbox" id="ko-toggle">
+                        <span class="toggle-track"></span>
+                    </div>
+                </label>
+                <label class="toggle-row">
+                    <span class="toggle-text">
+                        <span class="toggle-icon">💤</span>
+                        <span>
+                            <strong id="home-resting-label">Home rotates</strong>
+                            <small>B-squad / resting</small>
+                        </span>
+                    </span>
+                    <div class="toggle-wrap">
+                        <input type="checkbox" id="home-resting-toggle">
+                        <span class="toggle-track"></span>
+                    </div>
+                </label>
+                <label class="toggle-row">
+                    <span class="toggle-text">
+                        <span class="toggle-icon">💤</span>
+                        <span>
+                            <strong id="away-resting-label">Away rotates</strong>
+                            <small>B-squad / resting</small>
+                        </span>
+                    </span>
+                    <div class="toggle-wrap">
+                        <input type="checkbox" id="away-resting-toggle">
+                        <span class="toggle-track"></span>
+                    </div>
+                </label>
+            </div>
+
+            <div class="sidebar-divider"></div>
+
+            <div class="sidebar-section">
+                <div class="section-label">Pool Strategy</div>
+                <div class="strategy-widget">
+                    <div class="strategy-header">
+                        <span class="strategy-mode-badge" id="strategy-badge">Safe</span>
+                        <span class="strategy-value" id="aggressiveness-label">0.0</span>
+                    </div>
+                    <input type="range" id="aggressiveness-slider" class="strategy-slider" min="0" max="1.5" step="0.1" value="0">
+                    <div class="strategy-scale">
+                        <span>Chalk</span>
+                        <span>Contrarian</span>
+                    </div>
+                    <p class="strategy-hint" id="strategy-hint">Tipping the most likely score. Best when you're leading.</p>
+                </div>
+            </div>
+
+            <div class="sidebar-divider"></div>
+
+            <button id="refresh-btn" class="sidebar-btn primary">
+                <span>🔄</span> Refresh Data
+            </button>
+            <button id="sync-elo-btn" class="sidebar-btn">
+                <span>⚡</span> Sync Elo Ratings
+            </button>
         </aside>
 
-        <!-- Main Content -->
-        <main class="main-content fade-in">
-            <header>
-                <h1>Turnier-Übersicht</h1>
-                <button id="refresh-btn" class="action-btn" style="width: auto;">🔄 Refresh Data</button>
-            </header>
-            <hr>
-
-            <div id="matches-view" class="fade-in">
-                <h2 style="margin-bottom: 10px; color: var(--text-muted); font-size: 1.1rem; font-weight: 500;">Bevorstehende Spiele</h2>
+        <main class="main-content">
+            <!-- Dashboard View -->
+            <div id="matches-view">
+                <div class="page-header">
+                    <div>
+                        <h1>Tournament Overview</h1>
+                        <p class="page-subtitle">Click any match for a full prediction breakdown</p>
+                    </div>
+                </div>
                 <div id="matches-grid" class="matches-grid"></div>
             </div>
 
-            <div id="value-bets-view" class="fade-in" style="display: none;">
-                <h2 style="margin-bottom: 10px; color: var(--text-muted); font-size: 1.1rem; font-weight: 500;">🔥 Top Value Bets (Global Ranking)</h2>
+            <!-- Value Bets View -->
+            <div id="value-bets-view" style="display:none;">
+                <div class="page-header">
+                    <div>
+                        <h1>Top Value Bets</h1>
+                        <p class="page-subtitle">Ranked by Expected Points — highest xP first</p>
+                    </div>
+                </div>
                 <div id="value-bets-grid" class="matches-grid"></div>
             </div>
 
-            <div id="elo-history-view" class="fade-in" style="display: none;">
-                <h2 style="margin-bottom: 20px;">📈 Team Formkurve (Elo-Trend)</h2>
-                <div class="odds-card" style="margin-bottom: 20px;">
-                    <label for="history-team-selector" style="display:block; margin-bottom:8px; color:var(--text-muted);">Wähle ein Team:</label>
-                    <select id="history-team-selector" style="width:100%; padding: 8px 12px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem;"></select>
+            <!-- Elo History View -->
+            <div id="elo-history-view" style="display:none;">
+                <div class="page-header">
+                    <div>
+                        <h1>Team Form</h1>
+                        <p class="page-subtitle">Elo rating trajectory across the tournament</p>
+                    </div>
                 </div>
-                <div class="odds-card" style="background-color: var(--bg-card); padding: 20px;">
-                    <canvas id="eloChart" style="width: 100%; height: 400px;"></canvas>
+                <div class="glass-card" style="margin-bottom: 20px; padding: 20px;">
+                    <label for="history-team-selector" class="field-label">Select Team</label>
+                    <select id="history-team-selector" class="select-field"></select>
+                </div>
+                <div class="glass-card" style="padding: 24px;">
+                    <canvas id="eloChart" height="400"></canvas>
                 </div>
             </div>
 
-            <div class="layout-grid fade-in" id="layout-grid" style="display: none;">
-                <button id="back-btn" class="action-btn" style="width: auto; margin-bottom: 20px; grid-column: 1 / -1;">⬅ Zurück zur Übersicht</button>
-                
-                <!-- Matrix Section -->
-                <section class="matrix-section">
-                    <h3 id="match-title">Team A vs Team B</h3>
-                    <div class="matrix-container" id="matrix-container">
-                        <!-- Heatmap will be generated here -->
+            <!-- Detail View -->
+            <div id="detail-view" style="display:none;">
+                <div class="detail-header">
+                    <button id="back-btn" class="back-btn">
+                        ← Back
+                    </button>
+                    <div class="detail-title-block">
+                        <h1 id="match-title">Team A vs Team B</h1>
+                        <div id="match-meta" class="match-meta-row"></div>
                     </div>
-                </section>
+                </div>
 
-                <!-- Odds Section -->
-                <section class="odds-section">
-                    <h3>Matches & Odds</h3>
-                    <div class="odds-card" id="odds-card">
-                        <!-- Odds injected here -->
-                    </div>
+                <!-- xG Summary Row -->
+                <div class="xg-row" id="xg-row"></div>
 
-                    <h4 class="mt-4">Die Value-Empfehlungen (xP)</h4>
-                    <div id="xp-container">
-                        <!-- XP Tips injected here -->
-                    </div>
-                </section>
+                <!-- Main Grid -->
+                <div class="detail-grid">
+                    <!-- Heatmap -->
+                    <section class="glass-card heatmap-card">
+                        <div class="card-title">Score Probability Matrix</div>
+                        <div class="matrix-container" id="matrix-container"></div>
+                    </section>
+
+                    <!-- Tips Panel -->
+                    <section class="tips-panel">
+                        <!-- Odds -->
+                        <div class="glass-card odds-card" id="odds-card"></div>
+
+                        <!-- Tabs -->
+                        <div class="tab-bar">
+                            <button class="tab active" id="tab-safe" onclick="switchTab('safe')">
+                                ⚡ Safe Play
+                            </button>
+                            <button class="tab" id="tab-pool" onclick="switchTab('pool')">
+                                🎲 Pool Strategy
+                            </button>
+                        </div>
+
+                        <div id="panel-safe" class="tab-panel active-panel">
+                            <div id="xp-container"></div>
+                        </div>
+
+                        <div id="panel-pool" class="tab-panel" style="display:none;">
+                            <div id="pool-container"></div>
+                        </div>
+                    </section>
+                </div>
             </div>
-            
-            <div id="loading-spinner" class="spinner-container fade-in" style="display: none;">
+
+            <!-- Loading -->
+            <div id="loading-spinner" class="spinner-container" style="display:none;">
                 <div class="spinner"></div>
-                <p style="color: var(--text-muted); font-weight: 500;">Fetching Data API...</p>
+                <p class="spinner-label">Computing predictions…</p>
             </div>
         </main>
     </div>
 
-    <script src="app.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js?v=5"></script>
 </body>
 </html>

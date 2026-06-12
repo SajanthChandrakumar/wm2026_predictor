@@ -1,149 +1,183 @@
 let currentMatches = [];
-let maxProb = 0;
 let selectedMatchId = null;
+let lastCalcData = null;
 let eloChartInstance = null;
+let aggressivenessDebounce = null;
 
+// ── Boot ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     fetchQuota();
-    fetchMatches(); 
+    fetchMatches();
+    initSidebar();
+});
 
-    document.getElementById('refresh-btn').addEventListener('click', () => {
-        document.getElementById('layout-grid').style.display = 'none';
-        document.getElementById('matches-view').style.display = 'none';
-        document.getElementById('value-bets-view').style.display = 'none';
-        document.getElementById('loading-spinner').style.display = 'flex';
-        fetchMatches(true); 
-    });
-
-    document.getElementById('nav-dashboard').addEventListener('click', (e) => {
-        document.querySelectorAll('nav li').forEach(li => li.classList.remove('active'));
-        e.target.classList.add('active');
-        document.getElementById('layout-grid').style.display = 'none';
-        document.getElementById('value-bets-view').style.display = 'none';
-        document.getElementById('matches-view').style.display = 'block';
-    });
-
-    document.getElementById('nav-value-bets').addEventListener('click', (e) => {
-        document.querySelectorAll('nav li').forEach(li => li.classList.remove('active'));
-        e.target.classList.add('active');
-        document.getElementById('layout-grid').style.display = 'none';
-        document.getElementById('matches-view').style.display = 'none';
-        document.getElementById('elo-history-view').style.display = 'none';
-        document.getElementById('value-bets-view').style.display = 'block';
+function initSidebar() {
+    // Nav
+    document.getElementById('nav-dashboard').addEventListener('click', () => showView('dashboard'));
+    document.getElementById('nav-value-bets').addEventListener('click', () => {
+        showView('value-bets');
         renderValueBets(currentMatches);
     });
-
-    document.getElementById('nav-elo-history').addEventListener('click', (e) => {
-        document.querySelectorAll('nav li').forEach(li => li.classList.remove('active'));
-        e.target.classList.add('active');
-        document.getElementById('layout-grid').style.display = 'none';
-        document.getElementById('matches-view').style.display = 'none';
-        document.getElementById('value-bets-view').style.display = 'none';
-        document.getElementById('elo-history-view').style.display = 'block';
+    document.getElementById('nav-elo-history').addEventListener('click', () => {
+        showView('elo-history');
         loadEloHistoryView();
     });
 
-    document.getElementById('sync-elo-btn').addEventListener('click', async () => {
-        const btn = document.getElementById('sync-elo-btn');
-        btn.textContent = 'Syncing...';
-        btn.disabled = true;
-        try {
-            const res = await fetch('/api/sync_elo', { method: 'POST' });
-            const data = await res.json();
-            alert(data.updates ? `Erfolgreich! ${data.updates} neue Spiele verarbeitet.` : 'Keine neuen Spiele.');
-        } catch (e) {
-            alert('Fehler bei der Synchronisation.');
-        }
-        btn.textContent = '🔄 Sync Elo (API)';
-        btn.disabled = false;
+    // Buttons
+    document.getElementById('refresh-btn').addEventListener('click', () => {
+        showView('loading');
+        fetchMatches(true);
+    });
+    document.getElementById('sync-elo-btn').addEventListener('click', syncElo);
+
+    // Match toggles — re-predict on change
+    ['ko-toggle', 'home-resting-toggle', 'away-resting-toggle'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => {
+            if (selectedMatchId) updatePrediction();
+        });
     });
 
-    document.getElementById('ko-toggle').addEventListener('change', () => {
-        if (selectedMatchId) updatePrediction();
-    });
-
-    document.getElementById('home-resting-toggle').addEventListener('change', () => {
-        if (selectedMatchId) updatePrediction();
-    });
-
-    document.getElementById('away-resting-toggle').addEventListener('change', () => {
-        if (selectedMatchId) updatePrediction();
-    });
-
+    // Back
     document.getElementById('back-btn').addEventListener('click', () => {
-        document.getElementById('layout-grid').style.display = 'none';
-        document.getElementById('matches-view').style.display = 'block';
         selectedMatchId = null;
+        showView('dashboard');
     });
-});
 
+    // Aggressiveness slider
+    const slider = document.getElementById('aggressiveness-slider');
+    slider.addEventListener('input', () => {
+        updateStrategyUI(parseFloat(slider.value));
+        if (!selectedMatchId) return;
+        clearTimeout(aggressivenessDebounce);
+        aggressivenessDebounce = setTimeout(() => updatePrediction(), 400);
+    });
+    updateStrategyUI(0);
+}
+
+// ── Views ─────────────────────────────────────────────────────
+function showView(view) {
+    ['matches-view', 'value-bets-view', 'elo-history-view', 'detail-view', 'loading-spinner']
+        .forEach(id => document.getElementById(id).style.display = 'none');
+
+    document.querySelectorAll('nav li').forEach(li => li.classList.remove('active'));
+
+    const map = {
+        'dashboard':   ['matches-view',     'nav-dashboard'],
+        'value-bets':  ['value-bets-view',  'nav-value-bets'],
+        'elo-history': ['elo-history-view',  'nav-elo-history'],
+        'detail':      ['detail-view',       null],
+        'loading':     ['loading-spinner',   null],
+    };
+    const [viewId, navId] = map[view] || ['matches-view', 'nav-dashboard'];
+    document.getElementById(viewId).style.display = '';
+    if (navId) document.getElementById(navId).classList.add('active');
+}
+
+// ── Strategy UI ───────────────────────────────────────────────
+function updateStrategyUI(val) {
+    document.getElementById('aggressiveness-label').textContent = val.toFixed(1);
+    const badge  = document.getElementById('strategy-badge');
+    const hint   = document.getElementById('strategy-hint');
+
+    if (val === 0) {
+        badge.className = 'strategy-mode-badge';
+        badge.textContent = 'Safe';
+        hint.textContent = 'Tipping the most likely score. Best when leading or in a small pool.';
+    } else if (val <= 0.3) {
+        badge.className = 'strategy-mode-badge';
+        badge.textContent = 'Soft';
+        hint.textContent = 'Same tendency as the field, different exact score. Low cost, good differentiation.';
+    } else if (val <= 0.7) {
+        badge.className = 'strategy-mode-badge aggressive';
+        badge.textContent = 'Contrarian';
+        hint.textContent = 'Accepting lower average points to build a ceiling over the field. Good when chasing.';
+    } else {
+        badge.className = 'strategy-mode-badge max-aggro';
+        badge.textContent = 'High Risk';
+        hint.textContent = 'Maximum variance — betting the field gets the result completely wrong. KO phase / big deficit only.';
+    }
+}
+
+// ── API Calls ─────────────────────────────────────────────────
 async function fetchQuota() {
     try {
-        const res = await fetch('/api/quota');
-        const data = await res.json();
-        document.getElementById('quota-value').textContent = data.remaining !== undefined ? data.remaining : 'Unknown';
-        document.getElementById('quota-delta').textContent = `-${data.used !== undefined ? data.used : '?'} used`;
-    } catch (e) {
-        console.error("Failed to fetch quota", e);
-    }
+        const data = await (await fetch('/api/quota')).json();
+        document.getElementById('quota-value').textContent = data.remaining ?? '--';
+        document.getElementById('quota-delta').textContent = `${data.used ?? '?'} used`;
+    } catch {}
 }
 
 async function fetchMatches(force = false) {
+    showView('loading');
     try {
         const url = force ? '/api/matches?force=true' : '/api/matches';
-        const res = await fetch(url);
-        currentMatches = await res.json();
-        
+        currentMatches = await (await fetch(url)).json();
         renderMatchGrid(currentMatches);
-        
-        // Refresh the Value Bets view if it's currently active
-        if (document.getElementById('nav-value-bets').classList.contains('active')) {
-            document.getElementById('matches-view').style.display = 'none';
-            document.getElementById('value-bets-view').style.display = 'block';
-            renderValueBets(currentMatches);
-        } else {
-            document.getElementById('value-bets-view').style.display = 'none';
-            document.getElementById('matches-view').style.display = 'block';
-        }
-        
-        document.getElementById('loading-spinner').style.display = 'none';
-        fetchQuota(); 
+        showView('dashboard');
+        fetchQuota();
     } catch (e) {
-        document.getElementById('loading-spinner').innerHTML = `<p style="color:red">Fehler: ${e.message}</p>`;
+        document.getElementById('loading-spinner').innerHTML =
+            `<p style="color:var(--danger)">Error: ${e.message}</p>`;
     }
 }
 
+async function syncElo() {
+    const btn = document.getElementById('sync-elo-btn');
+    btn.disabled = true;
+    btn.textContent = 'Syncing…';
+    try {
+        const data = await (await fetch('/api/sync_elo', { method: 'POST' })).json();
+        btn.textContent = data.updates ? `✓ ${data.updates} updated` : '✓ Up to date';
+    } catch {
+        btn.textContent = '✗ Sync failed';
+    }
+    setTimeout(() => { btn.textContent = '⚡ Sync Elo Ratings'; btn.disabled = false; }, 3000);
+}
+
+async function updatePrediction() {
+    if (!selectedMatchId) return;
+    const matchData = currentMatches.find(m => m.id === selectedMatchId);
+    if (!matchData) return;
+
+    const aggressiveness = parseFloat(document.getElementById('aggressiveness-slider').value);
+    showView('loading');
+
+    try {
+        const res = await fetch('/api/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                match: matchData.raw_match,
+                is_ko: document.getElementById('ko-toggle').checked,
+                home_resting: document.getElementById('home-resting-toggle').checked,
+                away_resting: document.getElementById('away-resting-toggle').checked,
+                aggressiveness,
+            })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || 'API error');
+        }
+        lastCalcData = await res.json();
+        renderDetail(matchData, lastCalcData);
+        showView('detail');
+    } catch (e) {
+        document.getElementById('loading-spinner').innerHTML =
+            `<div style="text-align:center"><p style="color:var(--danger);font-weight:600">${e.message}</p>
+             <button onclick="showView('dashboard')" class="sidebar-btn" style="width:auto;margin-top:16px;">← Back</button></div>`;
+    }
+}
+
+// ── Render: Match Grid ────────────────────────────────────────
 function renderMatchGrid(matches) {
     const grid = document.getElementById('matches-grid');
     grid.innerHTML = '';
-    
-    const sortedMatches = [...matches].sort((a, b) => new Date(a.raw_match.commence_time) - new Date(b.raw_match.commence_time));
-    
-    sortedMatches.forEach(match => {
-        const dateObj = new Date(match.raw_match.commence_time);
-        const timeString = dateObj.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const sorted = [...matches].sort((a, b) =>
+        new Date(a.raw_match.commence_time) - new Date(b.raw_match.commence_time));
 
-        const card = document.createElement('div');
-        card.className = 'match-card fade-in';
-        card.style.animationDelay = `${Math.min(sortedMatches.indexOf(match) * 0.05, 0.5)}s`;
-        card.innerHTML = `
-            <div class="match-time">🕒 ${timeString}</div>
-            <div class="teams">
-                <span>${match.home_disp}</span>
-                <span class="vs">vs</span>
-                <span>${match.away_disp}</span>
-            </div>
-        `;
-        
-        card.addEventListener('click', () => {
-            selectedMatchId = match.id;
-            document.getElementById('home-resting-toggle').checked = false;
-            document.getElementById('away-resting-toggle').checked = false;
-            document.getElementById('matches-view').style.display = 'none';
-            document.getElementById('loading-spinner').style.display = 'flex';
-            updatePrediction();
-        });
-        
+    sorted.forEach((match, i) => {
+        const card = buildMatchCard(match, i, false);
+        card.addEventListener('click', () => openMatch(match.id));
         grid.appendChild(card);
     });
 }
@@ -151,193 +185,345 @@ function renderMatchGrid(matches) {
 function renderValueBets(matches) {
     const grid = document.getElementById('value-bets-grid');
     grid.innerHTML = '';
-    
-    // Filter and sort by max_xp descending
-    const sortedMatches = matches
-        .filter(m => m.max_xp && m.max_xp > 0)
+    const sorted = [...matches]
+        .filter(m => m.max_xp > 0)
         .sort((a, b) => b.max_xp - a.max_xp);
-        
-    sortedMatches.forEach(match => {
-        const dateObj = new Date(match.raw_match.commence_time);
-        const timeString = dateObj.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-        const card = document.createElement('div');
-        card.className = 'match-card value-bet-card fade-in';
-        card.style.animationDelay = `${Math.min(sortedMatches.indexOf(match) * 0.05, 0.5)}s`;
-        card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <span style="font-weight: 700; font-size: 1.1rem;">${match.home_disp} <span style="color:var(--text-muted);font-size:0.9rem;margin:0 6px;">vs</span> ${match.away_disp}</span>
-                <span class="match-time" style="margin:0;">🕒 ${timeString}</span>
-            </div>
-            <div class="value-tip">${match.top_tip}</div>
-            <div class="value-xp">Expected Return: ${match.max_xp.toFixed(2)} xP</div>
-        `;
-        
-        card.addEventListener('click', () => {
-            selectedMatchId = match.id;
-            document.getElementById('home-resting-toggle').checked = false;
-            document.getElementById('away-resting-toggle').checked = false;
-            document.getElementById('value-bets-view').style.display = 'none';
-            document.getElementById('loading-spinner').style.display = 'flex';
-            updatePrediction();
-        });
-        
+    sorted.forEach((match, i) => {
+        const card = buildMatchCard(match, i, true);
+        card.addEventListener('click', () => openMatch(match.id));
         grid.appendChild(card);
     });
 }
 
-async function updatePrediction() {
-    if (!selectedMatchId) return;
+function buildMatchCard(match, index, isValue) {
+    const card = document.createElement('div');
+    card.className = `match-card${isValue ? ' value-card' : ''}`;
+    card.style.animationDelay = `${Math.min(index * 0.04, 0.4)}s`;
 
-    const matchData = currentMatches.find(m => m.id === selectedMatchId);
-    const isKo = document.getElementById('ko-toggle').checked;
-    const homeResting = document.getElementById('home-resting-toggle').checked;
-    const awayResting = document.getElementById('away-resting-toggle').checked;
+    const d = new Date(match.raw_match.commence_time);
+    const timeStr = d.toLocaleDateString('de-DE', {
+        weekday: 'short', day: '2-digit', month: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+    });
 
-    document.getElementById('layout-grid').style.display = 'none';
-    document.getElementById('loading-spinner').style.display = 'flex';
+    const probs = computeImpliedProbs(match.odds);
+    const tipHtml = match.top_tip && match.top_tip !== 'N/A'
+        ? `<div class="card-tip-row">
+             <span class="card-tip-label">Top tip</span>
+             <span class="card-tip-badge">${match.top_tip}</span>
+           </div>`
+        : '';
 
-    try {
-        const res = await fetch('/api/predict', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                match: matchData.raw_match, 
-                is_ko: isKo,
-                home_resting: homeResting,
-                away_resting: awayResting
-            })
-        });
-        
-        if (!res.ok) {
-            let errorMsg = "API Error";
-            try {
-                const errorData = await res.json();
-                errorMsg = errorData.detail || errorMsg;
-            } catch(e) {}
-            throw new Error(errorMsg);
-        }
-        const data = await res.json();
-
-        renderDashboard(matchData, data);
-        document.getElementById('loading-spinner').style.display = 'none';
-        document.getElementById('layout-grid').style.display = 'grid';
-    } catch (e) {
-        document.getElementById('loading-spinner').innerHTML = `<p style="color:red">Berechnungsfehler: ${e.message}</p>`;
-    }
+    card.innerHTML = `
+        <div class="card-time">${timeStr}</div>
+        <div class="card-teams">
+            <span class="card-team">${match.home_disp}</span>
+            <span class="card-vs">vs</span>
+            <span class="card-team">${match.away_disp}</span>
+        </div>
+        <div class="prob-bar">
+            <div class="prob-home" style="width:${probs.home*100}%"></div>
+            <div class="prob-draw" style="width:${probs.draw*100}%"></div>
+            <div class="prob-away" style="width:${probs.away*100}%"></div>
+        </div>
+        <div class="prob-labels">
+            <span class="home-pct">${pct(probs.home)}</span>
+            <span class="draw-pct">${pct(probs.draw)}</span>
+            <span class="away-pct">${pct(probs.away)}</span>
+        </div>
+        ${tipHtml}
+    `;
+    return card;
 }
 
-function renderDashboard(matchInfo, calcData) {
-    document.getElementById('home-resting-label').textContent = matchInfo.home_disp + ' rotiert (B-Elf)';
-    document.getElementById('away-resting-label').textContent = matchInfo.away_disp + ' rotiert (B-Elf)';
-    document.getElementById('match-title').textContent = `${matchInfo.home_disp} vs ${matchInfo.away_disp}`;
+function openMatch(id) {
+    selectedMatchId = id;
+    const match = currentMatches.find(m => m.id === id);
+    document.getElementById('home-resting-label').textContent = (match?.home_disp ?? 'Home') + ' rotates';
+    document.getElementById('away-resting-label').textContent = (match?.away_disp ?? 'Away') + ' rotates';
+    document.getElementById('home-resting-toggle').checked = false;
+    document.getElementById('away-resting-toggle').checked = false;
+    updatePrediction();
+}
 
-    // Render Matrix with CSS Grid
-    const matrixContainer = document.getElementById('matrix-container');
-    let gridHtml = `
-        <div class="heatmap-wrapper">
-            <div class="heatmap-y-axis-label">${matchInfo.home_disp} Goals</div>
-            <div class="heatmap-x-axis-label">${matchInfo.away_disp} Goals</div>
-            <div class="heatmap-grid">
-                <!-- Top Left Empty Cell -->
-                <div class="heatmap-axis-cell empty"></div>
-    `;
-    
-    // Top Row (X Axis - Away Goals)
-    for (let a = 0; a <= 5; a++) {
-        gridHtml += `<div class="heatmap-axis-cell x-axis">${a}</div>`;
-    }
+// ── Render: Detail View ───────────────────────────────────────
+function renderDetail(matchInfo, calc) {
+    const isKo = document.getElementById('ko-toggle').checked;
 
-    for (let h = 0; h <= 5; h++) {
-        // Y Axis (Home Goals)
-        gridHtml += `<div class="heatmap-axis-cell y-axis">${h}</div>`;
-        
-        for (let a = 0; a <= 5; a++) {
-            const prob = calcData.matrix[h] && calcData.matrix[h][a] ? calcData.matrix[h][a] : 0;
-            const bgColor = getColorForProb(prob, calcData.max_prob);
-            const probPercent = (prob * 100).toFixed(1) + '%';
-            
-            gridHtml += `
-                <div class="heatmap-cell" style="background-color: ${bgColor}" title="${matchInfo.home_disp} ${h} : ${a} ${matchInfo.away_disp} (${probPercent})">
-                    <span class="cell-value">${probPercent}</span>
-                </div>
-            `;
-        }
-    }
-    gridHtml += `</div></div>`;
-    matrixContainer.innerHTML = gridHtml;
+    // Title & meta
+    document.getElementById('match-title').textContent =
+        `${matchInfo.home_disp} vs ${matchInfo.away_disp}`;
 
-    // Render Odds
-    const oddsHtml = `
-        <div class="team-row">
-            <span>${matchInfo.home_disp}</span>
-            <span class="odds-pill">${matchInfo.odds.home.toFixed(2)}</span>
+    const metaChips = [
+        isKo ? '<span class="meta-chip ko">🏆 K.O. Phase</span>' : '<span class="meta-chip">Group Stage</span>',
+        `<span class="meta-chip">xG ${calc.xg_home.toFixed(2)} – ${calc.xg_away.toFixed(2)}</span>`,
+    ];
+    document.getElementById('match-meta').innerHTML = metaChips.join('');
+
+    // xG row
+    document.getElementById('xg-row').innerHTML = `
+        <div class="xg-team home">
+            <span class="xg-team-name">${matchInfo.home_disp}</span>
+            <span class="xg-value">${calc.xg_home.toFixed(2)}</span>
+            <span class="xg-label">Expected Goals</span>
         </div>
-        <div class="team-row">
-            <span style="color: #94A3B8; font-size: 14px;">Draw</span>
-            <span class="odds-pill" style="color: #94A3B8;">${matchInfo.odds.draw.toFixed(2)}</span>
+        <div class="xg-divider">
+            <span>vs</span>
+            <small>xG</small>
         </div>
-        <div class="team-row" style="margin-bottom: 0;">
-            <span>${matchInfo.away_disp}</span>
-            <span class="odds-pill">${matchInfo.odds.away.toFixed(2)}</span>
+        <div class="xg-team away">
+            <span class="xg-team-name">${matchInfo.away_disp}</span>
+            <span class="xg-value">${calc.xg_away.toFixed(2)}</span>
+            <span class="xg-label">Expected Goals</span>
         </div>
     `;
-    document.getElementById('odds-card').innerHTML = oddsHtml;
 
-    // Render XP Tips
-    const xpContainer = document.getElementById('xp-container');
-    let xpHtml = '';
-    
-    if (calcData.xp_tips && calcData.xp_tips.length > 0) {
-        const topTip = calcData.xp_tips[0];
-        xpHtml += `
-            <div class="success-card">
-                <strong>🎯 Top Pick: ${topTip.Tipp}</strong> (${topTip.xP.toFixed(1)} xP)
+    // Heatmap
+    renderHeatmap(matchInfo, calc);
+
+    // Odds
+    const probs = computeImpliedProbs(matchInfo.odds);
+    document.getElementById('odds-card').innerHTML = `
+        <div class="card-title">Bookmaker Odds</div>
+        <div class="odds-row">
+            <span class="odds-team">${matchInfo.home_disp}</span>
+            <div class="odds-right">
+                <span class="odds-pct">${pct(probs.home)}</span>
+                <span class="odds-price">${matchInfo.odds.home.toFixed(2)}</span>
+            </div>
+        </div>
+        <div class="odds-row">
+            <span class="odds-team" style="color:var(--text-secondary)">Draw</span>
+            <div class="odds-right">
+                <span class="odds-pct">${pct(probs.draw)}</span>
+                <span class="odds-price">${matchInfo.odds.draw.toFixed(2)}</span>
+            </div>
+        </div>
+        <div class="odds-row">
+            <span class="odds-team">${matchInfo.away_disp}</span>
+            <div class="odds-right">
+                <span class="odds-pct">${pct(probs.away)}</span>
+                <span class="odds-price">${matchInfo.odds.away.toFixed(2)}</span>
+            </div>
+        </div>
+    `;
+
+    // Safe tips
+    renderSafeTips(calc.xp_tips);
+
+    // Pool tips
+    renderPoolTips(calc.pool_tips);
+
+    // Keep active tab
+    const activeTab = document.querySelector('.tab.active')?.id === 'tab-pool' ? 'pool' : 'safe';
+    switchTab(activeTab);
+}
+
+function renderSafeTips(tips) {
+    if (!tips?.length) { document.getElementById('xp-container').innerHTML = '<p style="color:var(--text-muted)">No tips available.</p>'; return; }
+    const top = tips[0];
+    let html = `
+        <div class="tip-top">
+            <div>
+                <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Top Pick</div>
+                <div class="tip-top-score">${top.Tipp}</div>
+            </div>
+            <div class="tip-top-right">
+                <div class="tip-top-xp">${top.xP.toFixed(2)} xP</div>
+                <div class="tip-top-label">Expected Points</div>
+            </div>
+        </div>
+    `;
+    for (let i = 1; i < Math.min(4, tips.length); i++) {
+        const t = tips[i];
+        html += `
+            <div class="tip-row">
+                <span class="tip-rank">#${i+1}</span>
+                <span class="tip-score">${t.Tipp}</span>
+                <span class="tip-xp-val">${t.xP.toFixed(2)} xP</span>
             </div>
         `;
-        
-        for (let i = 1; i < Math.min(4, calcData.xp_tips.length); i++) {
-            const tip = calcData.xp_tips[i];
-            xpHtml += `
-                <div class="metric-card">
-                    <label>Rank ${i+1} | Score ${tip.Tipp}</label>
-                    <div class="value">${tip.xP.toFixed(1)} xP</div>
-                </div>
-            `;
-        }
     }
-    xpContainer.innerHTML = xpHtml;
+    document.getElementById('xp-container').innerHTML = html;
 }
 
-// Colormap interpolation (Deep Blue -> Emerald Green -> Yellow)
-function getColorForProb(prob, maxProb) {
-    if (maxProb === 0 || prob === 0) return 'rgba(255, 255, 255, 0.03)';
-    let ratio = prob / maxProb;
-    if (ratio > 1) ratio = 1;
+function renderPoolTips(tips) {
+    if (!tips?.length) { document.getElementById('pool-container').innerHTML = '<p style="color:var(--text-muted)">No pool tips available.</p>'; return; }
+    const agg = parseFloat(document.getElementById('aggressiveness-slider').value);
+    const top = tips[0];
 
-    // Colors: #1E293B (0) -> #38BDF8 (0.33) -> #10B981 (0.66) -> #FACC15 (1)
-    const colors = [
-        {r: 30, g: 41, b: 59},   // base surface
-        {r: 56, g: 189, b: 248}, // accent blue
-        {r: 16, g: 185, b: 129}, // success emerald
-        {r: 250, g: 204, b: 21}  // warning yellow
-    ];
+    const edgeClass = top.edge_vs_field >= 0 ? 'positive' : 'negative';
+    const edgeStr = top.edge_vs_field >= 0
+        ? `+${top.edge_vs_field.toFixed(2)} pts vs field`
+        : `${top.edge_vs_field.toFixed(2)} pts vs field`;
 
-    let c1, c2, localRatio;
-    if (ratio < 0.33) {
-        c1 = colors[0]; c2 = colors[1];
-        localRatio = ratio / 0.33;
-    } else if (ratio < 0.66) {
-        c1 = colors[1]; c2 = colors[2];
-        localRatio = (ratio - 0.33) / 0.33;
-    } else {
-        c1 = colors[2]; c2 = colors[3];
-        localRatio = (ratio - 0.66) / 0.34;
+    let bannerText = '';
+    if (agg === 0) bannerText = 'Set aggressiveness > 0 to see contrarian picks that differentiate you from the field.';
+    else if (agg <= 0.3) bannerText = `Soft contrarian (λ=${agg}): same tendency as the field, different scoreline. Minimal xP cost, real differentiation.`;
+    else if (agg <= 0.7) bannerText = `Contrarian mode (λ=${agg}): accepting lower average to get a ceiling above the field. Best when chasing.`;
+    else bannerText = `High-risk mode (λ=${agg}): betting the field gets the result wrong. Use in KO phase when trailing badly.`;
+
+    let html = `
+        <div class="pool-mode-banner">${bannerText}</div>
+        <div class="pool-top">
+            <div class="pool-top-header">
+                <div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Pool Pick</div>
+                    <div class="pool-top-score">${top.Tipp}</div>
+                </div>
+                <div class="pool-top-xp">${top.xP.toFixed(2)} xP</div>
+            </div>
+            <div class="pool-stats">
+                <div class="pool-stat">
+                    <span class="pool-stat-label">Edge vs field</span>
+                    <span class="pool-stat-value ${edgeClass}">${edgeStr}</span>
+                </div>
+                <div class="pool-stat">
+                    <span class="pool-stat-label">Upside (σ)</span>
+                    <span class="pool-stat-value neutral">${top.upside.toFixed(2)}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    for (let i = 1; i < Math.min(4, tips.length); i++) {
+        const t = tips[i];
+        const ec = t.edge_vs_field >= 0 ? 'pos' : 'neg';
+        const es = t.edge_vs_field >= 0 ? `+${t.edge_vs_field.toFixed(2)}` : t.edge_vs_field.toFixed(2);
+        html += `
+            <div class="pool-row">
+                <span class="pool-row-score">${t.Tipp}</span>
+                <span class="pool-row-xp">${t.xP.toFixed(2)} xP</span>
+                <span class="pool-row-edge ${ec}">${es} edge</span>
+            </div>
+        `;
+    }
+    document.getElementById('pool-container').innerHTML = html;
+}
+
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(tab) {
+    document.getElementById('tab-safe').classList.toggle('active', tab === 'safe');
+    document.getElementById('tab-pool').classList.toggle('active', tab === 'pool');
+    document.getElementById('panel-safe').style.display = tab === 'safe' ? '' : 'none';
+    document.getElementById('panel-pool').style.display = tab === 'pool' ? '' : 'none';
+}
+
+// ── Heatmap ───────────────────────────────────────────────────
+function renderHeatmap(matchInfo, calc) {
+    const container = document.getElementById('matrix-container');
+    const maxP = calc.max_prob;
+
+    // Column headers row
+    let colHeaders = '<div class="axis-num col"></div>';
+    for (let a = 0; a <= 5; a++) colHeaders += `<div class="axis-num col">${a}</div>`;
+
+    let rowsHtml = '';
+    for (let h = 0; h <= 5; h++) {
+        let rowHtml = `<div class="axis-num">${h}</div>`;
+        for (let a = 0; a <= 5; a++) {
+            const prob = calc.matrix[h]?.[a] ?? 0;
+            const bg = probColor(prob, maxP);
+            const textColor = prob / maxP > 0.5 ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.85)';
+            const probPct = (prob * 100).toFixed(1) + '%';
+            rowHtml += `
+                <div class="heatmap-cell" style="background:${bg};color:${textColor}"
+                     title="${matchInfo.home_disp} ${h}:${a} ${matchInfo.away_disp} — ${probPct}">
+                    <span class="cell-pct">${probPct}</span>
+                </div>`;
+        }
+        rowsHtml += `<div class="heatmap-row">${rowHtml}</div>`;
     }
 
-    const r = Math.round(c1.r + (c2.r - c1.r) * localRatio);
-    const g = Math.round(c1.g + (c2.g - c1.g) * localRatio);
-    const b = Math.round(c1.b + (c2.b - c1.b) * localRatio);
+    container.innerHTML = `
+        <div class="heatmap-wrap">
+            <div style="font-size:0.68rem;color:var(--text-muted);text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;font-weight:700;">${matchInfo.away_disp} Goals →</div>
+            <div class="heatmap-body">
+                <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;padding-right:8px;display:flex;align-items:center;justify-content:center;">
+                    ${matchInfo.home_disp} Goals
+                </div>
+                <div>
+                    <div class="heatmap-row">${colHeaders}</div>
+                    ${rowsHtml}
+                </div>
+            </div>
+        </div>
+    `;
+}
 
-    return `rgb(${r}, ${g}, ${b})`;
+// ── Elo History ───────────────────────────────────────────────
+async function loadEloHistoryView() {
+    try {
+        const history = await (await fetch('/api/elo_history')).json();
+        const teams = Object.keys(history).sort();
+        const sel = document.getElementById('history-team-selector');
+        sel.innerHTML = teams.map(t => `<option value="${t}">${t}</option>`).join('');
+        sel.onchange = () => renderEloChart(history, sel.value);
+        if (teams.length) renderEloChart(history, teams[0]);
+    } catch (e) {
+        document.getElementById('elo-history-view').innerHTML += `<p style="color:var(--danger)">Error: ${e.message}</p>`;
+    }
+}
+
+function renderEloChart(history, team) {
+    const entries = history[team] || [];
+    const labels = entries.map(e => e.match_id === 'baseline' ? 'Start' : `Match ${e.match_id}`);
+    const data   = entries.map(e => e.elo);
+
+    if (eloChartInstance) eloChartInstance.destroy();
+    eloChartInstance = new Chart(document.getElementById('eloChart'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: `${team} Elo`,
+                data,
+                borderColor: '#38bdf8',
+                backgroundColor: 'rgba(56,189,248,0.08)',
+                borderWidth: 2.5,
+                pointRadius: 5,
+                pointBackgroundColor: '#38bdf8',
+                fill: true,
+                tension: 0.3,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: '#8899bb' } },
+                tooltip: { backgroundColor: '#0f1e36', titleColor: '#f0f6ff', bodyColor: '#8899bb' }
+            },
+            scales: {
+                x: { ticks: { color: '#4a5a7a' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                y: { ticks: { color: '#4a5a7a' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+            }
+        }
+    });
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function computeImpliedProbs(odds) {
+    const rh = 1 / odds.home, rd = 1 / odds.draw, ra = 1 / odds.away;
+    const t = rh + rd + ra;
+    return { home: rh / t, draw: rd / t, away: ra / t };
+}
+
+function pct(p) { return (p * 100).toFixed(0) + '%'; }
+
+function probColor(prob, maxProb) {
+    if (!prob || !maxProb) return 'rgba(255,255,255,0.03)';
+    const r = Math.min(prob / maxProb, 1);
+    // Dark slate → sky blue → emerald → amber
+    const stops = [
+        [18, 28, 48],
+        [56, 189, 248],
+        [16, 185, 129],
+        [245, 158, 11],
+    ];
+    let c1, c2, t;
+    if (r < 0.33)      { c1 = stops[0]; c2 = stops[1]; t = r / 0.33; }
+    else if (r < 0.66) { c1 = stops[1]; c2 = stops[2]; t = (r - 0.33) / 0.33; }
+    else               { c1 = stops[2]; c2 = stops[3]; t = (r - 0.66) / 0.34; }
+    const mix = (i) => Math.round(c1[i] + (c2[i] - c1[i]) * t);
+    return `rgb(${mix(0)},${mix(1)},${mix(2)})`;
 }
