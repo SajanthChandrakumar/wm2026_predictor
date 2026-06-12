@@ -6,15 +6,23 @@ Ein quantitatives Vorhersagemodell und Analytics-Dashboard für die Fußball-Wel
 
 Während klassische Tippspieler auf Intuition vertrauen, nutzt dieses System einen datengetriebenen Ansatz. Es zieht Live-Quoten von internationalen Buchmachern, bereinigt diese um die Buchmacher-Marge und leitet daraus über einen SciPy-Solver die erwarteten Tore (xG) ab. Diese Metriken werden mit einem dynamischen, sich selbst aktualisierenden Elo-Rating-System für alle 48 Teilnehmernationen abgeglichen, um Value-Bets und den maximalen Erwartungswert (Expected Points) zu identifizieren.
 
+## Aktuelle Updates (12.06.2026)
+
+* **Quantitative Blending & Roster Rotation:** Eine 70/30-Gewichtung verschmilzt die effizienten Live-Quoten der Buchmacher (70%) mit der internen Elo-Simulation (30%), um den wahren quantitativen Edge zu berechnen. Über dedizierte UI-Toggles lässt sich zudem eine Rotation am 3. Spieltag simulieren (-100 Elo-Strafe für B-Elf-Aufstellungen).
+* **Dixon-Coles Adjustment ($\rho = -0.15$):** Eine fundamentale mathematische Korrektur der Poisson-Verteilung, die die Wahrscheinlichkeiten für typische Low-Scoring Draws (0:0, 1:0, 0:1, 1:1) künstlich anhebt, ohne den grundlegenden xG-Wert zu verzerren.
+* **Host Nation Advantage:** Hartcodierter Heimvorteil (+80 Elo) für die Gastgeber USA, Kanada und Mexiko in der Vorhersage sowie in der rückwirkenden Elo-Punktvergabe.
+* **Autarkic Background Cronjob:** Eine `apscheduler`-Integration triggert jeden Morgen um 04:00 Uhr vollautomatisch einen Background-Worker, der die neuesten Ergebnisse der *Odds API* fetcht, um das Elo-Rating in der Datenbank absolut autark aktuell zu halten.
+* **Chronological Grid & Kick-Off Times:** Das Frontend parst die asynchronen ISO-Timestamps der API und serviert ein chronologisch sortiertes Grid mit lokalisierten (`de-DE`) Anstoßzeiten.
+
 ## Kern-Features
 
 * **🔥 Automated Value Finder:** Das System berechnet im Hintergrund automatisch die xP-Matrizen für alle anstehenden Spiele und präsentiert dir in der "Top Value Bets"-Ansicht ein globales Ranking der absolut besten Tipps mit dem höchsten mathematischen Edge.
 * **⚡ File-Based Production Cache:** Ein robustes, festplattenbasiertes Caching-System (`matches_cache.json`) speichert fertige API-Daten für eine Stunde. Das ermöglicht den fehlerfreien Betrieb über mehrere Server-Worker (z.B. Uvicorn/Gunicorn) in der Cloud, ohne jemals Rate-Limits bei *The Odds API* zu triggern.
-* **Sleek Match Grid UI:** Ein modernes, kachelbasiertes Grid-System für die Spieleauswahl anstelle von altbackenen Dropdown-Menüs.
+* **Sleek Match Grid UI:** Ein modernes, kachelbasiertes Grid-System für die Spieleauswahl.
 * **Reverse-Engineering von Expected Goals (xG):** Ein mathematischer Solver optimiert asymmetrische Poisson-Verteilungen gegen die Live-Quoten der Buchmacher (1X2 und Over/Under 2.5), um die exakten xG-Werte beider Teams zu extrahieren.
 * **Poisson Score Matrix:** Generierung einer vollständigen Wahrscheinlichkeitsmatrix für alle exakten Spielergebnisse (von 0:0 bis 5:5).
-* **Expected Points (xP) Calculator:** Eine spezialisierte Regel-Engine, die das punktespezifische Regelwerk einer Tippgruppe (Tendenz, Tordifferenz, Exaktes Ergebnis) auf die Poisson-Matrix anwendet, um den Tipp mit der mathematisch höchsten Punkte-Erwartung zu berechnen ("Hedge-Betting").
-* **Dynamische Elo-Kalibrierung:** Ein Idempotenz-gesicherter Backend-Service, der tägliche API-Spielergebnisse zieht und die Formkurve der Teams über die offizielle Elo-Formel (inkl. Margin-of-Victory Multiplikator) vollautomatisch anpasst. Fehlende Teams werden automatisch ergänzt (Base-Elo 1500).
+* **Expected Points (xP) Calculator:** Eine spezialisierte Regel-Engine wendet das punktespezifische Regelwerk einer Tippgruppe auf die Poisson-Matrix an, um den Tipp mit der mathematisch höchsten Punkte-Erwartung zu berechnen ("Hedge-Betting").
+* **Dynamische Elo-Kalibrierung:** Ein Idempotenz-gesicherter Backend-Service, der tägliche API-Spielergebnisse zieht und die Formkurve der Teams vollautomatisch anpasst. Fehlende Teams werden automatisch ergänzt (Base-Elo 1500).
 * **Smart API Quota Management:** Integriertes Tracking der Rate-Limits durch das Auslesen versteckter HTTP-Response-Header.
 
 ## Tech-Stack
