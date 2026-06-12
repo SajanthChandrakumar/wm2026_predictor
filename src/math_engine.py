@@ -61,12 +61,6 @@ class MathEngine:
         else:
             elo_away = 1500.0
             
-        hosts = ["United States", "Canada", "Mexico"]
-        is_home_host = home_norm in hosts
-        is_away_host = away_norm in hosts
-        
-        if is_home_host: elo_home += 80
-        if is_away_host: elo_away += 80
         if home_resting: elo_home -= 100
         if away_resting: elo_away -= 100
         
