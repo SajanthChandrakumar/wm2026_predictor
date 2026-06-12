@@ -37,8 +37,13 @@ class MathEngine:
             "away": true_prob_away
         }
 
-    def get_elo_probability(self, rating_a: float, rating_b: float) -> float:
-        """Berechnet die reine Elo-Siegwahrscheinlichkeit für Team A."""
+    def get_elo_probability(self, rating_a: float, rating_b: float, is_a_host: bool = False, is_b_host: bool = False) -> float:
+        """Berechnet die reine Elo-Siegwahrscheinlichkeit für Team A inkl. möglichem Heimvorteil."""
+        if is_a_host:
+            rating_a += 80
+        if is_b_host:
+            rating_b += 80
+            
         diff = rating_a - rating_b
         return 1 / (10 ** (-diff / 400) + 1)
 
@@ -67,8 +72,12 @@ class MathEngine:
             elo_home = self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'].values[0]
             elo_away = self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'].values[0] 
             
+            hosts = ["United States", "Canada", "Mexico"]
+            is_home_host = home_norm in hosts
+            is_away_host = away_norm in hosts
+            
             # 3. Elo-Wahrscheinlichkeit berechnen
-            prob_elo_home = self.get_elo_probability(elo_home, elo_away)
+            prob_elo_home = self.get_elo_probability(elo_home, elo_away, is_a_host=is_home_host, is_b_host=is_away_host)
             
             # Hier kommt später die Extraktion der Buchmacher-Quoten hin...
             # Aus Gründen der Übersichtlichkeit stark verkürzt:
@@ -100,6 +109,21 @@ class MathEngine:
             # Joint probability matrix
             prob_matrix = np.outer(poisson_home, poisson_away)
             
+            # Dixon-Coles adjustment for low-scoring matches
+            rho = -0.15
+            tau_00 = 1 - (l_home * l_away * rho)
+            tau_10 = 1 + (l_home * rho)
+            tau_01 = 1 + (l_away * rho)
+            tau_11 = 1 - rho
+            
+            prob_matrix[0, 0] *= tau_00
+            prob_matrix[1, 0] *= tau_10
+            prob_matrix[0, 1] *= tau_01
+            prob_matrix[1, 1] *= tau_11
+            
+            # Normalize matrix after Dixon-Coles adjustment
+            prob_matrix = prob_matrix / np.sum(prob_matrix)
+            
             # Sum probabilities for outcomes
             calc_home = np.sum(np.tril(prob_matrix, -1))
             calc_draw = np.sum(np.diag(prob_matrix))
@@ -127,9 +151,10 @@ class MathEngine:
         return float(result.x[0]), float(result.x[1])
 
     @staticmethod
-    def generate_exact_score_matrix(lambda_home: float, lambda_away: float, max_goals: int = 5) -> pd.DataFrame:
+    def generate_exact_score_matrix(lambda_home: float, lambda_away: float, max_goals: int = 5, rho: float = -0.15) -> pd.DataFrame:
         """
-        Generates a matrix of exact score probabilities using independent Poisson distributions.
+        Generates a matrix of exact score probabilities using independent Poisson distributions,
+        adjusted with the Dixon-Coles method for low-scoring draws.
         """
         goals_range = np.arange(max_goals + 1)
         prob_home = stats.poisson.pmf(goals_range, lambda_home)
@@ -137,6 +162,20 @@ class MathEngine:
         
         # Joint probability matrix
         prob_matrix = np.outer(prob_home, prob_away)
+        
+        # Dixon-Coles adjustment
+        tau_00 = 1 - (lambda_home * lambda_away * rho)
+        tau_10 = 1 + (lambda_home * rho)
+        tau_01 = 1 + (lambda_away * rho)
+        tau_11 = 1 - rho
+        
+        prob_matrix[0, 0] *= tau_00
+        prob_matrix[1, 0] *= tau_10
+        prob_matrix[0, 1] *= tau_01
+        prob_matrix[1, 1] *= tau_11
+        
+        # Normalize matrix
+        prob_matrix = prob_matrix / np.sum(prob_matrix)
         
         # Create DataFrame
         df = pd.DataFrame(
