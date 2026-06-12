@@ -106,10 +106,15 @@ function renderMatchGrid(matches) {
         const timeString = dateObj.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
         const card = document.createElement('div');
-        card.className = 'match-card';
+        card.className = 'match-card fade-in';
+        card.style.animationDelay = `${Math.min(sortedMatches.indexOf(match) * 0.05, 0.5)}s`;
         card.innerHTML = `
-            <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 8px;">🕒 ${timeString}</div>
-            ${match.home_disp} <div class="vs">vs</div> ${match.away_disp}
+            <div class="match-time">🕒 ${timeString}</div>
+            <div class="teams">
+                <span>${match.home_disp}</span>
+                <span class="vs">vs</span>
+                <span>${match.away_disp}</span>
+            </div>
         `;
         
         card.addEventListener('click', () => {
@@ -137,15 +142,15 @@ function renderValueBets(matches) {
         const timeString = dateObj.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
         const card = document.createElement('div');
-        card.className = 'match-card';
-        card.style.borderColor = '#10B981';
+        card.className = 'match-card value-bet-card fade-in';
+        card.style.animationDelay = `${Math.min(sortedMatches.indexOf(match) * 0.05, 0.5)}s`;
         card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #94A3B8;">
-                <span>${match.home_disp} vs ${match.away_disp}</span>
-                <span>🕒 ${timeString}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <span style="font-weight: 700; font-size: 1.1rem;">${match.home_disp} <span style="color:var(--text-muted);font-size:0.9rem;margin:0 6px;">vs</span> ${match.away_disp}</span>
+                <span class="match-time" style="margin:0;">🕒 ${timeString}</span>
             </div>
-            <div style="margin: 15px 0; font-size: 1.5rem; font-weight: bold; color: #FACC15;">Tipp: ${match.top_tip}</div>
-            <div style="background: rgba(16, 185, 129, 0.1); color: #10B981; padding: 5px; border-radius: 4px;">Expected: ${match.max_xp.toFixed(2)} xP</div>
+            <div class="value-tip">${match.top_tip}</div>
+            <div class="value-xp">Expected Return: ${match.max_xp.toFixed(2)} xP</div>
         `;
         
         card.addEventListener('click', () => {
@@ -261,16 +266,16 @@ function renderDashboard(matchInfo, calcData) {
 
 // Colormap interpolation (Deep Blue -> Emerald Green -> Yellow)
 function getColorForProb(prob, maxProb) {
-    if (maxProb === 0) return '#1A1D24';
+    if (maxProb === 0 || prob === 0) return 'rgba(255, 255, 255, 0.03)';
     let ratio = prob / maxProb;
     if (ratio > 1) ratio = 1;
 
-    // Colors: #1E293B (0) -> #3B82F6 (0.33) -> #10B981 (0.66) -> #FACC15 (1)
+    // Colors: #1E293B (0) -> #38BDF8 (0.33) -> #10B981 (0.66) -> #FACC15 (1)
     const colors = [
-        {r: 30, g: 41, b: 59},   // 1E293B
-        {r: 59, g: 130, b: 246}, // 3B82F6
-        {r: 16, g: 185, b: 129}, // 10B981
-        {r: 250, g: 204, b: 21}  // FACC15
+        {r: 30, g: 41, b: 59},   // base surface
+        {r: 56, g: 189, b: 248}, // accent blue
+        {r: 16, g: 185, b: 129}, // success emerald
+        {r: 250, g: 204, b: 21}  // warning yellow
     ];
 
     let c1, c2, localRatio;

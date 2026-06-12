@@ -10,29 +10,27 @@
 <body>
     <div class="app-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
-            <h2>🏆 WC PREDICTOR</h2>
+        <aside class="sidebar fade-in">
+            <h2>🏆 WC Predictor</h2>
             <hr>
             <div id="quota-container" class="quota-container">
-                <span class="label">API Requests Remaining</span>
+                <span class="label">API Remaining</span>
                 <div class="quota-value" id="quota-value">--</div>
                 <div class="quota-delta" id="quota-delta">-- used</div>
             </div>
             <hr>
             <nav>
                 <ul>
-                    <li id="nav-dashboard" class="active">⊞ Dashboard</li>
+                    <li id="nav-dashboard" class="active">📊 Dashboard</li>
                     <li id="nav-value-bets">🔥 Top Value Bets</li>
-                    <li>☑️ My Predictions</li>
+                    <li>🎯 My Predictions</li>
                     <li>🏆 Tournament View</li>
-                    <li>🧮 Heatmap Matrix</li>
-                    <li>📄 Bet Slip</li>
-                    <li>🏅 Rankings</li>
+                    <li>🎲 Bet Slip</li>
                     <li>⚙️ Settings</li>
                 </ul>
             </nav>
             <hr>
-            <button id="sync-elo-btn" class="action-btn">🔄 Sync Elo (API)</button>
+            <button id="sync-elo-btn" class="action-btn">🔄 Sync Elo API</button>
             <hr>
             <h3>Spieleinstellungen</h3>
             <label class="toggle-container">
@@ -43,24 +41,24 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="main-content">
+        <main class="main-content fade-in">
             <header>
-                <h1>Turnier-Heatmap | Match Predictions</h1>
-                <button id="refresh-btn" class="action-btn">🔄 Refresh Data</button>
+                <h1>Turnier-Übersicht</h1>
+                <button id="refresh-btn" class="action-btn" style="width: auto;">🔄 Refresh Data</button>
             </header>
             <hr>
 
-            <div id="matches-view">
-                <h2>Bevorstehende Spiele</h2>
+            <div id="matches-view" class="fade-in">
+                <h2 style="margin-bottom: 10px; color: var(--text-muted); font-size: 1.1rem; font-weight: 500;">Bevorstehende Spiele</h2>
                 <div id="matches-grid" class="matches-grid"></div>
             </div>
 
-            <div id="value-bets-view" style="display: none;">
-                <h2>🔥 Top Value Bets (Global Ranking)</h2>
+            <div id="value-bets-view" class="fade-in" style="display: none;">
+                <h2 style="margin-bottom: 10px; color: var(--text-muted); font-size: 1.1rem; font-weight: 500;">🔥 Top Value Bets (Global Ranking)</h2>
                 <div id="value-bets-grid" class="matches-grid"></div>
             </div>
 
-            <div class="layout-grid" id="layout-grid" style="display: none;">
+            <div class="layout-grid fade-in" id="layout-grid" style="display: none;">
                 <button id="back-btn" class="action-btn" style="width: auto; margin-bottom: 20px; grid-column: 1 / -1;">⬅ Zurück zur Übersicht</button>
                 
                 <!-- Matrix Section -->
@@ -85,9 +83,9 @@
                 </section>
             </div>
             
-            <div id="loading-spinner" class="spinner-container">
+            <div id="loading-spinner" class="spinner-container fade-in" style="display: none;">
                 <div class="spinner"></div>
-                <p>Fetching Data API...</p>
+                <p style="color: var(--text-muted); font-weight: 500;">Fetching Data API...</p>
             </div>
         </main>
     </div>
