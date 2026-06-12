@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 import numpy as np
 import scipy.optimize as optimize
@@ -63,10 +64,13 @@ class MathEngine:
             
         if home_resting: elo_home -= 100
         if away_resting: elo_away -= 100
-        
-        diff = elo_home - elo_away
-        prob_home = 1 / (10 ** (-diff / 400) + 1)
-        
+
+        hosts = ["United States", "Canada", "Mexico"]
+        is_home_host = home_norm in hosts
+        is_away_host = away_norm in hosts
+
+        prob_home = self.get_elo_probability(elo_home, elo_away, is_a_host=is_home_host, is_b_host=is_away_host)
+
         return float(prob_home), float(1.0 - prob_home)
 
     def merge_odds_and_elo(self, api_matches: list) -> pd.DataFrame:
@@ -100,76 +104,83 @@ class MathEngine:
             
             # 3. Elo-Wahrscheinlichkeit berechnen
             prob_elo_home = self.get_elo_probability(elo_home, elo_away, is_a_host=is_home_host, is_b_host=is_away_host)
-            
-            # Hier kommt später die Extraktion der Buchmacher-Quoten hin...
-            # Aus Gründen der Übersichtlichkeit stark verkürzt:
-            true_odds_home = 0.50 # Beispielwert nach Margenbereinigung
-            
+
+            # 4. Bookmaker edge: extract h2h odds, remove margin, compare to Elo
+            bookie_prob_home = None
+            for bookie in match.get("bookmakers", []):
+                for market in bookie.get("markets", []):
+                    if market["key"] != "h2h":
+                        continue
+                    outcomes = {o["name"]: o["price"] for o in market.get("outcomes", [])}
+                    if home_team in outcomes and away_team in outcomes and "Draw" in outcomes:
+                        true = self.remove_margin(outcomes[home_team], outcomes["Draw"], outcomes[away_team])
+                        bookie_prob_home = true["home"]
+                        break
+                if bookie_prob_home is not None:
+                    break
+
             processed_matches.append({
                 "match": f"{home_team} vs {away_team}",
                 "elo_prob_home": prob_elo_home,
-                "bookie_prob_home": true_odds_home,
-                "edge_home": prob_elo_home - true_odds_home # Die mathematische Diskrepanz
+                "bookie_prob_home": bookie_prob_home,
+                "edge_home": (prob_elo_home - bookie_prob_home) if bookie_prob_home is not None else None,
             })
             
         return pd.DataFrame(processed_matches)
 
     @staticmethod
-    def derive_xg_from_odds(prob_home: float, prob_draw: float, prob_away: float, prob_over25: float) -> tuple[float, float]:
+    def derive_xg_from_odds(prob_home: float, prob_draw: float, prob_away: float, prob_over25: float = None) -> tuple[float, float]:
         """
         Derives Expected Goals (xG) for home and away teams by minimizing the difference
         between bookmaker probabilities and Poisson-derived probabilities.
+        prob_over25 is optional — omit when totals market data is unavailable.
         """
         def cost_function(lambdas):
             l_home, l_away = lambdas
-            
-            # Matrix up to a reasonable max goals for calculating the match outcome probabilities
+
             max_goals = 10
             poisson_home = stats.poisson.pmf(np.arange(max_goals), l_home)
             poisson_away = stats.poisson.pmf(np.arange(max_goals), l_away)
-            
-            # Joint probability matrix
+
             prob_matrix = np.outer(poisson_home, poisson_away)
-            
-            # Dixon-Coles adjustment for low-scoring matches
+
             rho = -0.15
-            tau_00 = 1 - (l_home * l_away * rho)
-            tau_10 = 1 + (l_home * rho)
-            tau_01 = 1 + (l_away * rho)
-            tau_11 = 1 - rho
-            
-            prob_matrix[0, 0] *= tau_00
-            prob_matrix[1, 0] *= tau_10
-            prob_matrix[0, 1] *= tau_01
-            prob_matrix[1, 1] *= tau_11
-            
-            # Normalize matrix after Dixon-Coles adjustment
+            prob_matrix[0, 0] *= 1 - (l_home * l_away * rho)
+            prob_matrix[1, 0] *= 1 + (l_home * rho)
+            prob_matrix[0, 1] *= 1 + (l_away * rho)
+            prob_matrix[1, 1] *= 1 - rho
+
             prob_matrix = prob_matrix / np.sum(prob_matrix)
-            
-            # Sum probabilities for outcomes
+
             calc_home = np.sum(np.tril(prob_matrix, -1))
             calc_draw = np.sum(np.diag(prob_matrix))
             calc_away = np.sum(np.triu(prob_matrix, 1))
-            
-            # Calculate over 2.5 probability
-            goals_home_idx, goals_away_idx = np.indices((max_goals, max_goals))
-            total_goals = goals_home_idx + goals_away_idx
-            calc_over25 = np.sum(prob_matrix[total_goals > 2.5])
-            
-            # Cost function: Sum of squared errors
+
             error = (
                 (calc_home - prob_home) ** 2 +
                 (calc_draw - prob_draw) ** 2 +
-                (calc_away - prob_away) ** 2 +
-                (calc_over25 - prob_over25) ** 2
+                (calc_away - prob_away) ** 2
             )
+
+            if prob_over25 is not None:
+                goals_h, goals_a = np.indices((max_goals, max_goals))
+                calc_over25 = np.sum(prob_matrix[(goals_h + goals_a) > 2])
+                error += (calc_over25 - prob_over25) ** 2
+
             return error
 
-        # Initial guess and bounds to prevent solver failure
-        initial_guess = [1.5, 1.5]
         bounds = ((0.1, 5.0), (0.1, 5.0))
-        
-        result = optimize.minimize(cost_function, initial_guess, bounds=bounds)
+
+        result = optimize.minimize(cost_function, [1.5, 1.5], bounds=bounds, method='L-BFGS-B')
+        if not result.success:
+            result = optimize.minimize(cost_function, [prob_home * 3.5, prob_away * 3.5], bounds=bounds, method='L-BFGS-B')
+
+        if not result.success:
+            # Proportional fallback: scale world-cup averages by the match's win probability ratio
+            l_home = max(0.1, min(5.0, 1.35 * (prob_home / 0.45)))
+            l_away = max(0.1, min(5.0, 1.10 * (prob_away / 0.28)))
+            return l_home, l_away
+
         return float(result.x[0]), float(result.x[1])
 
     @staticmethod
@@ -264,13 +275,26 @@ class MathEngine:
         df_xp = df_xp.sort_values(by="xP", ascending=False).head(5).reset_index(drop=True)
         return df_xp
 
-    def _calculate_new_elo(self, rating_a: float, rating_b: float, actual_result_a: float, k_factor: int = 40, is_a_host: bool = False, is_b_host: bool = False) -> tuple[float, float]:
-        """ Helper for standard Elo calculation """
+    def _calculate_new_elo(self, rating_a: float, rating_b: float, actual_result_a: float, k_factor: int = 60, is_a_host: bool = False, is_b_host: bool = False, goal_diff: int = 0) -> tuple[float, float]:
+        """
+        Standard Elo update. K=60 entspricht dem World-Football-Elo-Standard
+        für WM-Endrundenspiele; der Margin-of-Victory-Multiplikator ebenso
+        (×1.5 bei 2 Toren Differenz, ×1.75 bei 3, +1/8 je weiteres Tor).
+        """
         expected_a = self.get_elo_probability(rating_a, rating_b, is_a_host=is_a_host, is_b_host=is_b_host)
         expected_b = 1 - expected_a
-        
-        new_rating_a = rating_a + k_factor * (actual_result_a - expected_a)
-        new_rating_b = rating_b + k_factor * ((1 - actual_result_a) - expected_b)
+
+        gd = abs(goal_diff)
+        if gd <= 1:
+            mov_multiplier = 1.0
+        elif gd == 2:
+            mov_multiplier = 1.5
+        else:
+            mov_multiplier = 1.75 + (gd - 3) / 8
+
+        k = k_factor * mov_multiplier
+        new_rating_a = rating_a + k * (actual_result_a - expected_a)
+        new_rating_b = rating_b + k * ((1 - actual_result_a) - expected_b)
         return new_rating_a, new_rating_b
 
     def update_elo_from_api_scores(self, api_scores: list, processed_matches_file: str = 'data/processed_matches.json') -> int:
@@ -336,7 +360,7 @@ class MathEngine:
                 else:
                     result_home = 0.5
                     
-                new_elo_home, new_elo_away = self._calculate_new_elo(elo_home, elo_away, result_home, is_a_host=is_home_host, is_b_host=is_away_host)
+                new_elo_home, new_elo_away = self._calculate_new_elo(elo_home, elo_away, result_home, is_a_host=is_home_host, is_b_host=is_away_host, goal_diff=home_score - away_score)
                 
                 self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'] = new_elo_home
                 self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'] = new_elo_away
@@ -357,7 +381,7 @@ class MathEngine:
                         baseline_rows = self.elo_df.loc[self.elo_df['team_name'] == team_name, 'elo_rating']
                         baseline_elo = float(baseline_rows.values[0]) if not baseline_rows.empty else 1500.0
                         history[team_name] = [
-                            {"timestamp": 0, "match_id": "baseline", "elo": 1500.0}
+                            {"timestamp": 0, "match_id": "baseline", "elo": baseline_elo}
                         ]
                     history[team_name].append({
                         "timestamp": float(time.time()),

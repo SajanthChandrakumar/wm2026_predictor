@@ -2,6 +2,8 @@ import os
 import sys
 import json
 import time
+import statistics
+import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,7 +29,10 @@ TEAM_MAPPING = {
     "Korea Republic": "South Korea", "South Korea": "South Korea",
     "Czech Republic": "Czech Republic", "Czechia": "Czech Republic",
     "IR Iran": "Iran", "Côte d'Ivoire": "Ivory Coast", "Ivory Coast": "Ivory Coast",
-    "Saudi Arabia": "Saudi Arabia", "KSA": "Saudi Arabia"
+    "Saudi Arabia": "Saudi Arabia", "KSA": "Saudi Arabia",
+    "Turkey": "Türkiye", "Türkiye": "Türkiye",
+    "Bosnia & Herzegovina": "Bosnia and Herzegovina",
+    "Bosnia and Herzegovina": "Bosnia and Herzegovina"
 }
 
 DISPLAY_MAPPING = {
@@ -55,32 +60,32 @@ if not os.path.exists(elo_csv_path):
 math_engine = MathEngine(elo_csv_path, TEAM_MAPPING)
 
 def extract_odds(match):
+    """
+    Konsens-Quoten: Median über alle Buchmacher statt erstbester Quote.
+    Der Markt-Median ist robuster gegen Ausreisser einzelner Anbieter.
+    """
     home_team = match.get("home_team")
     away_team = match.get("away_team")
-    odds = {}
-    if "bookmakers" in match:
-        for bookie in match["bookmakers"]:
-            for market in bookie.get("markets", []):
-                if market["key"] == "h2h":
-                    for outcome in market.get("outcomes", []):
-                        if outcome["name"] == home_team and "home" not in odds:
-                            odds["home"] = outcome["price"]
-                        elif outcome["name"] == away_team and "away" not in odds:
-                            odds["away"] = outcome["price"]
-                        elif outcome["name"] == "Draw" and "draw" not in odds:
-                            odds["draw"] = outcome["price"]
-                elif market["key"] == "totals":
-                    for outcome in market.get("outcomes", []):
-                        if outcome["name"] == "Over" and outcome.get("point", 2.5) == 2.5 and "over25" not in odds:
-                            odds["over25"] = outcome["price"]
-                        elif outcome["name"] == "Under" and outcome.get("point", 2.5) == 2.5 and "under25" not in odds:
-                            odds["under25"] = outcome["price"]
-            if all(k in odds for k in ["home", "draw", "away", "over25"]):
-                break
-    if all(k in odds for k in ["home", "draw", "away"]) and "over25" not in odds:
-        odds["over25"] = 1.90
-        odds["under25"] = 1.90
-    required_keys = ["home", "draw", "away", "over25"]
+    collected = {"home": [], "draw": [], "away": [], "over25": [], "under25": []}
+    for bookie in match.get("bookmakers", []):
+        for market in bookie.get("markets", []):
+            if market["key"] == "h2h":
+                for outcome in market.get("outcomes", []):
+                    if outcome["name"] == home_team:
+                        collected["home"].append(outcome["price"])
+                    elif outcome["name"] == away_team:
+                        collected["away"].append(outcome["price"])
+                    elif outcome["name"] == "Draw":
+                        collected["draw"].append(outcome["price"])
+            elif market["key"] == "totals":
+                for outcome in market.get("outcomes", []):
+                    if outcome.get("point") == 2.5:
+                        if outcome["name"] == "Over":
+                            collected["over25"].append(outcome["price"])
+                        elif outcome["name"] == "Under":
+                            collected["under25"].append(outcome["price"])
+    odds = {k: statistics.median(v) for k, v in collected.items() if v}
+    required_keys = ["home", "draw", "away"]
     missing_keys = [k for k in required_keys if k not in odds]
     if missing_keys:
         raise ValueError("Keine Quoten für diesen Markt verfügbar")
@@ -122,15 +127,21 @@ def get_matches(force: bool = False):
             
             try:
                 math_engine.merge_odds_and_elo([m])
-                prob_home = 1.0 / odds["home"]
-                prob_draw = 1.0 / odds["draw"]
-                prob_away = 1.0 / odds["away"]
-                prob_over25 = 1.0 / odds["over25"]
-                
+                true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
+                prob_home = true_probs["home"]
+                prob_draw = true_probs["draw"]
+                prob_away = true_probs["away"]
+                if "over25" in odds and "under25" in odds:
+                    raw_over = 1.0 / odds["over25"]
+                    raw_under = 1.0 / odds["under25"]
+                    prob_over25 = raw_over / (raw_over + raw_under)
+                else:
+                    prob_over25 = None
+
                 xg_h, xg_a = math_engine.derive_xg_from_odds(
                     prob_home, prob_draw, prob_away, prob_over25
                 )
-                sm = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=5)
+                sm = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
                 df_xp = math_engine.calculate_expected_points(sm, is_ko_phase=False)
                 
                 if not df_xp.empty:
@@ -181,35 +192,46 @@ def predict_match(payload: dict):
         math_engine.merge_odds_and_elo([match_data])
         odds = extract_odds(match_data)
         
-        b_prob_home = 1.0 / odds["home"]
-        b_prob_draw = 1.0 / odds["draw"]
-        b_prob_away = 1.0 / odds["away"]
-        prob_over25 = 1.0 / odds["over25"]
-        
+        true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
+        b_prob_home = true_probs["home"]
+        b_prob_draw = true_probs["draw"]
+        b_prob_away = true_probs["away"]
+        if "over25" in odds and "under25" in odds:
+            raw_over = 1.0 / odds["over25"]
+            raw_under = 1.0 / odds["under25"]
+            prob_over25 = raw_over / (raw_over + raw_under)
+        else:
+            prob_over25 = None
+
         elo_prob_home, elo_prob_away = math_engine.get_match_elo_probabilities(
-            match_data.get("home_team"), 
-            match_data.get("away_team"), 
-            home_resting, 
+            match_data.get("home_team"),
+            match_data.get("away_team"),
+            home_resting,
             away_resting
         )
-        
-        blend_home = (b_prob_home * 0.7) + (elo_prob_home * 0.3)
-        blend_away = (b_prob_away * 0.7) + (elo_prob_away * 0.3)
-        
-        total = blend_home + blend_away + b_prob_draw
-        prob_home = blend_home / total
-        prob_away = blend_away / total
-        prob_draw = b_prob_draw / total
-        
+
+        # Blend only within the win/loss pool so draw probability stays fixed
+        win_loss_pool = b_prob_home + b_prob_away
+        blend_home = (b_prob_home / win_loss_pool * 0.7 + elo_prob_home * 0.3) * win_loss_pool
+        blend_away = (b_prob_away / win_loss_pool * 0.7 + elo_prob_away * 0.3) * win_loss_pool
+        prob_home = blend_home
+        prob_away = blend_away
+        prob_draw = b_prob_draw
+
         xg_home, xg_away = math_engine.derive_xg_from_odds(
             prob_home=prob_home, prob_draw=prob_draw, prob_away=prob_away, prob_over25=prob_over25
         )
-        
+
         if is_ko:
-            xg_home *= 1.33
-            xg_away *= 1.33
-            
-        score_matrix = math_engine.generate_exact_score_matrix(xg_home, xg_away, max_goals=5)
+            # ET only happens when the match is still drawn after 90 min.
+            # Weight the extra ~30 min of goals by that probability.
+            base_matrix = math_engine.generate_exact_score_matrix(xg_home, xg_away, max_goals=10)
+            p_draw_90 = float(np.sum(np.diag(base_matrix.values)))
+            et_factor = 1 + p_draw_90 / 3
+            xg_home *= et_factor
+            xg_away *= et_factor
+
+        score_matrix = math_engine.generate_exact_score_matrix(xg_home, xg_away, max_goals=10)
         xp_df = math_engine.calculate_expected_points(score_matrix, is_ko_phase=is_ko)
         
         matrix_dict = {}
