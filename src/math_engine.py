@@ -220,60 +220,112 @@ class MathEngine:
         df.columns.name = "Away Goals"
         return df
 
+    @staticmethod
+    def _tip_points(tipped_home: int, tipped_away: int, actual_home: int, actual_away: int, is_ko_phase: bool = False) -> int:
+        """Punkte für einen Tipp gegen ein tatsächliches Resultat nach SRF-Regelwerk."""
+        points = 0
+
+        tipped_tendency = np.sign(tipped_home - tipped_away)
+        actual_tendency = np.sign(actual_home - actual_away)
+        tendency_correct = tipped_tendency == actual_tendency
+
+        if tendency_correct:
+            points += 5
+        if tipped_home == actual_home:
+            points += 1
+        if tipped_away == actual_away:
+            points += 1
+        if tendency_correct and (tipped_home - tipped_away) == (actual_home - actual_away):
+            points += 3
+
+        return points * 2 if is_ko_phase else points
+
+    def _points_distribution(self, t_home: int, t_away: int, score_matrix: pd.DataFrame, is_ko_phase: bool) -> tuple[float, float]:
+        """Gibt (Erwartungswert, Standardabweichung) der Punkte eines Tipps über die Resultatverteilung zurück."""
+        ev = 0.0
+        ev_sq = 0.0
+        for a_home_str in score_matrix.index:
+            for a_away_str in score_matrix.columns:
+                prob = score_matrix.loc[a_home_str, a_away_str]
+                if prob > 0:
+                    pts = self._tip_points(t_home, t_away, int(a_home_str), int(a_away_str), is_ko_phase)
+                    ev += pts * prob
+                    ev_sq += (pts ** 2) * prob
+        variance = max(0.0, ev_sq - ev ** 2)
+        return ev, variance ** 0.5
+
     def calculate_expected_points(self, score_matrix: pd.DataFrame, is_ko_phase: bool = False) -> pd.DataFrame:
         """
         Calculates the Expected Points (xP) for tips from 0:0 up to 5:5 based on the specific ruleset.
         """
-        def calc_points(tipped_home: int, tipped_away: int, actual_home: int, actual_away: int) -> int:
-            points = 0
-            
-            # Tendency
-            tipped_tendency = np.sign(tipped_home - tipped_away)
-            actual_tendency = np.sign(actual_home - actual_away)
-            tendency_correct = tipped_tendency == actual_tendency
-            
-            if tendency_correct:
-                points += 5
-                
-            # Exact goals
-            if tipped_home == actual_home:
-                points += 1
-            if tipped_away == actual_away:
-                points += 1
-                
-            # Goal difference
-            if tendency_correct and (tipped_home - tipped_away) == (actual_home - actual_away):
-                points += 3
-                
-            return points * 2 if is_ko_phase else points
-
         results = []
         max_tip_goals = 5
-        
-        # Iterating over all possible tips
+
         for t_home in range(max_tip_goals + 1):
             for t_away in range(max_tip_goals + 1):
-                xp = 0.0
-                
-                # Iterating over the probability matrix
-                for a_home_str in score_matrix.index:
-                    for a_away_str in score_matrix.columns:
-                        a_home = int(a_home_str)
-                        a_away = int(a_away_str)
-                        prob = score_matrix.loc[a_home_str, a_away_str]
-                        
-                        if prob > 0:
-                            pts = calc_points(t_home, t_away, a_home, a_away)
-                            xp += pts * prob
-                            
-                results.append({
-                    "Tipp": f"{t_home}:{t_away}",
-                    "xP": xp
-                })
-                
+                xp, _ = self._points_distribution(t_home, t_away, score_matrix, is_ko_phase)
+                results.append({"Tipp": f"{t_home}:{t_away}", "xP": xp})
+
         df_xp = pd.DataFrame(results)
         df_xp = df_xp.sort_values(by="xP", ascending=False).head(5).reset_index(drop=True)
         return df_xp
+
+    def calculate_pool_optimal_tips(self, score_matrix: pd.DataFrame, is_ko_phase: bool = False, aggressiveness: float = 0.0) -> pd.DataFrame:
+        """
+        Pool-Strategie: nicht den Erwartungswert maximieren, sondern den Vorsprung
+        gegenüber dem Feld. In einem Tippspiel gewinnt das Maximum, nicht der Schnitt –
+        wer immer den Favoriten-Tipp (Chalk) abgibt, kann sich vom Feld nicht absetzen.
+
+        Modell: Das Feld tippt den xP-optimalen "Chalk"-Tipp. Für jeden Kandidaten-Tipp t
+        ist die Vorsprungs-Zufallsvariable A = Punkte(t) - Punkte(Chalk) über die
+        Resultatverteilung. Bewertet wird E[A] + λ·SD[A] mit λ = aggressiveness.
+          - aggressiveness = 0  → reiner Chalk-Tipp (max xP), ideal in Führung / kleinem Pool.
+          - aggressiveness > 0  → kontrarianische Tipps mit höherem Ceiling, ideal bei
+            Rückstand / grossem Pool / K.o.-Phase (Punkte verdoppelt).
+        Typische Werte: 0.3 (leicht offensiv) bis 1.0 (stark kontrarianisch).
+        """
+        max_tip_goals = 5
+
+        # 1. Chalk-Tipp des Feldes bestimmen (xP-Maximum)
+        chalk_home, chalk_away, best_xp = 0, 0, -1.0
+        for t_home in range(max_tip_goals + 1):
+            for t_away in range(max_tip_goals + 1):
+                xp, _ = self._points_distribution(t_home, t_away, score_matrix, is_ko_phase)
+                if xp > best_xp:
+                    best_xp, chalk_home, chalk_away = xp, t_home, t_away
+
+        # 2. Vorsprungsverteilung jedes Kandidaten gegen den Chalk-Tipp
+        results = []
+        for t_home in range(max_tip_goals + 1):
+            for t_away in range(max_tip_goals + 1):
+                mean_adv = 0.0
+                mean_adv_sq = 0.0
+                xp = 0.0
+                for a_home_str in score_matrix.index:
+                    for a_away_str in score_matrix.columns:
+                        prob = score_matrix.loc[a_home_str, a_away_str]
+                        if prob <= 0:
+                            continue
+                        a_home, a_away = int(a_home_str), int(a_away_str)
+                        pts = self._tip_points(t_home, t_away, a_home, a_away, is_ko_phase)
+                        chalk_pts = self._tip_points(chalk_home, chalk_away, a_home, a_away, is_ko_phase)
+                        adv = pts - chalk_pts
+                        mean_adv += adv * prob
+                        mean_adv_sq += (adv ** 2) * prob
+                        xp += pts * prob
+                sd_adv = max(0.0, mean_adv_sq - mean_adv ** 2) ** 0.5
+                score = mean_adv + aggressiveness * sd_adv
+                results.append({
+                    "Tipp": f"{t_home}:{t_away}",
+                    "xP": xp,
+                    "edge_vs_field": mean_adv,
+                    "upside": sd_adv,
+                    "score": score,
+                })
+
+        df = pd.DataFrame(results)
+        df = df.sort_values(by="score", ascending=False).head(5).reset_index(drop=True)
+        return df
 
     def _calculate_new_elo(self, rating_a: float, rating_b: float, actual_result_a: float, k_factor: int = 60, is_a_host: bool = False, is_b_host: bool = False, goal_diff: int = 0) -> tuple[float, float]:
         """

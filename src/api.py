@@ -184,7 +184,8 @@ def predict_match(payload: dict):
     is_ko = payload.get("is_ko", False)
     home_resting = payload.get("home_resting", False)
     away_resting = payload.get("away_resting", False)
-    
+    aggressiveness = float(payload.get("aggressiveness", 0.0))
+
     if not match_data:
         raise HTTPException(status_code=400, detail="Match data required")
         
@@ -233,21 +234,23 @@ def predict_match(payload: dict):
 
         score_matrix = math_engine.generate_exact_score_matrix(xg_home, xg_away, max_goals=10)
         xp_df = math_engine.calculate_expected_points(score_matrix, is_ko_phase=is_ko)
-        
+        pool_df = math_engine.calculate_pool_optimal_tips(score_matrix, is_ko_phase=is_ko, aggressiveness=aggressiveness)
+
         matrix_dict = {}
         for row in score_matrix.index:
             matrix_dict[row] = {}
             for col in score_matrix.columns:
                 matrix_dict[row][col] = score_matrix.loc[row, col]
-                
+
         max_prob = score_matrix.values.max()
-                
+
         return {
             "xg_home": xg_home,
             "xg_away": xg_away,
             "matrix": matrix_dict,
             "max_prob": max_prob,
-            "xp_tips": xp_df.to_dict(orient="records")
+            "xp_tips": xp_df.to_dict(orient="records"),
+            "pool_tips": pool_df.to_dict(orient="records")
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
