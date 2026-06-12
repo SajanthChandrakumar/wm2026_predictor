@@ -242,9 +242,9 @@ class MathEngine:
         df_xp = df_xp.sort_values(by="xP", ascending=False).head(5).reset_index(drop=True)
         return df_xp
 
-    def _calculate_new_elo(self, rating_a: float, rating_b: float, actual_result_a: float, k_factor: int = 40) -> tuple[float, float]:
+    def _calculate_new_elo(self, rating_a: float, rating_b: float, actual_result_a: float, k_factor: int = 40, is_a_host: bool = False, is_b_host: bool = False) -> tuple[float, float]:
         """ Helper for standard Elo calculation """
-        expected_a = self.get_elo_probability(rating_a, rating_b)
+        expected_a = self.get_elo_probability(rating_a, rating_b, is_a_host=is_a_host, is_b_host=is_b_host)
         expected_b = 1 - expected_a
         
         new_rating_a = rating_a + k_factor * (actual_result_a - expected_a)
@@ -302,6 +302,10 @@ class MathEngine:
                         
                 elo_home = self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'].values[0]
                 elo_away = self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'].values[0]
+                
+                hosts = ["United States", "Canada", "Mexico"]
+                is_home_host = home_norm in hosts
+                is_away_host = away_norm in hosts
                     
                 if home_score > away_score:
                     result_home = 1.0
@@ -310,7 +314,10 @@ class MathEngine:
                 else:
                     result_home = 0.5
                     
-                new_elo_home, new_elo_away = self._calculate_new_elo(elo_home, elo_away, result_home)
+                new_elo_home, new_elo_away = self._calculate_new_elo(
+                    elo_home, elo_away, result_home, 
+                    is_a_host=is_home_host, is_b_host=is_away_host
+                )
                 
                 self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'] = new_elo_home
                 self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'] = new_elo_away
