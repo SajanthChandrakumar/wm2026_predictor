@@ -1,0 +1,98 @@
+{
+    "Mexico": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1912.9373145911663
+        },
+        {
+            "timestamp": 1781343081.124934,
+            "match_id": "80d82d1113934bfbea4ce8daf37a2433",
+            "elo": 1912.9373145911663
+        }
+    ],
+    "South Africa": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1657.0626854088337
+        },
+        {
+            "timestamp": 1781343081.12501,
+            "match_id": "80d82d1113934bfbea4ce8daf37a2433",
+            "elo": 1657.0626854088337
+        }
+    ],
+    "South Korea": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1889.2709848123145
+        },
+        {
+            "timestamp": 1781343081.1257641,
+            "match_id": "384cbb5d76b535896a24fe65f93cfac8",
+            "elo": 1889.2709848123145
+        }
+    ],
+    "Czech Republic": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1720.7290151876855
+        },
+        {
+            "timestamp": 1781343081.125855,
+            "match_id": "384cbb5d76b535896a24fe65f93cfac8",
+            "elo": 1720.7290151876855
+        }
+    ],
+    "Canada": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1794.4151844011226
+        },
+        {
+            "timestamp": 1781343081.126466,
+            "match_id": "d1f4f946c70a0b4e81f5d43e9d32361c",
+            "elo": 1794.4151844011226
+        }
+    ],
+    "Bosnia and Herzegovina": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1705.5848155988774
+        },
+        {
+            "timestamp": 1781343081.126548,
+            "match_id": "d1f4f946c70a0b4e81f5d43e9d32361c",
+            "elo": 1705.5848155988774
+        }
+    ],
+    "United States": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1953.0863915807183
+        },
+        {
+            "timestamp": 1781343081.127094,
+            "match_id": "c12986f447a515fbe641addd786dbb24",
+            "elo": 1953.0863915807183
+        }
+    ],
+    "Paraguay": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1766.9136084192817
+        },
+        {
+            "timestamp": 1781343081.12716,
+            "match_id": "c12986f447a515fbe641addd786dbb24",
+            "elo": 1766.9136084192817
+        }
+    ]
+}

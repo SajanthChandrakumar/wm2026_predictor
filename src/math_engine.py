@@ -1,3 +1,5 @@
+import os
+import json
 import time
 import pandas as pd
 import numpy as np
@@ -12,6 +14,7 @@ class MathEngine:
     def __init__(self, elo_csv_path: str, name_mapping: dict = None):
         self.elo_csv_path = elo_csv_path
         self.elo_df = pd.read_csv(elo_csv_path)
+        self.elo_df['elo_rating'] = self.elo_df['elo_rating'].astype(float)
         self.name_mapping = name_mapping or {}
 
     @staticmethod
@@ -52,6 +55,7 @@ class MathEngine:
         """ Reloads the latest Elo dataframe from the CSV file to ensure global state is up-to-date """
         if os.path.exists(self.elo_csv_path):
             self.elo_df = pd.read_csv(self.elo_csv_path)
+            self.elo_df['elo_rating'] = self.elo_df['elo_rating'].astype(float)
 
     def get_match_elo_probabilities(self, home_team: str, away_team: str, home_resting: bool = False, away_resting: bool = False) -> tuple[float, float]:
         home_norm = self.name_mapping.get(home_team, home_team)
@@ -222,24 +226,35 @@ class MathEngine:
         return df
 
     @staticmethod
-    def _tip_points(tipped_home: int, tipped_away: int, actual_home: int, actual_away: int, is_ko_phase: bool = False) -> int:
-        """Punkte für einen Tipp gegen ein tatsächliches Resultat nach SRF-Regelwerk."""
-        points = 0
+    def calculate_actual_points(tipped_score: str, actual_score: str, is_ko_phase: bool = False) -> int:
+        """Score a completed tip against an actual result using the SRF Tippspiel ruleset."""
+        try:
+            t_home, t_away = map(int, tipped_score.split(":"))
+            a_home, a_away = map(int, actual_score.split(":"))
+        except Exception:
+            return 0
 
-        tipped_tendency = np.sign(tipped_home - tipped_away)
-        actual_tendency = np.sign(actual_home - actual_away)
-        tendency_correct = tipped_tendency == actual_tendency
+        points = 0
+        t_tend = np.sign(t_home - t_away)
+        a_tend = np.sign(a_home - a_away)
+        tendency_correct = t_tend == a_tend
 
         if tendency_correct:
             points += 5
-        if tipped_home == actual_home:
+        if t_home == a_home:
             points += 1
-        if tipped_away == actual_away:
+        if t_away == a_away:
             points += 1
-        if tendency_correct and (tipped_home - tipped_away) == (actual_home - actual_away):
+        if tendency_correct and (t_home - t_away) == (a_home - a_away):
             points += 3
 
         return points * 2 if is_ko_phase else points
+
+    @staticmethod
+    def _tip_points(tipped_home: int, tipped_away: int, actual_home: int, actual_away: int, is_ko_phase: bool = False) -> int:
+        return MathEngine.calculate_actual_points(
+            f"{tipped_home}:{tipped_away}", f"{actual_home}:{actual_away}", is_ko_phase
+        )
 
     def _points_distribution(self, t_home: int, t_away: int, score_matrix: pd.DataFrame, is_ko_phase: bool) -> tuple[float, float]:
         """Gibt (Erwartungswert, Standardabweichung) der Punkte eines Tipps über die Resultatverteilung zurück."""
@@ -355,8 +370,6 @@ class MathEngine:
         Updates Elo ratings based on completed matches from the API, 
         ensuring idempotency by tracking processed match IDs.
         """
-        import os
-        import json
         processed_ids = []
         if os.path.exists(processed_matches_file):
             with open(processed_matches_file, 'r', encoding='utf-8') as f:
@@ -415,8 +428,8 @@ class MathEngine:
                     
                 new_elo_home, new_elo_away = self._calculate_new_elo(elo_home, elo_away, result_home, is_a_host=is_home_host, is_b_host=is_away_host, goal_diff=home_score - away_score)
                 
-                self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'] = new_elo_home
-                self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'] = new_elo_away
+                self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'] = float(new_elo_home)
+                self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'] = float(new_elo_away)
                 
                 # Elo History Logging
                 history_json_path = os.path.join(os.path.dirname(os.path.abspath(processed_matches_file)), 'elo_history.json')

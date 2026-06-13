@@ -22,6 +22,10 @@ function initSidebar() {
         showView('elo-history');
         loadEloHistoryView();
     });
+    document.getElementById('nav-performance').addEventListener('click', () => {
+        showView('performance');
+        loadPerformanceView();
+    });
 
     // Buttons
     document.getElementById('refresh-btn').addEventListener('click', () => {
@@ -56,17 +60,18 @@ function initSidebar() {
 
 // ── Views ─────────────────────────────────────────────────────
 function showView(view) {
-    ['matches-view', 'value-bets-view', 'elo-history-view', 'detail-view', 'loading-spinner']
+    ['matches-view', 'value-bets-view', 'elo-history-view', 'performance-view', 'detail-view', 'loading-spinner']
         .forEach(id => document.getElementById(id).style.display = 'none');
 
     document.querySelectorAll('nav li').forEach(li => li.classList.remove('active'));
 
     const map = {
-        'dashboard':   ['matches-view',     'nav-dashboard'],
-        'value-bets':  ['value-bets-view',  'nav-value-bets'],
+        'dashboard':   ['matches-view',      'nav-dashboard'],
+        'value-bets':  ['value-bets-view',   'nav-value-bets'],
         'elo-history': ['elo-history-view',  'nav-elo-history'],
-        'detail':      ['detail-view',       null],
-        'loading':     ['loading-spinner',   null],
+        'performance': ['performance-view',  'nav-performance'],
+        'detail':      ['detail-view',        null],
+        'loading':     ['loading-spinner',    null],
     };
     const [viewId, navId] = map[view] || ['matches-view', 'nav-dashboard'];
     document.getElementById(viewId).style.display = '';
@@ -131,7 +136,7 @@ async function syncElo() {
     } catch {
         btn.textContent = '✗ Sync failed';
     }
-    setTimeout(() => { btn.textContent = '⚡ Sync Elo Ratings'; btn.disabled = false; }, 3000);
+    setTimeout(() => { btn.textContent = 'Sync Elo Ratings'; btn.disabled = false; }, 3000);
 }
 
 async function updatePrediction() {
@@ -168,17 +173,43 @@ async function updatePrediction() {
     }
 }
 
-// ── Render: Match Grid ────────────────────────────────────────
+// ── Render: Match Grid (fixture-list grouped by day) ──────────
 function renderMatchGrid(matches) {
     const grid = document.getElementById('matches-grid');
     grid.innerHTML = '';
+
     const sorted = [...matches].sort((a, b) =>
         new Date(a.raw_match.commence_time) - new Date(b.raw_match.commence_time));
 
-    sorted.forEach((match, i) => {
-        const card = buildMatchCard(match, i, false);
-        card.addEventListener('click', () => openMatch(match.id));
-        grid.appendChild(card);
+    const groups = {};
+    sorted.forEach(match => {
+        const d = new Date(match.raw_match.commence_time);
+        const key = d.toLocaleDateString('de-CH', {
+            weekday: 'long', day: 'numeric', month: 'long',
+            timeZone: 'Europe/Zurich'
+        });
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(match);
+    });
+
+    Object.entries(groups).forEach(([day, dayMatches]) => {
+        const group = document.createElement('div');
+        group.className = 'day-group';
+
+        const header = document.createElement('div');
+        header.className = 'day-header';
+        header.textContent = day;
+        group.appendChild(header);
+
+        const list = document.createElement('div');
+        list.className = 'fixture-group-list';
+        dayMatches.forEach(match => {
+            const row = buildFixtureRow(match);
+            row.addEventListener('click', () => openMatch(match.id));
+            list.appendChild(row);
+        });
+        group.appendChild(list);
+        grid.appendChild(group);
     });
 }
 
@@ -189,52 +220,61 @@ function renderValueBets(matches) {
         .filter(m => m.max_xp > 0)
         .sort((a, b) => b.max_xp - a.max_xp);
 
-    sorted.forEach((match, i) => {
-        const card = buildMatchCard(match, i, true);
-        card.addEventListener('click', () => openMatch(match.id));
-        grid.appendChild(card);
+    const list = document.createElement('div');
+    list.className = 'fixture-group-list';
+    sorted.forEach(match => {
+        const row = buildFixtureRow(match, true);
+        row.addEventListener('click', () => openMatch(match.id));
+        list.appendChild(row);
     });
+    grid.appendChild(list);
 }
 
-function buildMatchCard(match, index, isValue) {
-    const card = document.createElement('div');
-    card.className = `match-card${isValue ? ' value-card' : ''}`;
-    card.style.animationDelay = `${Math.min(index * 0.04, 0.4)}s`;
+function buildFixtureRow(match, showXp = false) {
+    const row = document.createElement('div');
+    row.className = 'fixture-row';
 
     const d = new Date(match.raw_match.commence_time);
-    const timeStr = d.toLocaleDateString('de-DE', {
-        weekday: 'short', day: '2-digit', month: '2-digit',
-        hour: '2-digit', minute: '2-digit'
+    const now = new Date();
+    const isPast = d < now;
+
+    const timeStr = d.toLocaleTimeString('de-CH', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich'
     });
 
     const probs = computeImpliedProbs(match.odds);
-    const tipHtml = match.top_tip && match.top_tip !== 'N/A'
-        ? `<div class="card-tip-row">
-             <span class="card-tip-label">Top tip</span>
-             <span class="card-tip-badge">${match.top_tip}</span>
-           </div>`
-        : '';
+    const hPct = probs.home * 100, dPct = probs.draw * 100, aPct = probs.away * 100;
 
-    card.innerHTML = `
-        <div class="card-time">${timeStr}</div>
-        <div class="card-teams">
-            <span class="card-team">${match.home_disp}</span>
-            <span class="card-vs">vs</span>
-            <span class="card-team">${match.away_disp}</span>
+    const tipHtml = match.top_tip && match.top_tip !== 'N/A'
+        ? `<div class="fixture-tip">${match.top_tip}</div>`
+        : `<div class="fixture-tip na">–</div>`;
+
+    const xpBadge = showXp && match.max_xp > 0
+        ? `<div class="fixture-tip" style="color:var(--green);background:var(--green-dim);border-color:rgba(30,171,90,0.3)">${match.max_xp.toFixed(1)} xP</div>`
+        : tipHtml;
+
+    row.innerHTML = `
+        <div class="fixture-time${isPast ? ' past' : ''}">${timeStr}</div>
+        <div class="fixture-body">
+            <div class="fixture-teams">
+                <span class="fixture-home">${match.home_disp}</span>
+                <div class="fix-bar">
+                    <div class="bar-h" style="width:${hPct}%"></div>
+                    <div class="bar-d" style="width:${dPct}%"></div>
+                    <div class="bar-a" style="width:${aPct}%"></div>
+                </div>
+                <span class="fixture-away">${match.away_disp}</span>
+            </div>
+            <div class="fixture-probs">
+                <span class="fp-h">${pct(probs.home)}</span>
+                <span class="fp-d">${pct(probs.draw)} X</span>
+                <span class="fp-a">${pct(probs.away)}</span>
+            </div>
         </div>
-        <div class="prob-bar">
-            <div class="prob-home" style="width:${probs.home*100}%"></div>
-            <div class="prob-draw" style="width:${probs.draw*100}%"></div>
-            <div class="prob-away" style="width:${probs.away*100}%"></div>
-        </div>
-        <div class="prob-labels">
-            <span class="home-pct">${pct(probs.home)}</span>
-            <span class="draw-pct">${pct(probs.draw)}</span>
-            <span class="away-pct">${pct(probs.away)}</span>
-        </div>
-        ${tipHtml}
+        ${xpBadge}
+        <div class="fixture-chevron">›</div>
     `;
-    return card;
+    return row;
 }
 
 function openMatch(id) {
@@ -478,11 +518,11 @@ function renderEloChart(history, team) {
             datasets: [{
                 label: `${team} Elo`,
                 data,
-                borderColor: '#38bdf8',
-                backgroundColor: 'rgba(56,189,248,0.08)',
+                borderColor: '#c8901a',
+                backgroundColor: 'rgba(200,144,26,0.08)',
                 borderWidth: 2.5,
                 pointRadius: 5,
-                pointBackgroundColor: '#38bdf8',
+                pointBackgroundColor: '#e6a51e',
                 fill: true,
                 tension: 0.3,
             }]
@@ -501,6 +541,222 @@ function renderEloChart(history, team) {
     });
 }
 
+// ── Performance Dashboard ─────────────────────────────────────
+async function loadPerformanceView() {
+    const grid = document.getElementById('performance-grid');
+    grid.innerHTML = '';
+    document.getElementById('kpi-matches').textContent = '…';
+    document.getElementById('kpi-points').textContent  = '…';
+    document.getElementById('kpi-hitrate').textContent = '…';
+
+    let archiveData;
+    try {
+        archiveData = await (await fetch('/api/archive')).json();
+    } catch (e) {
+        grid.innerHTML = `<p style="color:var(--red)">Failed to load archive: ${e.message}</p>`;
+        return;
+    }
+
+    let completedMatches = 0, totalPoints = 0, correctTendency = 0;
+    let algoTotal = 0, algoCorrectTendency = 0, algoMatchCount = 0;
+
+    Object.entries(archiveData).forEach(([match_id, match]) => {
+        if (match.post_match_result?.status !== 'completed') return;
+
+        completedMatches++;
+        const pts = match.post_match_result.points_earned || 0;
+        totalPoints += pts;
+        if (pts >= 5) correctTendency++;
+
+        const ap = match.post_match_result?.algo_points;
+        if (ap != null) { algoTotal += ap; algoMatchCount++; if (ap >= 5) algoCorrectTendency++; }
+
+        const userTip  = match.prediction?.user_tip  ?? null;
+        const algoTip  = match.prediction?.top_tip   ?? null;
+        const algoPts  = match.post_match_result?.algo_points ?? null;
+        const activeTip = userTip ?? algoTip;
+
+        const borderColor = activeTip == null ? 'var(--text-3)'
+            : pts >= 8 ? 'var(--green)'
+            : pts >= 5 ? 'var(--amber)'
+            : 'var(--red)';
+
+        const algoColor = algoPts == null ? 'var(--text-3)'
+            : algoPts >= 8 ? 'var(--green)'
+            : algoPts >= 5 ? 'var(--amber)'
+            : 'var(--red)';
+
+        const myTipHtml = userTip
+            ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                   <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Mein Tipp</span>
+                   <span style="font-size:1rem;font-weight:800;color:var(--text-1);">${userTip}</span>
+                   <span style="margin-left:auto;font-size:0.78rem;font-weight:700;color:${borderColor};">+${pts} Pts</span>
+                   <button onclick="editUserTip(this, '${match_id}')"
+                       style="background:none;border:1px solid var(--border-2);border-radius:3px;
+                              color:var(--text-3);font-size:0.65rem;padding:1px 6px;cursor:pointer;">✎</button>
+               </div>`
+            : `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;" id="tip-input-${match_id}">
+                   <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Mein Tipp</span>
+                   <input id="tip-val-${match_id}" type="text" placeholder="2:1" maxlength="5"
+                       style="width:52px;background:var(--surface-2);border:1px solid var(--border-2);
+                              border-radius:4px;color:var(--text-1);font-size:0.9rem;font-weight:700;
+                              padding:3px 7px;text-align:center;outline:none;"
+                       onclick="event.stopPropagation()">
+                   <button onclick="saveUserTip(event,'${match_id}')"
+                       style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:4px;
+                              color:var(--gold-l);font-size:0.72rem;font-weight:700;padding:3px 10px;cursor:pointer;">
+                       Speichern
+                   </button>
+               </div>`;
+
+        const algoTipHtml = algoTip
+            ? `<div style="display:flex;align-items:center;gap:8px;">
+                   <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Algo</span>
+                   <span style="font-size:1rem;font-weight:800;color:var(--text-2);">${algoTip}</span>
+                   <span style="margin-left:auto;font-size:0.78rem;font-weight:700;color:${algoColor};">${algoPts != null ? '+'+algoPts+' Pts' : '–'}</span>
+               </div>`
+            : `<div style="display:flex;align-items:center;gap:8px;">
+                   <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Algo</span>
+                   <span style="font-size:0.72rem;color:var(--text-3);font-style:italic;">Kein Algo-Tipp</span>
+               </div>`;
+
+        const card = document.createElement('div');
+        card.className = 'glass-card';
+        card.style.cssText = `border-left:4px solid ${borderColor};padding:14px 18px;`;
+        card.innerHTML = `
+            <div style="font-size:0.72rem;color:var(--text-2);margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${match.metadata.home_disp} vs ${match.metadata.away_disp}
+                <span style="float:right;color:var(--text-3);">Resultat: <strong style="color:var(--text-1);">${match.post_match_result.actual_score}</strong></span>
+            </div>
+            <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:4px;">
+                ${myTipHtml}
+                ${algoTipHtml}
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+
+    document.getElementById('kpi-matches').textContent = completedMatches;
+    document.getElementById('kpi-points').textContent  = totalPoints;
+    document.getElementById('kpi-hitrate').textContent = completedMatches > 0
+        ? ((correctTendency / completedMatches) * 100).toFixed(1) + '%'
+        : '0.0%';
+
+    // ── You vs Algo Panel ────────────────────────────────────────
+    const h2h = document.getElementById('h2h-panel');
+    if (completedMatches === 0 || algoMatchCount === 0) {
+        h2h.innerHTML = '';
+    } else {
+        const userHitRate  = ((correctTendency  / completedMatches) * 100).toFixed(1);
+        const algoHitRate  = ((algoCorrectTendency / algoMatchCount) * 100).toFixed(1);
+        const maxPts       = Math.max(totalPoints, algoTotal, 1);
+        const userBarPct   = (totalPoints / maxPts * 100).toFixed(1);
+        const algoBarPct   = (algoTotal   / maxPts * 100).toFixed(1);
+
+        const diff         = totalPoints - algoTotal;
+        const diffLabel    = diff > 0
+            ? `<span style="color:var(--gold-l);font-weight:800;">Du führst +${diff} Pts</span>`
+            : diff < 0
+            ? `<span style="color:var(--blue);font-weight:800;">Algo führt +${Math.abs(diff)} Pts</span>`
+            : `<span style="color:var(--text-2);font-weight:700;">Gleichstand</span>`;
+
+        h2h.innerHTML = `
+            <div class="glass-card" style="padding:20px 24px;">
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;
+                            color:var(--text-3);font-weight:700;margin-bottom:16px;">You vs Algo</div>
+
+                <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;margin-bottom:16px;">
+                    <!-- Du -->
+                    <div>
+                        <div style="font-size:0.72rem;color:var(--gold-l);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Du</div>
+                        <div style="font-size:2.4rem;font-weight:900;color:var(--gold-l);line-height:1;letter-spacing:-1px;">${totalPoints}</div>
+                        <div style="font-size:0.72rem;color:var(--text-2);margin-top:3px;">${userHitRate}% Tendenz</div>
+                    </div>
+
+                    <!-- Differenz -->
+                    <div style="text-align:center;font-size:0.82rem;">${diffLabel}</div>
+
+                    <!-- Algo -->
+                    <div style="text-align:right;">
+                        <div style="font-size:0.72rem;color:var(--blue);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Algo</div>
+                        <div style="font-size:2.4rem;font-weight:900;color:var(--blue);line-height:1;letter-spacing:-1px;">${algoTotal}</div>
+                        <div style="font-size:0.72rem;color:var(--text-2);margin-top:3px;">${algoHitRate}% Tendenz</div>
+                    </div>
+                </div>
+
+                <!-- Progress bars -->
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:0.62rem;color:var(--gold-l);font-weight:700;min-width:28px;text-align:right;">Du</span>
+                        <div style="flex:1;height:8px;background:var(--surface-3);border-radius:4px;overflow:hidden;">
+                            <div style="width:${userBarPct}%;height:100%;background:var(--gold);border-radius:4px;
+                                        transition:width 0.6s ease;"></div>
+                        </div>
+                        <span style="font-size:0.72rem;color:var(--text-2);font-weight:600;min-width:36px;">${totalPoints} Pts</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:0.62rem;color:var(--blue);font-weight:700;min-width:28px;text-align:right;">Algo</span>
+                        <div style="flex:1;height:8px;background:var(--surface-3);border-radius:4px;overflow:hidden;">
+                            <div style="width:${algoBarPct}%;height:100%;background:var(--blue);border-radius:4px;
+                                        transition:width 0.6s ease;"></div>
+                        </div>
+                        <span style="font-size:0.72rem;color:var(--text-2);font-weight:600;min-width:36px;">${algoTotal} Pts</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    if (completedMatches === 0) {
+        grid.innerHTML = `<p style="color:var(--text-2);font-size:0.85rem;">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
+    }
+}
+
+async function saveUserTip(event, matchId) {
+    event.stopPropagation();
+    const input = document.getElementById(`tip-val-${matchId}`);
+    const tip = input?.value?.trim();
+    if (!tip || !/^\d+:\d+$/.test(tip)) {
+        input.style.borderColor = 'var(--red)';
+        return;
+    }
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+        const res = await fetch('/api/archive/user_tip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ match_id: matchId, user_tip: tip })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Error');
+        loadPerformanceView();  // reload to reflect new tip + points
+    } catch (e) {
+        btn.textContent = '✗';
+        btn.style.color = 'var(--red)';
+        setTimeout(() => { btn.textContent = 'Speichern'; btn.disabled = false; }, 2000);
+    }
+}
+
+function editUserTip(btn, matchId) {
+    const row = btn.closest('div');
+    const currentTip = row.querySelector('span:nth-child(2)')?.textContent || '';
+    row.innerHTML = `
+        <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Mein Tipp</span>
+        <input id="tip-val-${matchId}" type="text" value="${currentTip}" maxlength="5"
+            style="width:52px;background:var(--surface-2);border:1px solid var(--border-2);
+                   border-radius:4px;color:var(--text-1);font-size:0.9rem;font-weight:700;
+                   padding:3px 7px;text-align:center;outline:none;"
+            onclick="event.stopPropagation()">
+        <button onclick="saveUserTip(event,'${matchId}')"
+            style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:4px;
+                   color:var(--gold-l);font-size:0.72rem;font-weight:700;padding:3px 10px;cursor:pointer;">
+            Speichern
+        </button>
+    `;
+}
+
 // ── Helpers ───────────────────────────────────────────────────
 function computeImpliedProbs(odds) {
     const rh = 1 / odds.home, rd = 1 / odds.draw, ra = 1 / odds.away;
@@ -511,19 +767,17 @@ function computeImpliedProbs(odds) {
 function pct(p) { return (p * 100).toFixed(0) + '%'; }
 
 function probColor(prob, maxProb) {
-    if (!prob || !maxProb) return 'rgba(255,255,255,0.03)';
+    if (!prob || !maxProb) return '#0d1220';
     const r = Math.min(prob / maxProb, 1);
-    // Dark slate → sky blue → emerald → amber
+    // Dark navy → deep amber → gold
     const stops = [
-        [18, 28, 48],
-        [56, 189, 248],
-        [16, 185, 129],
-        [245, 158, 11],
+        [13,  18,  32],
+        [90,  55,  10],
+        [210, 148,  26],
     ];
     let c1, c2, t;
-    if (r < 0.33)      { c1 = stops[0]; c2 = stops[1]; t = r / 0.33; }
-    else if (r < 0.66) { c1 = stops[1]; c2 = stops[2]; t = (r - 0.33) / 0.33; }
-    else               { c1 = stops[2]; c2 = stops[3]; t = (r - 0.66) / 0.34; }
+    if (r < 0.5) { c1 = stops[0]; c2 = stops[1]; t = r / 0.5; }
+    else         { c1 = stops[1]; c2 = stops[2]; t = (r - 0.5) / 0.5; }
     const mix = (i) => Math.round(c1[i] + (c2[i] - c1[i]) * t);
     return `rgb(${mix(0)},${mix(1)},${mix(2)})`;
 }

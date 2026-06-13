@@ -5,33 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WM 2026 Predictor</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
     <div class="app-container">
         <aside class="sidebar">
             <div class="sidebar-logo">
-                <span class="logo-icon">⚽</span>
-                <span class="logo-text">WC <strong>2026</strong></span>
+                <span class="logo-badge">WC</span>
+                <span class="logo-text">2026 <span>Predictor</span></span>
             </div>
 
             <div id="quota-container" class="quota-widget">
-                <span class="quota-label">API Remaining</span>
-                <div class="quota-value" id="quota-value">--</div>
-                <div class="quota-used" id="quota-delta">-- used</div>
+                <span class="quota-label">API Quota</span>
+                <div class="quota-right">
+                    <div class="quota-value" id="quota-value">--</div>
+                    <div class="quota-used" id="quota-delta">-- used</div>
+                </div>
             </div>
 
             <nav>
                 <div class="nav-label">Views</div>
                 <ul>
                     <li id="nav-dashboard" class="active">
-                        <span class="nav-icon">📊</span> Dashboard
+                        <span class="nav-icon">▦</span> Dashboard
                     </li>
                     <li id="nav-value-bets">
-                        <span class="nav-icon">🔥</span> Top Value Bets
+                        <span class="nav-icon">↑</span> Top Value Bets
                     </li>
                     <li id="nav-elo-history">
-                        <span class="nav-icon">📈</span> Team Form
+                        <span class="nav-icon">∿</span> Team Form
+                    </li>
+                    <li id="nav-performance">
+                        <span class="nav-icon">◈</span> Performance
                     </li>
                 </ul>
             </nav>
@@ -42,7 +47,7 @@
                 <div class="section-label">Match Settings</div>
                 <label class="toggle-row">
                     <span class="toggle-text">
-                        <span class="toggle-icon">🏆</span>
+                        <span class="toggle-icon">◉</span>
                         <span>
                             <strong>K.O. Phase</strong>
                             <small>Points doubled</small>
@@ -55,7 +60,7 @@
                 </label>
                 <label class="toggle-row">
                     <span class="toggle-text">
-                        <span class="toggle-icon">💤</span>
+                        <span class="toggle-icon">⊖</span>
                         <span>
                             <strong id="home-resting-label">Home rotates</strong>
                             <small>B-squad / resting</small>
@@ -68,7 +73,7 @@
                 </label>
                 <label class="toggle-row">
                     <span class="toggle-text">
-                        <span class="toggle-icon">💤</span>
+                        <span class="toggle-icon">⊖</span>
                         <span>
                             <strong id="away-resting-label">Away rotates</strong>
                             <small>B-squad / resting</small>
@@ -102,10 +107,10 @@
             <div class="sidebar-divider"></div>
 
             <button id="refresh-btn" class="sidebar-btn primary">
-                <span>🔄</span> Refresh Data
+                Refresh Data
             </button>
             <button id="sync-elo-btn" class="sidebar-btn">
-                <span>⚡</span> Sync Elo Ratings
+                Sync Elo Ratings
             </button>
         </aside>
 
@@ -113,10 +118,8 @@
             <!-- Dashboard View -->
             <div id="matches-view">
                 <div class="page-header">
-                    <div>
-                        <h1>Tournament Overview</h1>
-                        <p class="page-subtitle">Click any match for a full prediction breakdown</p>
-                    </div>
+                    <h1>Tournament Fixtures</h1>
+                    <p class="page-subtitle">Click any match for a full prediction breakdown</p>
                 </div>
                 <div id="matches-grid" class="matches-grid"></div>
             </div>
@@ -124,27 +127,48 @@
             <!-- Value Bets View -->
             <div id="value-bets-view" style="display:none;">
                 <div class="page-header">
-                    <div>
-                        <h1>Top Value Bets</h1>
-                        <p class="page-subtitle">Ranked by Expected Points — highest xP first</p>
-                    </div>
+                    <h1>Top Value Bets</h1>
+                    <p class="page-subtitle">Ranked by Expected Points — highest xP first</p>
                 </div>
                 <div id="value-bets-grid" class="matches-grid"></div>
+            </div>
+
+            <!-- Performance View -->
+            <div id="performance-view" style="display:none;">
+                <div class="page-header">
+                    <h1>Algorithm Performance</h1>
+                    <p class="page-subtitle">Prediction accuracy vs actual results</p>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;">
+                    <div class="glass-card" style="padding:20px;text-align:center;">
+                        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:10px;">Completed Matches</div>
+                        <div id="kpi-matches" style="font-size:2.4rem;font-weight:900;color:var(--text-1);line-height:1;">0</div>
+                    </div>
+                    <div class="glass-card" style="padding:20px;text-align:center;">
+                        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:10px;">Total SRF Points</div>
+                        <div id="kpi-points" style="font-size:2.4rem;font-weight:900;color:var(--green);line-height:1;">0</div>
+                    </div>
+                    <div class="glass-card" style="padding:20px;text-align:center;">
+                        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:10px;">Hit Rate (Tendency)</div>
+                        <div id="kpi-hitrate" style="font-size:2.4rem;font-weight:900;color:var(--amber);line-height:1;">0.0%</div>
+                    </div>
+                </div>
+                <div id="h2h-panel" style="margin-bottom:24px;"></div>
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:12px;">Match History</div>
+                <div id="performance-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;"></div>
             </div>
 
             <!-- Elo History View -->
             <div id="elo-history-view" style="display:none;">
                 <div class="page-header">
-                    <div>
-                        <h1>Team Form</h1>
-                        <p class="page-subtitle">Elo rating trajectory across the tournament</p>
-                    </div>
+                    <h1>Team Form</h1>
+                    <p class="page-subtitle">Elo rating trajectory across the tournament</p>
                 </div>
-                <div class="glass-card" style="margin-bottom: 20px; padding: 20px;">
+                <div class="glass-card" style="margin-bottom:20px;padding:20px;">
                     <label for="history-team-selector" class="field-label">Select Team</label>
                     <select id="history-team-selector" class="select-field"></select>
                 </div>
-                <div class="glass-card" style="padding: 24px;">
+                <div class="glass-card" style="padding:24px;">
                     <canvas id="eloChart" height="400"></canvas>
                 </div>
             </div>
@@ -152,45 +176,32 @@
             <!-- Detail View -->
             <div id="detail-view" style="display:none;">
                 <div class="detail-header">
-                    <button id="back-btn" class="back-btn">
-                        ← Back
-                    </button>
+                    <button id="back-btn" class="back-btn">← Back</button>
                     <div class="detail-title-block">
                         <h1 id="match-title">Team A vs Team B</h1>
                         <div id="match-meta" class="match-meta-row"></div>
                     </div>
                 </div>
 
-                <!-- xG Summary Row -->
                 <div class="xg-row" id="xg-row"></div>
 
-                <!-- Main Grid -->
                 <div class="detail-grid">
-                    <!-- Heatmap -->
                     <section class="glass-card heatmap-card">
                         <div class="card-title">Score Probability Matrix</div>
                         <div class="matrix-container" id="matrix-container"></div>
                     </section>
 
-                    <!-- Tips Panel -->
                     <section class="tips-panel">
-                        <!-- Odds -->
                         <div class="glass-card odds-card" id="odds-card"></div>
 
-                        <!-- Tabs -->
                         <div class="tab-bar">
-                            <button class="tab active" id="tab-safe" onclick="switchTab('safe')">
-                                ⚡ Safe Play
-                            </button>
-                            <button class="tab" id="tab-pool" onclick="switchTab('pool')">
-                                🎲 Pool Strategy
-                            </button>
+                            <button class="tab active" id="tab-safe" onclick="switchTab('safe')">Safe Play</button>
+                            <button class="tab" id="tab-pool" onclick="switchTab('pool')">Pool Strategy</button>
                         </div>
 
-                        <div id="panel-safe" class="tab-panel active-panel">
+                        <div id="panel-safe" class="tab-panel">
                             <div id="xp-container"></div>
                         </div>
-
                         <div id="panel-pool" class="tab-panel" style="display:none;">
                             <div id="pool-container"></div>
                         </div>
@@ -207,6 +218,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
 </body>
 </html>

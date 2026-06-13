@@ -3,6 +3,7 @@ import sys
 import json
 import time
 import statistics
+from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
@@ -91,8 +92,85 @@ def extract_odds(match):
         raise ValueError("Keine Quoten für diesen Markt verfügbar")
     return odds
 
-CACHE_TTL = 3600  # 1 Stunde in Sekunden
-cache_file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'matches_cache.json')
+cache_file_path    = os.path.join(os.path.dirname(__file__), '..', 'data', 'matches_cache.json')
+totals_cache_path  = os.path.join(os.path.dirname(__file__), '..', 'data', 'totals_cache.json')
+scores_cache_path  = os.path.join(os.path.dirname(__file__), '..', 'data', 'scores_cache.json')
+archive_json_path  = os.path.join(os.path.dirname(__file__), '..', 'data', 'prediction_archive.json')
+
+TOTALS_CACHE_TTL = 3600   # 1h per match
+SCORES_CACHE_TTL = 1800   # 30 min — avoids burning quota on repeated manual syncs
+
+
+def _dynamic_ttl(matches: list) -> int:
+    """Return cache TTL in seconds based on soonest upcoming kickoff."""
+    now = time.time()
+    soonest = None
+    for m in matches:
+        ct = m.get("raw_match", m).get("commence_time", "")
+        if ct:
+            try:
+                dt = datetime.fromisoformat(ct.replace("Z", "+00:00"))
+                diff = dt.timestamp() - now
+                if diff > 0 and (soonest is None or diff < soonest):
+                    soonest = diff
+            except Exception:
+                pass
+    if soonest is None:
+        return 3600
+    if soonest > 86400:   # > 24h away
+        return 43200      # 12h
+    if soonest > 7200:    # 2h – 24h
+        return 3600       # 1h
+    return 900            # < 2h → 15 min
+
+
+def _fetch_or_cache_totals(event_id: str, raw_match: dict) -> dict:
+    """
+    Return raw_match augmented with totals bookmakers, fetching from the
+    single-event endpoint (1 request) only if the per-match cache is stale.
+    """
+    totals_cache = {}
+    if os.path.exists(totals_cache_path):
+        try:
+            with open(totals_cache_path, 'r', encoding='utf-8') as f:
+                totals_cache = json.load(f)
+        except Exception:
+            pass
+
+    entry = totals_cache.get(event_id, {})
+    if entry and (time.time() - entry.get("timestamp", 0) < TOTALS_CACHE_TTL):
+        totals_bookmakers = entry.get("bookmakers", [])
+    else:
+        try:
+            engine = OddsApiEngine()
+            event_data = engine.get_event_odds(event_id, market="totals")
+            totals_bookmakers = event_data.get("bookmakers", [])
+            totals_cache[event_id] = {"timestamp": time.time(), "bookmakers": totals_bookmakers}
+            os.makedirs(os.path.dirname(totals_cache_path), exist_ok=True)
+            with open(totals_cache_path, 'w', encoding='utf-8') as f:
+                json.dump(totals_cache, f, indent=4)
+        except Exception as e:
+            print(f"Totals fetch failed for {event_id}: {e}")
+            totals_bookmakers = []
+
+    if not totals_bookmakers:
+        return raw_match
+
+    # Merge totals markets into existing bookmaker entries
+    existing = {b["key"]: b for b in raw_match.get("bookmakers", [])}
+    for tb in totals_bookmakers:
+        key = tb.get("key")
+        if key in existing:
+            have_keys = {m["key"] for m in existing[key].get("markets", [])}
+            for mkt in tb.get("markets", []):
+                if mkt["key"] not in have_keys:
+                    existing[key]["markets"].append(mkt)
+        else:
+            existing[key] = tb
+
+    merged = dict(raw_match)
+    merged["bookmakers"] = list(existing.values())
+    return merged
 
 @app.get("/api/matches")
 def get_matches(force: bool = False):
@@ -100,24 +178,23 @@ def get_matches(force: bool = False):
     Holt die Spiele. Nutzt den Cache, es sei denn, force=True wird übergeben.
     """
     math_engine.reload_elo_data()
-    # 1. Cache prüfen (Wenn Daten da sind, nicht älter als 1 Stunde und kein Force-Refresh verlangt wird)
+    # 1. Cache prüfen — TTL is dynamic based on soonest kickoff time
     if not force and os.path.exists(cache_file_path):
         try:
             with open(cache_file_path, "r", encoding="utf-8") as f:
                 cached_data = json.load(f)
                 timestamp = cached_data.get("timestamp", 0)
                 data = cached_data.get("data")
-                if data is not None and (time.time() - timestamp < CACHE_TTL):
-                    return data
+                if data is not None:
+                    ttl = _dynamic_ttl(data)
+                    if time.time() - timestamp < ttl:
+                        return data
         except json.JSONDecodeError:
             pass
         
-    # 2. API Call (Nur wenn der Cache leer/abgelaufen ist oder der User den Button drückt)
+    # 2. API Call — h2h only (1 request). Totals are fetched lazily per match on /api/predict.
     engine = OddsApiEngine()
-    try:
-        data = engine.get_world_cup_odds(market="h2h,totals")
-    except Exception:
-        data = engine.get_world_cup_odds(market="h2h")
+    data = engine.get_world_cup_odds(market="h2h")
     
     results = []
     for m in data:
@@ -169,14 +246,89 @@ def get_matches(force: bool = False):
         except ValueError:
             continue
             
-    # 3. Cache aktualisieren
+    # 3. Cache aktualisieren — merge with existing so completed matches aren't lost
     try:
         os.makedirs(os.path.dirname(cache_file_path), exist_ok=True)
+        existing_matches = {}
+        if os.path.exists(cache_file_path):
+            try:
+                with open(cache_file_path, "r", encoding="utf-8") as f:
+                    existing_matches = {m["id"]: m for m in json.load(f).get("data", [])}
+            except Exception:
+                pass
+        for r in results:
+            prev = existing_matches.get(r["id"])
+            if prev:
+                old_o, new_o = prev.get("odds", {}), r.get("odds", {})
+                odds_changed = any(
+                    abs(new_o.get(k, 0) - old_o.get(k, 0)) > 0.02
+                    for k in ["home", "draw", "away"]
+                )
+                if not odds_changed:
+                    continue  # keep old entry unchanged
+            existing_matches[r["id"]] = r
+        merged = sorted(existing_matches.values(), key=lambda m: m.get("raw_match", {}).get("commence_time", ""))
         with open(cache_file_path, "w", encoding="utf-8") as f:
-            json.dump({"timestamp": time.time(), "data": results}, f, indent=4)
+            json.dump({"timestamp": time.time(), "data": merged}, f, indent=4)
     except Exception as e:
         print(f"Fehler beim Speichern des Caches: {e}")
-    
+
+    # 4. Archive: log new pre-match snapshots (only first time a match_id is seen)
+    try:
+        archive = {}
+        if os.path.exists(archive_json_path):
+            with open(archive_json_path, 'r', encoding='utf-8') as f:
+                archive = json.load(f)
+
+        changed = False
+        for r in results:
+            if r["id"] in archive or r["top_tip"] == "N/A":
+                continue
+
+            home_norm = TEAM_MAPPING.get(r["home_team"], r["home_team"])
+            away_norm = TEAM_MAPPING.get(r["away_team"], r["away_team"])
+            elo_rows_home = math_engine.elo_df.loc[math_engine.elo_df['team_name'] == home_norm, 'elo_rating']
+            elo_rows_away = math_engine.elo_df.loc[math_engine.elo_df['team_name'] == away_norm, 'elo_rating']
+            elo_home_val = float(elo_rows_home.values[0]) if not elo_rows_home.empty else 1500.0
+            elo_away_val = float(elo_rows_away.values[0]) if not elo_rows_away.empty else 1500.0
+
+            archive[r["id"]] = {
+                "metadata": {
+                    "home_team": r["home_team"],
+                    "away_team": r["away_team"],
+                    "home_disp": r["home_disp"],
+                    "away_disp": r["away_disp"],
+                    "is_ko_phase": False
+                },
+                "pre_match_snapshot": {
+                    "timestamp_recorded": datetime.now(timezone.utc).isoformat(),
+                    "odds": r["odds"],
+                    "elo_state": {
+                        "home_rating": elo_home_val,
+                        "away_rating": elo_away_val
+                    }
+                },
+                "prediction": {
+                    "top_tip": r["top_tip"],
+                    "user_tip": None,
+                    "max_xp": float(r["max_xp"])
+                },
+                "post_match_result": {
+                    "status": "pending",
+                    "actual_score": None,
+                    "points_earned": None,
+                    "algo_points": None
+                }
+            }
+            changed = True
+
+        if changed:
+            os.makedirs(os.path.dirname(archive_json_path), exist_ok=True)
+            with open(archive_json_path, 'w', encoding='utf-8') as f:
+                json.dump(archive, f, indent=4)
+    except Exception as e:
+        print(f"Archive logging failed: {e}")
+
     return results
 
 @app.post("/api/predict")
@@ -190,8 +342,11 @@ def predict_match(payload: dict):
 
     if not match_data:
         raise HTTPException(status_code=400, detail="Match data required")
-        
+
     try:
+        event_id = match_data.get("id", "")
+        match_data = _fetch_or_cache_totals(event_id, match_data)
+
         math_engine.merge_odds_and_elo([match_data])
         odds = extract_odds(match_data)
         
@@ -265,6 +420,53 @@ def get_quota():
             return json.load(f)
     return {"remaining": "Unknown", "used": "Unknown"}
 
+@app.post("/api/archive/user_tip")
+def set_user_tip(payload: dict):
+    match_id  = payload.get("match_id")
+    user_tip  = payload.get("user_tip", "").strip()
+
+    if not match_id or not user_tip:
+        raise HTTPException(status_code=400, detail="match_id and user_tip required")
+
+    parts = user_tip.split(":")
+    if len(parts) != 2 or not all(p.strip().isdigit() for p in parts):
+        raise HTTPException(status_code=400, detail="user_tip must be in format H:A (e.g. 2:1)")
+
+    if not os.path.exists(archive_json_path):
+        raise HTTPException(status_code=404, detail="Archive not found")
+
+    with open(archive_json_path, 'r', encoding='utf-8') as f:
+        archive = json.load(f)
+
+    if match_id not in archive:
+        raise HTTPException(status_code=404, detail="Match not in archive")
+
+    entry = archive[match_id]
+    entry["prediction"]["user_tip"] = user_tip
+
+    actual = entry["post_match_result"].get("actual_score")
+    if actual:
+        is_ko = entry["metadata"].get("is_ko_phase", False)
+        pts = MathEngine.calculate_actual_points(user_tip, actual, is_ko)
+        entry["post_match_result"]["points_earned"] = pts
+    else:
+        pts = None
+
+    with open(archive_json_path, 'w', encoding='utf-8') as f:
+        json.dump(archive, f, indent=4)
+
+    return {"ok": True, "points_earned": pts}
+
+@app.get("/api/archive")
+def get_archive():
+    if os.path.exists(archive_json_path):
+        try:
+            with open(archive_json_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return {}
+    return {}
+
 @app.get("/api/elo_history")
 def get_elo_history():
     history_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_history.json')
@@ -281,14 +483,117 @@ def perform_elo_sync() -> dict:
     odds_engine = OddsApiEngine()
     processed_json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'processed_matches.json')
     try:
-        completed_matches = odds_engine.get_completed_scores(days_from=3)
+        # Scores cache: avoid burning quota when sync is triggered multiple times within 30 min
+        scores_cache = {}
+        if os.path.exists(scores_cache_path):
+            try:
+                with open(scores_cache_path, 'r', encoding='utf-8') as f:
+                    scores_cache = json.load(f)
+            except Exception:
+                pass
+
+        if time.time() - scores_cache.get("timestamp", 0) < SCORES_CACHE_TTL:
+            completed_matches = scores_cache.get("data", [])
+            print("Elo sync: using cached scores (< 30 min old)")
+        else:
+            completed_matches = odds_engine.get_completed_scores(days_from=3)
+            try:
+                os.makedirs(os.path.dirname(scores_cache_path), exist_ok=True)
+                with open(scores_cache_path, 'w', encoding='utf-8') as f:
+                    json.dump({"timestamp": time.time(), "data": completed_matches}, f, indent=4)
+            except Exception as e:
+                print(f"Scores cache write failed: {e}")
+
         updates = math_engine.update_elo_from_api_scores(
-            api_scores=completed_matches, 
+            api_scores=completed_matches,
             processed_matches_file=processed_json_path
         )
         if updates > 0:
             math_engine.elo_df.to_csv(math_engine.elo_csv_path, index=False)
             print(f"Automated Elo sync completed: {updates} updates.")
+
+        # Post-match grading: score archived predictions against actual results
+        # Also create retroactive entries for completed matches played before the app started
+        try:
+            archive = {}
+            if os.path.exists(archive_json_path):
+                with open(archive_json_path, 'r', encoding='utf-8') as f:
+                    archive = json.load(f)
+
+            graded = 0
+            retro = 0
+            for match in completed_matches:
+                match_id = match.get("id")
+                if not match_id or not match.get("completed"):
+                    continue
+
+                home_team = match.get("home_team")
+                away_team = match.get("away_team")
+                scores = match.get("scores") or []
+                home_score = next((s["score"] for s in scores if s["name"] == home_team), None)
+                away_score = next((s["score"] for s in scores if s["name"] == away_team), None)
+                if home_score is None or away_score is None:
+                    continue
+                try:
+                    home_score = int(home_score)
+                    away_score = int(away_score)
+                except ValueError:
+                    continue
+
+                actual_score_str = f"{home_score}:{away_score}"
+
+                if match_id not in archive:
+                    # Match was played before this app started tracking — create a retroactive entry
+                    archive[match_id] = {
+                        "metadata": {
+                            "home_team": home_team,
+                            "away_team": away_team,
+                            "home_disp": DISPLAY_MAPPING.get(home_team, home_team),
+                            "away_disp": DISPLAY_MAPPING.get(away_team, away_team),
+                            "is_ko_phase": False
+                        },
+                        "pre_match_snapshot": None,
+                        "prediction": {"top_tip": None, "max_xp": None},
+                        "post_match_result": {
+                            "status": "completed",
+                            "actual_score": actual_score_str,
+                            "points_earned": None
+                        }
+                    }
+                    retro += 1
+                    continue
+
+                if archive[match_id]["post_match_result"]["status"] != "pending":
+                    continue
+
+                algo_tip  = archive[match_id]["prediction"].get("top_tip")
+                user_tip  = archive[match_id]["prediction"].get("user_tip")
+                is_ko     = archive[match_id]["metadata"]["is_ko_phase"]
+                active_tip = user_tip if user_tip else algo_tip
+                archive[match_id]["post_match_result"]["status"]        = "completed"
+                archive[match_id]["post_match_result"]["actual_score"]  = actual_score_str
+                archive[match_id]["post_match_result"]["points_earned"] = (
+                    MathEngine.calculate_actual_points(active_tip, actual_score_str, is_ko)
+                    if active_tip else None
+                )
+                archive[match_id]["post_match_result"]["algo_points"] = (
+                    MathEngine.calculate_actual_points(algo_tip, actual_score_str, is_ko)
+                    if algo_tip else None
+                )
+                graded += 1
+
+            if graded > 0 or retro > 0:
+                os.makedirs(os.path.dirname(archive_json_path), exist_ok=True)
+                with open(archive_json_path, 'w', encoding='utf-8') as f:
+                    json.dump(archive, f, indent=4)
+                if graded:
+                    print(f"Archive grading completed: {graded} predictions scored.")
+                if retro:
+                    print(f"Retroactive archive entries created: {retro} matches.")
+        except Exception as e:
+            print(f"Archive grading failed: {e}")
+
+        if updates > 0:
             return {"status": "success", "updates": updates}
         else:
             print("Automated Elo sync completed: No new matches.")
