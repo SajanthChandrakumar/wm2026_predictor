@@ -1,3 +1,5 @@
+import os
+import json
 import time
 import pandas as pd
 import numpy as np
@@ -222,24 +224,35 @@ class MathEngine:
         return df
 
     @staticmethod
-    def _tip_points(tipped_home: int, tipped_away: int, actual_home: int, actual_away: int, is_ko_phase: bool = False) -> int:
-        """Punkte für einen Tipp gegen ein tatsächliches Resultat nach SRF-Regelwerk."""
-        points = 0
+    def calculate_actual_points(tipped_score: str, actual_score: str, is_ko_phase: bool = False) -> int:
+        """Score a completed tip against an actual result using the SRF Tippspiel ruleset."""
+        try:
+            t_home, t_away = map(int, tipped_score.split(":"))
+            a_home, a_away = map(int, actual_score.split(":"))
+        except Exception:
+            return 0
 
-        tipped_tendency = np.sign(tipped_home - tipped_away)
-        actual_tendency = np.sign(actual_home - actual_away)
-        tendency_correct = tipped_tendency == actual_tendency
+        points = 0
+        t_tend = np.sign(t_home - t_away)
+        a_tend = np.sign(a_home - a_away)
+        tendency_correct = t_tend == a_tend
 
         if tendency_correct:
             points += 5
-        if tipped_home == actual_home:
+        if t_home == a_home:
             points += 1
-        if tipped_away == actual_away:
+        if t_away == a_away:
             points += 1
-        if tendency_correct and (tipped_home - tipped_away) == (actual_home - actual_away):
+        if tendency_correct and (t_home - t_away) == (a_home - a_away):
             points += 3
 
         return points * 2 if is_ko_phase else points
+
+    @staticmethod
+    def _tip_points(tipped_home: int, tipped_away: int, actual_home: int, actual_away: int, is_ko_phase: bool = False) -> int:
+        return MathEngine.calculate_actual_points(
+            f"{tipped_home}:{tipped_away}", f"{actual_home}:{actual_away}", is_ko_phase
+        )
 
     def _points_distribution(self, t_home: int, t_away: int, score_matrix: pd.DataFrame, is_ko_phase: bool) -> tuple[float, float]:
         """Gibt (Erwartungswert, Standardabweichung) der Punkte eines Tipps über die Resultatverteilung zurück."""
@@ -355,8 +368,6 @@ class MathEngine:
         Updates Elo ratings based on completed matches from the API, 
         ensuring idempotency by tracking processed match IDs.
         """
-        import os
-        import json
         processed_ids = []
         if os.path.exists(processed_matches_file):
             with open(processed_matches_file, 'r', encoding='utf-8') as f:
