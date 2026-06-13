@@ -246,11 +246,21 @@ def get_matches(force: bool = False):
         except ValueError:
             continue
             
-    # 3. Cache aktualisieren
+    # 3. Cache aktualisieren — merge with existing so completed matches aren't lost
     try:
         os.makedirs(os.path.dirname(cache_file_path), exist_ok=True)
+        existing_matches = {}
+        if os.path.exists(cache_file_path):
+            try:
+                with open(cache_file_path, "r", encoding="utf-8") as f:
+                    existing_matches = {m["id"]: m for m in json.load(f).get("data", [])}
+            except Exception:
+                pass
+        for r in results:
+            existing_matches[r["id"]] = r  # update live matches, keep disappeared ones
+        merged = sorted(existing_matches.values(), key=lambda m: m.get("raw_match", {}).get("commence_time", ""))
         with open(cache_file_path, "w", encoding="utf-8") as f:
-            json.dump({"timestamp": time.time(), "data": results}, f, indent=4)
+            json.dump({"timestamp": time.time(), "data": merged}, f, indent=4)
     except Exception as e:
         print(f"Fehler beim Speichern des Caches: {e}")
 
