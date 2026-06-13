@@ -420,6 +420,43 @@ def get_quota():
             return json.load(f)
     return {"remaining": "Unknown", "used": "Unknown"}
 
+@app.post("/api/archive/user_tip")
+def set_user_tip(payload: dict):
+    match_id  = payload.get("match_id")
+    user_tip  = payload.get("user_tip", "").strip()
+
+    if not match_id or not user_tip:
+        raise HTTPException(status_code=400, detail="match_id and user_tip required")
+
+    parts = user_tip.split(":")
+    if len(parts) != 2 or not all(p.strip().isdigit() for p in parts):
+        raise HTTPException(status_code=400, detail="user_tip must be in format H:A (e.g. 2:1)")
+
+    if not os.path.exists(archive_json_path):
+        raise HTTPException(status_code=404, detail="Archive not found")
+
+    with open(archive_json_path, 'r', encoding='utf-8') as f:
+        archive = json.load(f)
+
+    if match_id not in archive:
+        raise HTTPException(status_code=404, detail="Match not in archive")
+
+    entry = archive[match_id]
+    entry["prediction"]["user_tip"] = user_tip
+
+    actual = entry["post_match_result"].get("actual_score")
+    if actual:
+        is_ko = entry["metadata"].get("is_ko_phase", False)
+        pts = MathEngine.calculate_actual_points(user_tip, actual, is_ko)
+        entry["post_match_result"]["points_earned"] = pts
+    else:
+        pts = None
+
+    with open(archive_json_path, 'w', encoding='utf-8') as f:
+        json.dump(archive, f, indent=4)
+
+    return {"ok": True, "points_earned": pts}
+
 @app.get("/api/archive")
 def get_archive():
     if os.path.exists(archive_json_path):

@@ -559,7 +559,7 @@ async function loadPerformanceView() {
 
     let completedMatches = 0, totalPoints = 0, correctTendency = 0;
 
-    Object.values(archiveData).forEach(match => {
+    Object.entries(archiveData).forEach(([match_id, match]) => {
         if (match.post_match_result?.status !== 'completed') return;
 
         completedMatches++;
@@ -587,8 +587,23 @@ async function loadPerformanceView() {
                    <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Mein Tipp</span>
                    <span style="font-size:1rem;font-weight:800;color:var(--text-1);">${userTip}</span>
                    <span style="margin-left:auto;font-size:0.78rem;font-weight:700;color:${borderColor};">+${pts} Pts</span>
+                   <button onclick="editUserTip(this, '${match_id}')"
+                       style="background:none;border:1px solid var(--border-2);border-radius:3px;
+                              color:var(--text-3);font-size:0.65rem;padding:1px 6px;cursor:pointer;">✎</button>
                </div>`
-            : `<div style="font-size:0.72rem;color:var(--text-3);font-style:italic;margin-bottom:6px;">Kein Tipp erfasst</div>`;
+            : `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;" id="tip-input-${match_id}">
+                   <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Mein Tipp</span>
+                   <input id="tip-val-${match_id}" type="text" placeholder="2:1" maxlength="5"
+                       style="width:52px;background:var(--surface-2);border:1px solid var(--border-2);
+                              border-radius:4px;color:var(--text-1);font-size:0.9rem;font-weight:700;
+                              padding:3px 7px;text-align:center;outline:none;"
+                       onclick="event.stopPropagation()">
+                   <button onclick="saveUserTip(event,'${match_id}')"
+                       style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:4px;
+                              color:var(--gold-l);font-size:0.72rem;font-weight:700;padding:3px 10px;cursor:pointer;">
+                       Speichern
+                   </button>
+               </div>`;
 
         const algoTipHtml = algoTip
             ? `<div style="display:flex;align-items:center;gap:8px;">
@@ -626,6 +641,51 @@ async function loadPerformanceView() {
     if (completedMatches === 0) {
         grid.innerHTML = `<p style="color:var(--text-2);font-size:0.85rem;">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
     }
+}
+
+async function saveUserTip(event, matchId) {
+    event.stopPropagation();
+    const input = document.getElementById(`tip-val-${matchId}`);
+    const tip = input?.value?.trim();
+    if (!tip || !/^\d+:\d+$/.test(tip)) {
+        input.style.borderColor = 'var(--red)';
+        return;
+    }
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+        const res = await fetch('/api/archive/user_tip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ match_id: matchId, user_tip: tip })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Error');
+        loadPerformanceView();  // reload to reflect new tip + points
+    } catch (e) {
+        btn.textContent = '✗';
+        btn.style.color = 'var(--red)';
+        setTimeout(() => { btn.textContent = 'Speichern'; btn.disabled = false; }, 2000);
+    }
+}
+
+function editUserTip(btn, matchId) {
+    const row = btn.closest('div');
+    const currentTip = row.querySelector('span:nth-child(2)')?.textContent || '';
+    row.innerHTML = `
+        <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Mein Tipp</span>
+        <input id="tip-val-${matchId}" type="text" value="${currentTip}" maxlength="5"
+            style="width:52px;background:var(--surface-2);border:1px solid var(--border-2);
+                   border-radius:4px;color:var(--text-1);font-size:0.9rem;font-weight:700;
+                   padding:3px 7px;text-align:center;outline:none;"
+            onclick="event.stopPropagation()">
+        <button onclick="saveUserTip(event,'${matchId}')"
+            style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:4px;
+                   color:var(--gold-l);font-size:0.72rem;font-weight:700;padding:3px 10px;cursor:pointer;">
+            Speichern
+        </button>
+    `;
 }
 
 // ── Helpers ───────────────────────────────────────────────────
