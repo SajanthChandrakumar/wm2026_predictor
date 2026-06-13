@@ -204,7 +204,10 @@ def get_matches(force: bool = False):
             odds = extract_odds(m)
             
             try:
-                math_engine.merge_odds_and_elo([m])
+                math_engine.ensure_teams_exist(
+                    TEAM_MAPPING.get(home_raw, home_raw),
+                    TEAM_MAPPING.get(away_raw, away_raw),
+                )
                 true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
                 prob_home = true_probs["home"]
                 prob_draw = true_probs["draw"]
@@ -347,7 +350,10 @@ def predict_match(payload: dict):
         event_id = match_data.get("id", "")
         match_data = _fetch_or_cache_totals(event_id, match_data)
 
-        math_engine.merge_odds_and_elo([match_data])
+        math_engine.ensure_teams_exist(
+            TEAM_MAPPING.get(match_data.get("home_team"), match_data.get("home_team")),
+            TEAM_MAPPING.get(match_data.get("away_team"), match_data.get("away_team")),
+        )
         odds = extract_odds(match_data)
         
         true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])

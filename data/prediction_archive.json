@@ -2187,7 +2187,8 @@
         "prediction": {
             "top_tip": "2:0",
             "max_xp": null,
-            "user_tip": "2:0"
+            "user_tip": "2:0",
+            "algo_reconstructed": true
         },
         "post_match_result": {
             "status": "completed",
@@ -2208,7 +2209,8 @@
         "prediction": {
             "top_tip": "2:1",
             "max_xp": null,
-            "user_tip": "1:0"
+            "user_tip": "1:0",
+            "algo_reconstructed": true
         },
         "post_match_result": {
             "status": "completed",
@@ -2229,7 +2231,8 @@
         "prediction": {
             "top_tip": "1:0",
             "max_xp": null,
-            "user_tip": "2:1"
+            "user_tip": "2:1",
+            "algo_reconstructed": true
         },
         "post_match_result": {
             "status": "completed",
@@ -2250,7 +2253,8 @@
         "prediction": {
             "top_tip": "1:0",
             "max_xp": null,
-            "user_tip": "2:1"
+            "user_tip": "2:1",
+            "algo_reconstructed": true
         },
         "post_match_result": {
             "status": "completed",

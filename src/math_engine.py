@@ -74,64 +74,35 @@ class MathEngine:
         if home_resting: elo_home -= 100
         if away_resting: elo_away -= 100
 
+        # BEWUSST OHNE Gastgeber-Bonus (is_a_host/is_b_host).
+        # Dieser Wert wird in /api/predict zu 30% mit den Buchmacher-Quoten geblendet,
+        # und die Quoten preisen den Heimvorteil bereits ein. Würden wir hier zusätzlich
+        # +80 Elo für USA/Kanada/Mexiko draufgeben, zählten wir den Heimvorteil doppelt
+        # ("Double-Dip"). Der +80-Bonus gehört NUR in die reine Elo-Aktualisierung
+        # (_calculate_new_elo), wo es keine Markt-Quote zum Gegenrechnen gibt.
         prob_home = self.get_elo_probability(elo_home, elo_away)
 
         return float(prob_home), float(1.0 - prob_home)
 
-    def merge_odds_and_elo(self, api_matches: list) -> pd.DataFrame:
+    def ensure_teams_exist(self, *teams: str) -> None:
         """
-        Nimmt die JSON-Payload der API, extrahiert die Quoten,
-        rechnet die Marge raus und merget die Elo-Ratings dazu.
+        Stellt sicher, dass jedes (bereits normalisierte) Team eine Zeile im
+        Elo-DataFrame hat — fehlende Teams werden mit Default-Elo 1500 angelegt
+        und persistiert. Explizit benannter Side-Effect statt versteckt in einer
+        'merge'-Funktion. Keine Rückgabe.
         """
-        processed_matches = []
-        
-        for match in api_matches:
-            home_team = match.get("home_team", "")
-            away_team = match.get("away_team", "")
-            
-            # 1. Namen normalisieren
-            home_norm = self.name_mapping.get(home_team, home_team)
-            away_norm = self.name_mapping.get(away_team, away_team)
-            
-            # 2. Elo-Ratings aus dem Dataframe extrahieren
-            for team in [home_norm, away_norm]:
-                if team not in self.elo_df['team_name'].values:
-                    new_row = pd.DataFrame([{"team_code": team[:3].upper(), "team_name": team, "elo_rating": 1500}])
-                    self.elo_df = pd.concat([self.elo_df, new_row], ignore_index=True)
-                    self.elo_df.to_csv(self.elo_csv_path, index=False)
-            
-            elo_home = self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'].values[0]
-            elo_away = self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'].values[0] 
-            
-            hosts = ["United States", "Canada", "Mexico"]
-            is_home_host = home_norm in hosts
-            is_away_host = away_norm in hosts
-            
-            # 3. Elo-Wahrscheinlichkeit berechnen
-            prob_elo_home = self.get_elo_probability(elo_home, elo_away, is_a_host=is_home_host, is_b_host=is_away_host)
-
-            # 4. Bookmaker edge: extract h2h odds, remove margin, compare to Elo
-            bookie_prob_home = None
-            for bookie in match.get("bookmakers", []):
-                for market in bookie.get("markets", []):
-                    if market["key"] != "h2h":
-                        continue
-                    outcomes = {o["name"]: o["price"] for o in market.get("outcomes", [])}
-                    if home_team in outcomes and away_team in outcomes and "Draw" in outcomes:
-                        true = self.remove_margin(outcomes[home_team], outcomes["Draw"], outcomes[away_team])
-                        bookie_prob_home = true["home"]
-                        break
-                if bookie_prob_home is not None:
-                    break
-
-            processed_matches.append({
-                "match": f"{home_team} vs {away_team}",
-                "elo_prob_home": prob_elo_home,
-                "bookie_prob_home": bookie_prob_home,
-                "edge_home": (prob_elo_home - bookie_prob_home) if bookie_prob_home is not None else None,
-            })
-            
-        return pd.DataFrame(processed_matches)
+        added = False
+        for team in teams:
+            if team and team not in self.elo_df['team_name'].values:
+                new_row = pd.DataFrame([{
+                    "team_code": team[:3].upper(),
+                    "team_name": team,
+                    "elo_rating": 1500.0,
+                }])
+                self.elo_df = pd.concat([self.elo_df, new_row], ignore_index=True)
+                added = True
+        if added:
+            self.elo_df.to_csv(self.elo_csv_path, index=False)
 
     @staticmethod
     def derive_xg_from_odds(prob_home: float, prob_draw: float, prob_away: float, prob_over25: float = None) -> tuple[float, float]:

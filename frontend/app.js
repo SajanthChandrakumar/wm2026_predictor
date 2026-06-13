@@ -559,6 +559,7 @@ async function loadPerformanceView() {
 
     let completedMatches = 0, totalPoints = 0, correctTendency = 0;
     let algoTotal = 0, algoCorrectTendency = 0, algoMatchCount = 0;
+    let hasReconstructed = false;
 
     Object.entries(archiveData).forEach(([match_id, match]) => {
         if (match.post_match_result?.status !== 'completed') return;
@@ -609,9 +610,15 @@ async function loadPerformanceView() {
                    </button>
                </div>`;
 
+        const isReconstructed = match.prediction?.algo_reconstructed === true;
+        if (isReconstructed) hasReconstructed = true;
+        const algoLabel = isReconstructed
+            ? `<span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;" title="Aus Elo rekonstruiert — keine historischen Quoten verfügbar">Algo<span style="color:var(--amber);">*</span></span>`
+            : `<span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Algo</span>`;
+
         const algoTipHtml = algoTip
             ? `<div style="display:flex;align-items:center;gap:8px;">
-                   <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Algo</span>
+                   ${algoLabel}
                    <span style="font-size:1rem;font-weight:800;color:var(--text-2);">${algoTip}</span>
                    <span style="margin-left:auto;font-size:0.78rem;font-weight:700;color:${algoColor};">${algoPts != null ? '+'+algoPts+' Pts' : '–'}</span>
                </div>`
@@ -709,6 +716,11 @@ async function loadPerformanceView() {
 
     if (completedMatches === 0) {
         grid.innerHTML = `<p style="color:var(--text-2);font-size:0.85rem;">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
+    } else if (hasReconstructed) {
+        const note = document.createElement('p');
+        note.style.cssText = 'grid-column:1/-1;font-size:0.7rem;color:var(--text-3);margin-top:6px;font-style:italic;';
+        note.innerHTML = '<span style="color:var(--amber);">*</span> Algo-Tipp aus Elo-Ratings rekonstruiert (Spiel vor App-Start, keine historischen Quoten verfügbar) — angenähert, nicht das volle Quoten-Modell.';
+        grid.appendChild(note);
     }
 }
 
