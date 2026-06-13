@@ -172,6 +172,31 @@ def _fetch_or_cache_totals(event_id: str, raw_match: dict) -> dict:
     merged["bookmakers"] = list(existing.values())
     return merged
 
+def _enrich_edge(matches: list) -> list:
+    """
+    Berechnet die Edge (Elo vs Markt im Sieg/Niederlage-Pool) aus den bereits
+    vorhandenen Quoten — kostet KEINEN API-Request. Idempotent: nur fehlende
+    Werte werden ergänzt.
+    """
+    for m in matches:
+        if m.get("edge_home") is not None:
+            continue
+        odds = m.get("odds", {})
+        if not all(k in odds for k in ("home", "draw", "away")):
+            continue
+        try:
+            true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
+            pool = true_probs["home"] + true_probs["away"]
+            market_home_share = (true_probs["home"] / pool) if pool > 0 else 0.5
+            elo_home_share, _ = math_engine.get_match_elo_probabilities(m.get("home_team"), m.get("away_team"))
+            m["elo_home_share"] = elo_home_share
+            m["market_home_share"] = market_home_share
+            m["edge_home"] = elo_home_share - market_home_share
+        except Exception:
+            pass
+    return matches
+
+
 @app.get("/api/matches")
 def get_matches(force: bool = False):
     """
@@ -188,7 +213,7 @@ def get_matches(force: bool = False):
                 if data is not None:
                     ttl = _dynamic_ttl(data)
                     if time.time() - timestamp < ttl:
-                        return data
+                        return _enrich_edge(data)
         except json.JSONDecodeError:
             pass
         
@@ -231,9 +256,19 @@ def get_matches(force: bool = False):
                 else:
                     top_tip = "N/A"
                     max_xp = 0.0
+
+                # Edge: wo widerspricht die reine Elo dem Markt? Vergleich im
+                # Sieg/Niederlage-Pool (beide 2-Wege), damit Äpfel mit Äpfeln.
+                elo_home_share, _ = math_engine.get_match_elo_probabilities(home_raw, away_raw)
+                pool = prob_home + prob_away
+                market_home_share = (prob_home / pool) if pool > 0 else 0.5
+                edge_home = elo_home_share - market_home_share
             except Exception:
                 top_tip = "N/A"
                 max_xp = 0.0
+                elo_home_share = None
+                market_home_share = None
+                edge_home = None
 
             results.append({
                 "id": m.get("id"),
@@ -244,6 +279,9 @@ def get_matches(force: bool = False):
                 "odds": odds,
                 "top_tip": top_tip,
                 "max_xp": max_xp,
+                "elo_home_share": elo_home_share,
+                "market_home_share": market_home_share,
+                "edge_home": edge_home,
                 "raw_match": m
             })
         except ValueError:
@@ -267,7 +305,9 @@ def get_matches(force: bool = False):
                     abs(new_o.get(k, 0) - old_o.get(k, 0)) > 0.02
                     for k in ["home", "draw", "away"]
                 )
-                if not odds_changed:
+                # Backfill: alte Cache-Einträge ohne Edge-Daten einmalig nachziehen
+                missing_edge = "edge_home" not in prev and r.get("edge_home") is not None
+                if not odds_changed and not missing_edge:
                     continue  # keep old entry unchanged
             existing_matches[r["id"]] = r
         merged = sorted(existing_matches.values(), key=lambda m: m.get("raw_match", {}).get("commence_time", ""))

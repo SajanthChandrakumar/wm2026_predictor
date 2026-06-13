@@ -23,7 +23,8 @@
         },
         "prediction": {
             "top_tip": "0:2",
-            "max_xp": 5.564210732298132
+            "max_xp": 5.564210732298132,
+            "user_tip": null
         },
         "post_match_result": {
             "status": "pending",
