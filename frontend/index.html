@@ -35,6 +35,9 @@
                     <li id="nav-elo-history">
                         <span class="nav-icon">∿</span> Team Form
                     </li>
+                    <li id="nav-performance">
+                        <span class="nav-icon">◈</span> Performance
+                    </li>
                 </ul>
             </nav>
 
@@ -128,6 +131,30 @@
                     <p class="page-subtitle">Ranked by Expected Points — highest xP first</p>
                 </div>
                 <div id="value-bets-grid" class="matches-grid"></div>
+            </div>
+
+            <!-- Performance View -->
+            <div id="performance-view" style="display:none;">
+                <div class="page-header">
+                    <h1>Algorithm Performance</h1>
+                    <p class="page-subtitle">Prediction accuracy vs actual results</p>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;">
+                    <div class="glass-card" style="padding:20px;text-align:center;">
+                        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:10px;">Completed Matches</div>
+                        <div id="kpi-matches" style="font-size:2.4rem;font-weight:900;color:var(--text-1);line-height:1;">0</div>
+                    </div>
+                    <div class="glass-card" style="padding:20px;text-align:center;">
+                        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:10px;">Total SRF Points</div>
+                        <div id="kpi-points" style="font-size:2.4rem;font-weight:900;color:var(--green);line-height:1;">0</div>
+                    </div>
+                    <div class="glass-card" style="padding:20px;text-align:center;">
+                        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:10px;">Hit Rate (Tendency)</div>
+                        <div id="kpi-hitrate" style="font-size:2.4rem;font-weight:900;color:var(--amber);line-height:1;">0.0%</div>
+                    </div>
+                </div>
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:12px;">Match History</div>
+                <div id="performance-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;"></div>
             </div>
 
             <!-- Elo History View -->

@@ -22,6 +22,10 @@ function initSidebar() {
         showView('elo-history');
         loadEloHistoryView();
     });
+    document.getElementById('nav-performance').addEventListener('click', () => {
+        showView('performance');
+        loadPerformanceView();
+    });
 
     // Buttons
     document.getElementById('refresh-btn').addEventListener('click', () => {
@@ -56,17 +60,18 @@ function initSidebar() {
 
 // ── Views ─────────────────────────────────────────────────────
 function showView(view) {
-    ['matches-view', 'value-bets-view', 'elo-history-view', 'detail-view', 'loading-spinner']
+    ['matches-view', 'value-bets-view', 'elo-history-view', 'performance-view', 'detail-view', 'loading-spinner']
         .forEach(id => document.getElementById(id).style.display = 'none');
 
     document.querySelectorAll('nav li').forEach(li => li.classList.remove('active'));
 
     const map = {
-        'dashboard':   ['matches-view',     'nav-dashboard'],
-        'value-bets':  ['value-bets-view',  'nav-value-bets'],
+        'dashboard':   ['matches-view',      'nav-dashboard'],
+        'value-bets':  ['value-bets-view',   'nav-value-bets'],
         'elo-history': ['elo-history-view',  'nav-elo-history'],
-        'detail':      ['detail-view',       null],
-        'loading':     ['loading-spinner',   null],
+        'performance': ['performance-view',  'nav-performance'],
+        'detail':      ['detail-view',        null],
+        'loading':     ['loading-spinner',    null],
     };
     const [viewId, navId] = map[view] || ['matches-view', 'nav-dashboard'];
     document.getElementById(viewId).style.display = '';
@@ -534,6 +539,69 @@ function renderEloChart(history, team) {
             }
         }
     });
+}
+
+// ── Performance Dashboard ─────────────────────────────────────
+async function loadPerformanceView() {
+    const grid = document.getElementById('performance-grid');
+    grid.innerHTML = '';
+    document.getElementById('kpi-matches').textContent = '…';
+    document.getElementById('kpi-points').textContent  = '…';
+    document.getElementById('kpi-hitrate').textContent = '…';
+
+    let archiveData;
+    try {
+        archiveData = await (await fetch('/api/archive')).json();
+    } catch (e) {
+        grid.innerHTML = `<p style="color:var(--red)">Failed to load archive: ${e.message}</p>`;
+        return;
+    }
+
+    let completedMatches = 0, totalPoints = 0, correctTendency = 0;
+
+    Object.values(archiveData).forEach(match => {
+        if (match.post_match_result?.status !== 'completed') return;
+
+        completedMatches++;
+        const pts = match.post_match_result.points_earned || 0;
+        totalPoints += pts;
+        if (pts >= 5) correctTendency++;
+
+        const borderColor = pts >= 8 ? 'var(--green)' : pts >= 5 ? 'var(--amber)' : 'var(--red)';
+
+        const card = document.createElement('div');
+        card.className = 'glass-card';
+        card.style.cssText = `border-left:4px solid ${borderColor};padding:16px 18px;`;
+        card.innerHTML = `
+            <div style="font-size:0.72rem;color:var(--text-2);margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${match.metadata.home_disp} vs ${match.metadata.away_disp}
+            </div>
+            <div style="margin-bottom:12px;">
+                <span style="font-size:1.15rem;font-weight:800;color:var(--text-1);">
+                    ${match.prediction.top_tip}
+                </span>
+                <span style="font-size:0.82rem;color:var(--text-2);margin-left:10px;">
+                    Resultat: ${match.post_match_result.actual_score}
+                </span>
+            </div>
+            <div style="display:inline-block;background:rgba(255,255,255,0.05);color:${borderColor};
+                        padding:3px 10px;border-radius:4px;font-weight:700;font-size:0.82rem;
+                        border:1px solid ${borderColor}33;">
+                +${pts} Punkte
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+
+    document.getElementById('kpi-matches').textContent = completedMatches;
+    document.getElementById('kpi-points').textContent  = totalPoints;
+    document.getElementById('kpi-hitrate').textContent = completedMatches > 0
+        ? ((correctTendency / completedMatches) * 100).toFixed(1) + '%'
+        : '0.0%';
+
+    if (completedMatches === 0) {
+        grid.innerHTML = `<p style="color:var(--text-2);font-size:0.85rem;">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
+    }
 }
 
 // ── Helpers ───────────────────────────────────────────────────
