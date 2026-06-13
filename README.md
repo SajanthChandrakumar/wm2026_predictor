@@ -108,3 +108,13 @@ wm2026_predictor/
 ```bash
 .venv/bin/python -m pytest test_math_engine.py test_api.py -v
 ```
+
+---
+
+## Haftungsausschluss (Disclaimer)
+
+Dieses Projekt ist ein reines Hobby- und Bildungsprojekt, das aus persönlichem Interesse an Data Science, Software-Architektur und Wahrscheinlichkeitsrechnung entwickelt wurde. 
+
+Die durch diese Software generierten Daten, Matrizen und Expected-Points-Berechnungen (xP) dienen ausschließlich zu Informations- und Analysezwecken. Sie stellen **ausdrücklich keine Anlage-, Finanz- oder Wettberatung** dar. 
+
+Der Autor übernimmt absolut keine Verantwortung oder Haftung für die Richtigkeit der Vorhersagen oder für jegliche finanzielle Verluste, die durch die direkte oder indirekte Nutzung dieses Repositories, der Algorithmen oder des Dashboards entstehen. Sportwetten bergen ein erhebliches finanzielles Risiko. Die Nutzung der Software und das blinde Vertrauen auf die generierten "Value Bets" erfolgt vollständig auf eigene Gefahr.

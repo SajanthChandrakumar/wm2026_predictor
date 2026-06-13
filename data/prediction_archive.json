@@ -1,0 +1,2178 @@
+{
+    "26634922d3f78c146440816023e40de8": {
+        "metadata": {
+            "home_team": "Qatar",
+            "away_team": "Switzerland",
+            "home_disp": "Qatar",
+            "away_disp": "Switzerland",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.527951+00:00",
+            "odds": {
+                "home": 14.21,
+                "draw": 7.0,
+                "away": 1.21,
+                "over25": 1.6,
+                "under25": 2.3099999999999996
+            },
+            "elo_state": {
+                "home_rating": 1660.0,
+                "away_rating": 1920.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:2",
+            "max_xp": 5.564210732298132
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "f6c8748a16516e0998f95de14235432a": {
+        "metadata": {
+            "home_team": "Brazil",
+            "away_team": "Morocco",
+            "home_disp": "\ud83c\udde7\ud83c\uddf7 Brazil",
+            "away_disp": "Morocco",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.528106+00:00",
+            "odds": {
+                "home": 1.7,
+                "draw": 3.74,
+                "away": 5.5,
+                "over25": 2.1550000000000002,
+                "under25": 1.7
+            },
+            "elo_state": {
+                "home_rating": 2030.0,
+                "away_rating": 1910.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.243419460357673
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "5ae41a06735c926eeb7f74006933adce": {
+        "metadata": {
+            "home_team": "Haiti",
+            "away_team": "Scotland",
+            "home_disp": "Haiti",
+            "away_disp": "Scotland",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.528247+00:00",
+            "odds": {
+                "home": 6.0,
+                "draw": 4.4,
+                "away": 1.56,
+                "over25": 1.75,
+                "under25": 2.08
+            },
+            "elo_state": {
+                "home_rating": 1500.0,
+                "away_rating": 1800.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 4.385432951059648
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "564084f52cc9f1abcc18187c168a7cdc": {
+        "metadata": {
+            "home_team": "Australia",
+            "away_team": "Turkey",
+            "home_disp": "Australia",
+            "away_disp": "Turkey",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.528383+00:00",
+            "odds": {
+                "home": 5.16,
+                "draw": 3.76,
+                "away": 1.71,
+                "over25": 2.02,
+                "under25": 1.79
+            },
+            "elo_state": {
+                "home_rating": 1750.0,
+                "away_rating": 1850.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 4.158992793153818
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "d79edbd6aaeb578d33e313446b18d333": {
+        "metadata": {
+            "home_team": "Germany",
+            "away_team": "Cura\u00e7ao",
+            "home_disp": "\ud83c\udde9\ud83c\uddea Germany",
+            "away_disp": "Cura\u00e7ao",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.528515+00:00",
+            "odds": {
+                "home": 1.04,
+                "draw": 17.375,
+                "away": 41.0,
+                "over25": 1.2,
+                "under25": 4.65
+            },
+            "elo_state": {
+                "home_rating": 2010.0,
+                "away_rating": 1550.0
+            }
+        },
+        "prediction": {
+            "top_tip": "3:0",
+            "max_xp": 6.106555051560106
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "32ec06abda2398ac41501c86eb9aa376": {
+        "metadata": {
+            "home_team": "Netherlands",
+            "away_team": "Japan",
+            "home_disp": "\ud83c\uddf3\ud83c\uddf1 Netherlands",
+            "away_disp": "Japan",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.528648+00:00",
+            "odds": {
+                "home": 1.995,
+                "draw": 3.6,
+                "away": 3.8,
+                "over25": 1.92,
+                "under25": 1.9
+            },
+            "elo_state": {
+                "home_rating": 2020.0,
+                "away_rating": 1940.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.6544049846414675
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "05752bb341e197001387b64f3a06b9b2": {
+        "metadata": {
+            "home_team": "Ivory Coast",
+            "away_team": "Ecuador",
+            "home_disp": "\ud83c\udde8\ud83c\uddee Ivory Coast",
+            "away_disp": "Ecuador",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.528779+00:00",
+            "odds": {
+                "home": 3.63,
+                "draw": 2.8,
+                "away": 2.42,
+                "over25": 2.95,
+                "under25": 1.41
+            },
+            "elo_state": {
+                "home_rating": 1780.0,
+                "away_rating": 1950.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:0",
+            "max_xp": 3.4965153034020684
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "b55f9569de3f4d731bc5537ff5ff43e4": {
+        "metadata": {
+            "home_team": "Sweden",
+            "away_team": "Tunisia",
+            "home_disp": "Sweden",
+            "away_disp": "Tunisia",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.528911+00:00",
+            "odds": {
+                "home": 1.9,
+                "draw": 3.45,
+                "away": 4.35,
+                "over25": 2.2,
+                "under25": 1.64
+            },
+            "elo_state": {
+                "home_rating": 1820.0,
+                "away_rating": 1710.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.8802988496859547
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "c54f00b11925751d2b62988775c6c239": {
+        "metadata": {
+            "home_team": "Spain",
+            "away_team": "Cape Verde",
+            "home_disp": "\ud83c\uddea\ud83c\uddf8 Spain",
+            "away_disp": "Cape Verde",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.529042+00:00",
+            "odds": {
+                "home": 1.1,
+                "draw": 11.5,
+                "away": 26.0,
+                "over25": 1.37,
+                "under25": 3.15
+            },
+            "elo_state": {
+                "home_rating": 2090.0,
+                "away_rating": 1620.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 5.961481571761151
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "fbfb95c62003fd6d828b309f96ee1f9b": {
+        "metadata": {
+            "home_team": "Belgium",
+            "away_team": "Egypt",
+            "home_disp": "\ud83c\udde7\ud83c\uddea Belgium",
+            "away_disp": "Egypt",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.529176+00:00",
+            "odds": {
+                "home": 1.61,
+                "draw": 4.0,
+                "away": 5.75,
+                "over25": 1.94,
+                "under25": 1.855
+            },
+            "elo_state": {
+                "home_rating": 1980.0,
+                "away_rating": 1760.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.328629344527039
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "64b91c5f2db61c7358a4f05459e83c52": {
+        "metadata": {
+            "home_team": "Saudi Arabia",
+            "away_team": "Uruguay",
+            "home_disp": "Saudi Arabia",
+            "away_disp": "Uruguay",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.529305+00:00",
+            "odds": {
+                "home": 8.1,
+                "draw": 4.5,
+                "away": 1.43,
+                "over25": 1.96,
+                "under25": 1.82
+            },
+            "elo_state": {
+                "home_rating": 1720.0,
+                "away_rating": 1990.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:2",
+            "max_xp": 4.800152568189645
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "ec51b9c44ad5e34552f3ab53f7262813": {
+        "metadata": {
+            "home_team": "Iran",
+            "away_team": "New Zealand",
+            "home_disp": "\ud83c\uddee\ud83c\uddf7 Iran",
+            "away_disp": "New Zealand",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.529437+00:00",
+            "odds": {
+                "home": 1.83,
+                "draw": 3.5,
+                "away": 4.8,
+                "over25": 2.32,
+                "under25": 1.58
+            },
+            "elo_state": {
+                "home_rating": 1840.0,
+                "away_rating": 1600.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.0412900219020935
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "73a4fcd14cc9766b9b9bfd50b8ca153a": {
+        "metadata": {
+            "home_team": "France",
+            "away_team": "Senegal",
+            "home_disp": "\ud83c\uddeb\ud83c\uddf7 France",
+            "away_disp": "Senegal",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.529564+00:00",
+            "odds": {
+                "home": 1.47,
+                "draw": 4.4,
+                "away": 7.25,
+                "over25": 1.935,
+                "under25": 1.86
+            },
+            "elo_state": {
+                "home_rating": 2110.0,
+                "away_rating": 1880.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 4.651010466538569
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "4d4f2b9b78182b557d4fbf8dcf4f4af2": {
+        "metadata": {
+            "home_team": "Iraq",
+            "away_team": "Norway",
+            "home_disp": "Iraq",
+            "away_disp": "Norway",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.529691+00:00",
+            "odds": {
+                "home": 14.5,
+                "draw": 7.0,
+                "away": 1.2,
+                "over25": 1.59,
+                "under25": 2.38
+            },
+            "elo_state": {
+                "home_rating": 1650.0,
+                "away_rating": 1830.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:2",
+            "max_xp": 5.565998687844348
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "f31b2ee9e1cc6f7e641467f8237eaa21": {
+        "metadata": {
+            "home_team": "Argentina",
+            "away_team": "Algeria",
+            "home_disp": "\ud83c\udde6\ud83c\uddf7 Argentina",
+            "away_disp": "Algeria",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.529824+00:00",
+            "odds": {
+                "home": 1.4,
+                "draw": 4.69,
+                "away": 9.0,
+                "over25": 1.91,
+                "under25": 1.89
+            },
+            "elo_state": {
+                "home_rating": 2140.0,
+                "away_rating": 1770.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 4.9200184624258165
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "25161cf6cf0cd9be17ae2e7e224a1f45": {
+        "metadata": {
+            "home_team": "Austria",
+            "away_team": "Jordan",
+            "home_disp": "Austria",
+            "away_disp": "Jordan",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.529957+00:00",
+            "odds": {
+                "home": 1.33,
+                "draw": 5.48,
+                "away": 9.19,
+                "over25": 1.62,
+                "under25": 2.25
+            },
+            "elo_state": {
+                "home_rating": 1860.0,
+                "away_rating": 1640.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 5.038099470262142
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "6cc871c121a1869b4612d3fb22fa9d55": {
+        "metadata": {
+            "home_team": "Portugal",
+            "away_team": "DR Congo",
+            "home_disp": "\ud83c\uddf5\ud83c\uddf9 Portugal",
+            "away_disp": "DR Congo",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.530090+00:00",
+            "odds": {
+                "home": 1.28,
+                "draw": 5.7,
+                "away": 11.0,
+                "over25": 1.68,
+                "under25": 2.14
+            },
+            "elo_state": {
+                "home_rating": 2040.0,
+                "away_rating": 1630.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 5.253771078633845
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "689096c8cd7e2753b9fec95321943c5d": {
+        "metadata": {
+            "home_team": "England",
+            "away_team": "Croatia",
+            "home_disp": "\ud83c\udff4\udb40\udc67\udb40\udc62\udb40\udc65\udb40\udc6e\udb40\udc67\udb40\udc7f England",
+            "away_disp": "Croatia",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.530220+00:00",
+            "odds": {
+                "home": 1.73,
+                "draw": 3.83,
+                "away": 4.96,
+                "over25": 2.1,
+                "under25": 1.71
+            },
+            "elo_state": {
+                "home_rating": 2050.0,
+                "away_rating": 2000.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.145336754277571
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "87afdb85c977b451e1c00f5e3e632601": {
+        "metadata": {
+            "home_team": "Ghana",
+            "away_team": "Panama",
+            "home_disp": "Ghana",
+            "away_disp": "Panama",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.530351+00:00",
+            "odds": {
+                "home": 2.15,
+                "draw": 3.4,
+                "away": 3.47,
+                "over25": 2.2350000000000003,
+                "under25": 1.645
+            },
+            "elo_state": {
+                "home_rating": 1730.0,
+                "away_rating": 1700.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.499583133807567
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "22083e7a8e5362c711bc05c1e1319a1f": {
+        "metadata": {
+            "home_team": "Uzbekistan",
+            "away_team": "Colombia",
+            "home_disp": "Uzbekistan",
+            "away_disp": "Colombia",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.530474+00:00",
+            "odds": {
+                "home": 9.0,
+                "draw": 4.7,
+                "away": 1.38,
+                "over25": 1.935,
+                "under25": 1.85
+            },
+            "elo_state": {
+                "home_rating": 1680.0,
+                "away_rating": 2060.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:2",
+            "max_xp": 4.95443674887246
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "66ebb9e3f949caded535d97ce686ca09": {
+        "metadata": {
+            "home_team": "Czech Republic",
+            "away_team": "South Africa",
+            "home_disp": "\ud83c\udde8\ud83c\uddff Czech Republic",
+            "away_disp": "South Africa",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.530604+00:00",
+            "odds": {
+                "home": 1.75,
+                "draw": 3.8,
+                "away": 4.64,
+                "over25": 2.07,
+                "under25": 1.74
+            },
+            "elo_state": {
+                "home_rating": 1740.0,
+                "away_rating": 1670.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.062603316612919
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "289bc2e9f5adad8ae4d9a75a7c5461ad": {
+        "metadata": {
+            "home_team": "Switzerland",
+            "away_team": "Bosnia & Herzegovina",
+            "home_disp": "Switzerland",
+            "away_disp": "Bosnia & Herzegovina",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.530742+00:00",
+            "odds": {
+                "home": 1.57,
+                "draw": 4.0,
+                "away": 5.8,
+                "over25": 1.99,
+                "under25": 1.8
+            },
+            "elo_state": {
+                "home_rating": 1920.0,
+                "away_rating": 1690.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.383968173108362
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "fa9502285b257b03e62968d50d9229fc": {
+        "metadata": {
+            "home_team": "Canada",
+            "away_team": "Qatar",
+            "home_disp": "Canada",
+            "away_disp": "Qatar",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.530872+00:00",
+            "odds": {
+                "home": 1.3,
+                "draw": 5.225,
+                "away": 10.5,
+                "over25": 1.855,
+                "under25": 1.91
+            },
+            "elo_state": {
+                "home_rating": 1810.0,
+                "away_rating": 1660.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 5.206927282569282
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "0f2aeae6ac8e77223848d23a4ca86b0d": {
+        "metadata": {
+            "home_team": "Mexico",
+            "away_team": "South Korea",
+            "home_disp": "Mexico",
+            "away_disp": "\ud83c\uddf0\ud83c\uddf7 South Korea",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.530995+00:00",
+            "odds": {
+                "home": 2.0,
+                "draw": 3.3,
+                "away": 4.05,
+                "over25": 2.28,
+                "under25": 1.57
+            },
+            "elo_state": {
+                "home_rating": 1900.0,
+                "away_rating": 1870.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.7457763037730514
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "065b3573e875f8d23803357f73e5b99e": {
+        "metadata": {
+            "home_team": "USA",
+            "away_team": "Australia",
+            "home_disp": "\ud83c\uddfa\ud83c\uddf8 USA",
+            "away_disp": "Australia",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.531120+00:00",
+            "odds": {
+                "home": 1.5750000000000002,
+                "draw": 4.1,
+                "away": 5.6,
+                "over25": 1.9249999999999998,
+                "under25": 1.85
+            },
+            "elo_state": {
+                "home_rating": 1930.0,
+                "away_rating": 1750.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.350989437382332
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "4cd769aa7bae0ad9762bd69b80ef2903": {
+        "metadata": {
+            "home_team": "Scotland",
+            "away_team": "Morocco",
+            "home_disp": "Scotland",
+            "away_disp": "Morocco",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.531253+00:00",
+            "odds": {
+                "home": 4.1,
+                "draw": 3.28,
+                "away": 1.97,
+                "over25": 2.25,
+                "under25": 1.61
+            },
+            "elo_state": {
+                "home_rating": 1800.0,
+                "away_rating": 1910.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 3.767095634051431
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "ef0f74a991d3e35798ae5af77667bce1": {
+        "metadata": {
+            "home_team": "Brazil",
+            "away_team": "Haiti",
+            "home_disp": "\ud83c\udde7\ud83c\uddf7 Brazil",
+            "away_disp": "Haiti",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.531377+00:00",
+            "odds": {
+                "home": 1.07,
+                "draw": 12.25,
+                "away": 30.0,
+                "over25": 1.25,
+                "under25": 3.5
+            },
+            "elo_state": {
+                "home_rating": 2030.0,
+                "away_rating": 1500.0
+            }
+        },
+        "prediction": {
+            "top_tip": "3:0",
+            "max_xp": 5.956809831088827
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "f955d4b3395ce6e3b5ac1031ca52ca4e": {
+        "metadata": {
+            "home_team": "Turkey",
+            "away_team": "Paraguay",
+            "home_disp": "Turkey",
+            "away_disp": "Paraguay",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.531507+00:00",
+            "odds": {
+                "home": 2.05,
+                "draw": 3.21,
+                "away": 3.9,
+                "over25": 2.2350000000000003,
+                "under25": 1.645
+            },
+            "elo_state": {
+                "home_rating": 1850.0,
+                "away_rating": 1790.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.6571615407563125
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "4f0c518545b0096c68326daf25bffc1e": {
+        "metadata": {
+            "home_team": "Netherlands",
+            "away_team": "Sweden",
+            "home_disp": "\ud83c\uddf3\ud83c\uddf1 Netherlands",
+            "away_disp": "Sweden",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.531636+00:00",
+            "odds": {
+                "home": 1.62,
+                "draw": 4.02,
+                "away": 5.3,
+                "over25": 1.89,
+                "under25": 1.88
+            },
+            "elo_state": {
+                "home_rating": 2020.0,
+                "away_rating": 1820.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.253111376085524
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "f1ab0f69832972a329243522ceaa7804": {
+        "metadata": {
+            "home_team": "Germany",
+            "away_team": "Ivory Coast",
+            "home_disp": "\ud83c\udde9\ud83c\uddea Germany",
+            "away_disp": "\ud83c\udde8\ud83c\uddee Ivory Coast",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.531771+00:00",
+            "odds": {
+                "home": 1.54,
+                "draw": 4.3,
+                "away": 5.65,
+                "over25": 1.79,
+                "under25": 2.005
+            },
+            "elo_state": {
+                "home_rating": 2010.0,
+                "away_rating": 1780.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.365601746112192
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "681895f294b670b4c7b14495dfb583bc": {
+        "metadata": {
+            "home_team": "Ecuador",
+            "away_team": "Cura\u00e7ao",
+            "home_disp": "Ecuador",
+            "away_disp": "Cura\u00e7ao",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.531897+00:00",
+            "odds": {
+                "home": 1.185,
+                "draw": 6.75,
+                "away": 15.0,
+                "over25": 1.66,
+                "under25": 2.18
+            },
+            "elo_state": {
+                "home_rating": 1950.0,
+                "away_rating": 1550.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 5.623237845253907
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "dfc5202cf1b8ae002cf952cd04f235b9": {
+        "metadata": {
+            "home_team": "Tunisia",
+            "away_team": "Japan",
+            "home_disp": "Tunisia",
+            "away_disp": "Japan",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.532031+00:00",
+            "odds": {
+                "home": 5.4,
+                "draw": 3.6,
+                "away": 1.7,
+                "over25": 2.185,
+                "under25": 1.6549999999999998
+            },
+            "elo_state": {
+                "home_rating": 1710.0,
+                "away_rating": 1940.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 4.219090919818623
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "73529a242e319a86bf3d00ddb4accc37": {
+        "metadata": {
+            "home_team": "Spain",
+            "away_team": "Saudi Arabia",
+            "home_disp": "\ud83c\uddea\ud83c\uddf8 Spain",
+            "away_disp": "Saudi Arabia",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.532159+00:00",
+            "odds": {
+                "home": 1.09,
+                "draw": 10.0,
+                "away": 25.0,
+                "over25": 1.44,
+                "under25": 2.5
+            },
+            "elo_state": {
+                "home_rating": 2090.0,
+                "away_rating": 1720.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 6.024532710788809
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "5f92f257386ec5bf7c6e2498a21f3a61": {
+        "metadata": {
+            "home_team": "Belgium",
+            "away_team": "Iran",
+            "home_disp": "\ud83c\udde7\ud83c\uddea Belgium",
+            "away_disp": "\ud83c\uddee\ud83c\uddf7 Iran",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.532284+00:00",
+            "odds": {
+                "home": 1.4,
+                "draw": 4.675000000000001,
+                "away": 7.8,
+                "over25": 1.85,
+                "under25": 1.915
+            },
+            "elo_state": {
+                "home_rating": 1980.0,
+                "away_rating": 1840.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 4.813449730895382
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "852a3abe6d46820720febc0fedebff9a": {
+        "metadata": {
+            "home_team": "Uruguay",
+            "away_team": "Cape Verde",
+            "home_disp": "Uruguay",
+            "away_disp": "Cape Verde",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.532415+00:00",
+            "odds": {
+                "home": 1.44,
+                "draw": 4.475,
+                "away": 7.32,
+                "over25": 1.895,
+                "under25": 1.865
+            },
+            "elo_state": {
+                "home_rating": 1990.0,
+                "away_rating": 1620.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 4.699875215606223
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "c1ec9a65f4b4cf74477b368a7d6282de": {
+        "metadata": {
+            "home_team": "New Zealand",
+            "away_team": "Egypt",
+            "home_disp": "New Zealand",
+            "away_disp": "Egypt",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.532546+00:00",
+            "odds": {
+                "home": 4.8,
+                "draw": 3.7,
+                "away": 1.73,
+                "over25": 2.2,
+                "under25": 1.67
+            },
+            "elo_state": {
+                "home_rating": 1600.0,
+                "away_rating": 1760.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 4.118980128527251
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "be6c63f416c67bca1300a98f5b89c3af": {
+        "metadata": {
+            "home_team": "Argentina",
+            "away_team": "Austria",
+            "home_disp": "\ud83c\udde6\ud83c\uddf7 Argentina",
+            "away_disp": "Austria",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.532680+00:00",
+            "odds": {
+                "home": 1.62,
+                "draw": 3.87,
+                "away": 5.515000000000001,
+                "over25": 1.95,
+                "under25": 1.84
+            },
+            "elo_state": {
+                "home_rating": 2140.0,
+                "away_rating": 1860.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.2762102433029
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "7ad7a0ce2ef2618bb59b066da5642f70": {
+        "metadata": {
+            "home_team": "France",
+            "away_team": "Iraq",
+            "home_disp": "\ud83c\uddeb\ud83c\uddf7 France",
+            "away_disp": "Iraq",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.532805+00:00",
+            "odds": {
+                "home": 1.11,
+                "draw": 8.5,
+                "away": 25.0,
+                "over25": 1.44,
+                "under25": 2.5
+            },
+            "elo_state": {
+                "home_rating": 2110.0,
+                "away_rating": 1650.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 5.893154235614642
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "3f48473742ca0fd2a85930554720c75e": {
+        "metadata": {
+            "home_team": "Norway",
+            "away_team": "Senegal",
+            "home_disp": "Norway",
+            "away_disp": "Senegal",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.532933+00:00",
+            "odds": {
+                "home": 2.1100000000000003,
+                "draw": 3.455,
+                "away": 3.365,
+                "over25": 1.94,
+                "under25": 1.85
+            },
+            "elo_state": {
+                "home_rating": 1830.0,
+                "away_rating": 1880.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.458956095916354
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "fd8533b650e655030f6a7946f8795db2": {
+        "metadata": {
+            "home_team": "Jordan",
+            "away_team": "Algeria",
+            "home_disp": "Jordan",
+            "away_disp": "Algeria",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.533059+00:00",
+            "odds": {
+                "home": 6.5,
+                "draw": 4.2,
+                "away": 1.505,
+                "over25": 1.91,
+                "under25": 1.87
+            },
+            "elo_state": {
+                "home_rating": 1640.0,
+                "away_rating": 1770.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 4.516751044555619
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "8ba93d190f1f934e33862a97a6353a6e": {
+        "metadata": {
+            "home_team": "Portugal",
+            "away_team": "Uzbekistan",
+            "home_disp": "\ud83c\uddf5\ud83c\uddf9 Portugal",
+            "away_disp": "Uzbekistan",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.533189+00:00",
+            "odds": {
+                "home": 1.2349999999999999,
+                "draw": 6.2,
+                "away": 11.25,
+                "over25": 1.505,
+                "under25": 2.425
+            },
+            "elo_state": {
+                "home_rating": 2040.0,
+                "away_rating": 1680.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 5.291334360013266
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "2f49dd8deae3079dc4eb2d634d18a99c": {
+        "metadata": {
+            "home_team": "England",
+            "away_team": "Ghana",
+            "home_disp": "\ud83c\udff4\udb40\udc67\udb40\udc62\udb40\udc65\udb40\udc6e\udb40\udc67\udb40\udc7f England",
+            "away_disp": "Ghana",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.533314+00:00",
+            "odds": {
+                "home": 1.31,
+                "draw": 5.18,
+                "away": 9.5,
+                "over25": 1.685,
+                "under25": 2.135
+            },
+            "elo_state": {
+                "home_rating": 2050.0,
+                "away_rating": 1730.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 5.061971654352684
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "c1bc8c26480cd42b89a0de5329581314": {
+        "metadata": {
+            "home_team": "Panama",
+            "away_team": "Croatia",
+            "home_disp": "Panama",
+            "away_disp": "Croatia",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.533445+00:00",
+            "odds": {
+                "home": 6.5,
+                "draw": 3.89,
+                "away": 1.55,
+                "over25": 1.99,
+                "under25": 1.7850000000000001
+            },
+            "elo_state": {
+                "home_rating": 1700.0,
+                "away_rating": 2000.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 4.459774571871993
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "68bfc965eb267508e04d8e8d75c1a0ae": {
+        "metadata": {
+            "home_team": "Colombia",
+            "away_team": "DR Congo",
+            "home_disp": "Colombia",
+            "away_disp": "DR Congo",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.533574+00:00",
+            "odds": {
+                "home": 1.45,
+                "draw": 4.2,
+                "away": 7.4,
+                "over25": 2.12,
+                "under25": 1.67
+            },
+            "elo_state": {
+                "home_rating": 2060.0,
+                "away_rating": 1630.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.71700611513156
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "512ac18beb5aa936a59f7ea3e497ada2": {
+        "metadata": {
+            "home_team": "Bosnia & Herzegovina",
+            "away_team": "Qatar",
+            "home_disp": "Bosnia & Herzegovina",
+            "away_disp": "Qatar",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.533704+00:00",
+            "odds": {
+                "home": 1.61,
+                "draw": 3.7,
+                "away": 5.665,
+                "over25": 2.04,
+                "under25": 1.74
+            },
+            "elo_state": {
+                "home_rating": 1690.0,
+                "away_rating": 1660.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.306267017325383
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "c9ef5822ee64fd5275f7c73251bb56c7": {
+        "metadata": {
+            "home_team": "Switzerland",
+            "away_team": "Canada",
+            "home_disp": "Switzerland",
+            "away_disp": "Canada",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.533827+00:00",
+            "odds": {
+                "home": 2.1,
+                "draw": 3.3,
+                "away": 3.5,
+                "over25": 2.065,
+                "under25": 1.705
+            },
+            "elo_state": {
+                "home_rating": 1920.0,
+                "away_rating": 1810.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.5137527439661893
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "885ba95805db310a7bcc3fb1a7a6dd28": {
+        "metadata": {
+            "home_team": "Scotland",
+            "away_team": "Brazil",
+            "home_disp": "Scotland",
+            "away_disp": "\ud83c\udde7\ud83c\uddf7 Brazil",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.533954+00:00",
+            "odds": {
+                "home": 6.550000000000001,
+                "draw": 4.5,
+                "away": 1.44,
+                "over25": 1.8050000000000002,
+                "under25": 1.96
+            },
+            "elo_state": {
+                "home_rating": 1800.0,
+                "away_rating": 2030.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:2",
+            "max_xp": 4.59781230401201
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "d1279ce7f33136a33e99ad442fc855e8": {
+        "metadata": {
+            "home_team": "Morocco",
+            "away_team": "Haiti",
+            "home_disp": "Morocco",
+            "away_disp": "Haiti",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.534081+00:00",
+            "odds": {
+                "home": 1.3250000000000002,
+                "draw": 4.9399999999999995,
+                "away": 9.219999999999999,
+                "over25": 1.705,
+                "under25": 2.075
+            },
+            "elo_state": {
+                "home_rating": 1910.0,
+                "away_rating": 1500.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 5.000307594447875
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "5993bd5196ca09f83990f0c3261e442e": {
+        "metadata": {
+            "home_team": "Czech Republic",
+            "away_team": "Mexico",
+            "home_disp": "\ud83c\udde8\ud83c\uddff Czech Republic",
+            "away_disp": "Mexico",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.534215+00:00",
+            "odds": {
+                "home": 4.5,
+                "draw": 3.455,
+                "away": 1.8,
+                "over25": 2.065,
+                "under25": 1.7
+            },
+            "elo_state": {
+                "home_rating": 1740.0,
+                "away_rating": 1900.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 3.958782416522008
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "c0355dfc6e26ec327e379b6ef5824a5f": {
+        "metadata": {
+            "home_team": "South Africa",
+            "away_team": "South Korea",
+            "home_disp": "South Africa",
+            "away_disp": "\ud83c\uddf0\ud83c\uddf7 South Korea",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.534339+00:00",
+            "odds": {
+                "home": 5.609999999999999,
+                "draw": 3.865,
+                "away": 1.6,
+                "over25": 1.97,
+                "under25": 1.79
+            },
+            "elo_state": {
+                "home_rating": 1670.0,
+                "away_rating": 1870.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 4.314611243739261
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "a5a0b544a984ab16e564264f3e859b43": {
+        "metadata": {
+            "home_team": "Cura\u00e7ao",
+            "away_team": "Ivory Coast",
+            "home_disp": "Cura\u00e7ao",
+            "away_disp": "\ud83c\udde8\ud83c\uddee Ivory Coast",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.534471+00:00",
+            "odds": {
+                "home": 12.75,
+                "draw": 6.05,
+                "away": 1.205,
+                "over25": 1.67,
+                "under25": 2.15
+            },
+            "elo_state": {
+                "home_rating": 1550.0,
+                "away_rating": 1780.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:2",
+            "max_xp": 5.451028741783614
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "0ec28b84ec399bd4dffbe8d1bc72b3c4": {
+        "metadata": {
+            "home_team": "Ecuador",
+            "away_team": "Germany",
+            "home_disp": "Ecuador",
+            "away_disp": "\ud83c\udde9\ud83c\uddea Germany",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.534598+00:00",
+            "odds": {
+                "home": 4.65,
+                "draw": 3.675,
+                "away": 1.725,
+                "over25": 1.86,
+                "under25": 1.875
+            },
+            "elo_state": {
+                "home_rating": 1950.0,
+                "away_rating": 2010.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 4.0215372664670745
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "0ed0233bddc4eafc8507f86a9c17b998": {
+        "metadata": {
+            "home_team": "Japan",
+            "away_team": "Sweden",
+            "home_disp": "Japan",
+            "away_disp": "Sweden",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.534730+00:00",
+            "odds": {
+                "home": 2.075,
+                "draw": 3.33,
+                "away": 3.49,
+                "over25": 2.05,
+                "under25": 1.705
+            },
+            "elo_state": {
+                "home_rating": 1940.0,
+                "away_rating": 1820.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.5274428163114693
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "f3c4657daa143a0c5bd62cb370d01ce4": {
+        "metadata": {
+            "home_team": "Tunisia",
+            "away_team": "Netherlands",
+            "home_disp": "Tunisia",
+            "away_disp": "\ud83c\uddf3\ud83c\uddf1 Netherlands",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.534853+00:00",
+            "odds": {
+                "home": 6.34,
+                "draw": 4.2,
+                "away": 1.49,
+                "over25": 1.84,
+                "under25": 1.91
+            },
+            "elo_state": {
+                "home_rating": 1710.0,
+                "away_rating": 2020.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 4.494210270264499
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "22f6ac06dfcc88a847920f62633e6459": {
+        "metadata": {
+            "home_team": "Paraguay",
+            "away_team": "Australia",
+            "home_disp": "Paraguay",
+            "away_disp": "Australia",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.534982+00:00",
+            "odds": {
+                "home": 2.11,
+                "draw": 3.185,
+                "away": 3.5,
+                "over25": 2.24,
+                "under25": 1.62
+            },
+            "elo_state": {
+                "home_rating": 1790.0,
+                "away_rating": 1750.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.5171250033119987
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "f41aeac9a8343a84b4950f15ea25fba2": {
+        "metadata": {
+            "home_team": "Turkey",
+            "away_team": "USA",
+            "home_disp": "Turkey",
+            "away_disp": "\ud83c\uddfa\ud83c\uddf8 USA",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.535127+00:00",
+            "odds": {
+                "home": 2.67,
+                "draw": 3.435,
+                "away": 2.45,
+                "over25": 1.82,
+                "under25": 1.9249999999999998
+            },
+            "elo_state": {
+                "home_rating": 1850.0,
+                "away_rating": 1930.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:1",
+            "max_xp": 3.0191700053083212
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "b86b4d60f773e9e3c46c00e9a6496e79": {
+        "metadata": {
+            "home_team": "Norway",
+            "away_team": "France",
+            "home_disp": "Norway",
+            "away_disp": "\ud83c\uddeb\ud83c\uddf7 France",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.535258+00:00",
+            "odds": {
+                "home": 4.25,
+                "draw": 3.55,
+                "away": 1.81,
+                "over25": 1.935,
+                "under25": 1.815
+            },
+            "elo_state": {
+                "home_rating": 1830.0,
+                "away_rating": 2110.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 3.8859832343709058
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "7e6aee294ea1a4792c59558791084528": {
+        "metadata": {
+            "home_team": "Senegal",
+            "away_team": "Iraq",
+            "home_disp": "Senegal",
+            "away_disp": "Iraq",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.535390+00:00",
+            "odds": {
+                "home": 1.4,
+                "draw": 4.475,
+                "away": 7.845,
+                "over25": 1.87,
+                "under25": 1.875
+            },
+            "elo_state": {
+                "home_rating": 1880.0,
+                "away_rating": 1650.0
+            }
+        },
+        "prediction": {
+            "top_tip": "2:0",
+            "max_xp": 4.78681399800377
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "e07b1926be5a4d515c7eb108dbcee9c5": {
+        "metadata": {
+            "home_team": "Cape Verde",
+            "away_team": "Saudi Arabia",
+            "home_disp": "Cape Verde",
+            "away_disp": "Saudi Arabia",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.535521+00:00",
+            "odds": {
+                "home": 2.2649999999999997,
+                "draw": 3.4,
+                "away": 2.895,
+                "over25": 2.0949999999999998,
+                "under25": 1.7
+            },
+            "elo_state": {
+                "home_rating": 1620.0,
+                "away_rating": 1720.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.225765607993228
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "dcff2e31c0bce001a4db5caaf4fa8822": {
+        "metadata": {
+            "home_team": "Uruguay",
+            "away_team": "Spain",
+            "home_disp": "Uruguay",
+            "away_disp": "\ud83c\uddea\ud83c\uddf8 Spain",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.535647+00:00",
+            "odds": {
+                "home": 5.25,
+                "draw": 3.8449999999999998,
+                "away": 1.6150000000000002,
+                "over25": 1.86,
+                "under25": 1.8849999999999998
+            },
+            "elo_state": {
+                "home_rating": 1990.0,
+                "away_rating": 2090.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 4.220533113003749
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "581691da05dcd75b5c6d3be91ee9d2ab": {
+        "metadata": {
+            "home_team": "New Zealand",
+            "away_team": "Belgium",
+            "home_disp": "New Zealand",
+            "away_disp": "\ud83c\udde7\ud83c\uddea Belgium",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.535778+00:00",
+            "odds": {
+                "home": 9.925,
+                "draw": 5.5,
+                "away": 1.275,
+                "over25": 1.66,
+                "under25": 2.15
+            },
+            "elo_state": {
+                "home_rating": 1600.0,
+                "away_rating": 1980.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:2",
+            "max_xp": 5.168532630398832
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "3e3b5fa2b3c963e74cf044c60db0b573": {
+        "metadata": {
+            "home_team": "Egypt",
+            "away_team": "Iran",
+            "home_disp": "Egypt",
+            "away_disp": "\ud83c\uddee\ud83c\uddf7 Iran",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.535957+00:00",
+            "odds": {
+                "home": 2.215,
+                "draw": 2.9850000000000003,
+                "away": 3.525,
+                "over25": 2.5,
+                "under25": 1.44
+            },
+            "elo_state": {
+                "home_rating": 1760.0,
+                "away_rating": 1840.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.473944805142766
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "537c0997cd899394f47f16545b7068b2": {
+        "metadata": {
+            "home_team": "Croatia",
+            "away_team": "Ghana",
+            "home_disp": "Croatia",
+            "away_disp": "Ghana",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.536134+00:00",
+            "odds": {
+                "home": 1.625,
+                "draw": 3.71,
+                "away": 5.45,
+                "over25": 2.05,
+                "under25": 1.725
+            },
+            "elo_state": {
+                "home_rating": 2000.0,
+                "away_rating": 1730.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 4.272640210921454
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "4be17c8e1ccfecb0f2a5ef79e045c415": {
+        "metadata": {
+            "home_team": "Panama",
+            "away_team": "England",
+            "home_disp": "Panama",
+            "away_disp": "\ud83c\udff4\udb40\udc67\udb40\udc62\udb40\udc65\udb40\udc6e\udb40\udc67\udb40\udc7f England",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.536287+00:00",
+            "odds": {
+                "home": 9.504999999999999,
+                "draw": 5.725,
+                "away": 1.27,
+                "over25": 1.57,
+                "under25": 2.32
+            },
+            "elo_state": {
+                "home_rating": 1700.0,
+                "away_rating": 2050.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:2",
+            "max_xp": 5.135516905114383
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "67ae5751c401a98409b8566ae4897069": {
+        "metadata": {
+            "home_team": "Colombia",
+            "away_team": "Portugal",
+            "home_disp": "Colombia",
+            "away_disp": "\ud83c\uddf5\ud83c\uddf9 Portugal",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.536425+00:00",
+            "odds": {
+                "home": 3.49,
+                "draw": 3.26,
+                "away": 2.1,
+                "over25": 2.0549999999999997,
+                "under25": 1.7149999999999999
+            },
+            "elo_state": {
+                "home_rating": 2060.0,
+                "away_rating": 2040.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 3.506067111664379
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "13eab94a136b9c264ba974cf437a5f71": {
+        "metadata": {
+            "home_team": "DR Congo",
+            "away_team": "Uzbekistan",
+            "home_disp": "DR Congo",
+            "away_disp": "Uzbekistan",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.536556+00:00",
+            "odds": {
+                "home": 2.3,
+                "draw": 3.215,
+                "away": 3.0549999999999997,
+                "over25": 2.23,
+                "under25": 1.63
+            },
+            "elo_state": {
+                "home_rating": 1630.0,
+                "away_rating": 1680.0
+            }
+        },
+        "prediction": {
+            "top_tip": "1:0",
+            "max_xp": 3.2684431085450183
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "8756200e539155e571557c4f2e0d7f05": {
+        "metadata": {
+            "home_team": "Algeria",
+            "away_team": "Austria",
+            "home_disp": "Algeria",
+            "away_disp": "Austria",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.536691+00:00",
+            "odds": {
+                "home": 3.5700000000000003,
+                "draw": 3.12,
+                "away": 2.1399999999999997,
+                "over25": 2.12,
+                "under25": 1.685
+            },
+            "elo_state": {
+                "home_rating": 1770.0,
+                "away_rating": 1860.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:1",
+            "max_xp": 3.499689162133518
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    },
+    "54697f453437ab26276d773be1d72e9b": {
+        "metadata": {
+            "home_team": "Jordan",
+            "away_team": "Argentina",
+            "home_disp": "Jordan",
+            "away_disp": "\ud83c\udde6\ud83c\uddf7 Argentina",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": {
+            "timestamp_recorded": "2026-06-13T08:16:31.536820+00:00",
+            "odds": {
+                "home": 13.690000000000001,
+                "draw": 6.75,
+                "away": 1.18,
+                "over25": 1.545,
+                "under25": 2.34
+            },
+            "elo_state": {
+                "home_rating": 1640.0,
+                "away_rating": 2140.0
+            }
+        },
+        "prediction": {
+            "top_tip": "0:2",
+            "max_xp": 5.528826162913569
+        },
+        "post_match_result": {
+            "status": "pending",
+            "actual_score": null,
+            "points_earned": null
+        }
+    }
+}
