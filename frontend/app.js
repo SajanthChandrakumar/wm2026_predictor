@@ -567,32 +567,52 @@ async function loadPerformanceView() {
         totalPoints += pts;
         if (pts >= 5) correctTendency++;
 
-        const hasPrediction = match.prediction?.top_tip != null;
-        const borderColor = !hasPrediction ? 'var(--text-3)'
+        const userTip  = match.prediction?.user_tip  ?? null;
+        const algoTip  = match.prediction?.top_tip   ?? null;
+        const algoPts  = match.post_match_result?.algo_points ?? null;
+        const activeTip = userTip ?? algoTip;
+
+        const borderColor = activeTip == null ? 'var(--text-3)'
             : pts >= 8 ? 'var(--green)'
             : pts >= 5 ? 'var(--amber)'
             : 'var(--red)';
 
-        const tipLine = hasPrediction
-            ? `<span style="font-size:1.15rem;font-weight:800;color:var(--text-1);">${match.prediction.top_tip}</span>
-               <span style="font-size:0.82rem;color:var(--text-2);margin-left:10px;">Resultat: ${match.post_match_result.actual_score}</span>`
-            : `<span style="font-size:0.82rem;color:var(--text-2);">Resultat: ${match.post_match_result.actual_score}</span>`;
+        const algoColor = algoPts == null ? 'var(--text-3)'
+            : algoPts >= 8 ? 'var(--green)'
+            : algoPts >= 5 ? 'var(--amber)'
+            : 'var(--red)';
 
-        const ptsLine = hasPrediction
-            ? `<div style="display:inline-block;background:rgba(255,255,255,0.05);color:${borderColor};
-                           padding:3px 10px;border-radius:4px;font-weight:700;font-size:0.82rem;
-                           border:1px solid ${borderColor}33;">+${pts} Punkte</div>`
-            : `<div style="display:inline-block;color:var(--text-3);font-size:0.72rem;font-style:italic;">Kein Tipp erfasst</div>`;
+        const myTipHtml = userTip
+            ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                   <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Mein Tipp</span>
+                   <span style="font-size:1rem;font-weight:800;color:var(--text-1);">${userTip}</span>
+                   <span style="margin-left:auto;font-size:0.78rem;font-weight:700;color:${borderColor};">+${pts} Pts</span>
+               </div>`
+            : `<div style="font-size:0.72rem;color:var(--text-3);font-style:italic;margin-bottom:6px;">Kein Tipp erfasst</div>`;
+
+        const algoTipHtml = algoTip
+            ? `<div style="display:flex;align-items:center;gap:8px;">
+                   <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Algo</span>
+                   <span style="font-size:1rem;font-weight:800;color:var(--text-2);">${algoTip}</span>
+                   <span style="margin-left:auto;font-size:0.78rem;font-weight:700;color:${algoColor};">${algoPts != null ? '+'+algoPts+' Pts' : '–'}</span>
+               </div>`
+            : `<div style="display:flex;align-items:center;gap:8px;">
+                   <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Algo</span>
+                   <span style="font-size:0.72rem;color:var(--text-3);font-style:italic;">Kein Algo-Tipp</span>
+               </div>`;
 
         const card = document.createElement('div');
         card.className = 'glass-card';
-        card.style.cssText = `border-left:4px solid ${borderColor};padding:16px 18px;`;
+        card.style.cssText = `border-left:4px solid ${borderColor};padding:14px 18px;`;
         card.innerHTML = `
             <div style="font-size:0.72rem;color:var(--text-2);margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                 ${match.metadata.home_disp} vs ${match.metadata.away_disp}
+                <span style="float:right;color:var(--text-3);">Resultat: <strong style="color:var(--text-1);">${match.post_match_result.actual_score}</strong></span>
             </div>
-            <div style="margin-bottom:12px;">${tipLine}</div>
-            ${ptsLine}
+            <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:4px;">
+                ${myTipHtml}
+                ${algoTipHtml}
+            </div>
         `;
         grid.appendChild(card);
     });

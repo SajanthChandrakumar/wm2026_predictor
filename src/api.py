@@ -310,12 +310,14 @@ def get_matches(force: bool = False):
                 },
                 "prediction": {
                     "top_tip": r["top_tip"],
+                    "user_tip": None,
                     "max_xp": float(r["max_xp"])
                 },
                 "post_match_result": {
                     "status": "pending",
                     "actual_score": None,
-                    "points_earned": None
+                    "points_earned": None,
+                    "algo_points": None
                 }
             }
             changed = True
@@ -527,12 +529,19 @@ def perform_elo_sync() -> dict:
                 if archive[match_id]["post_match_result"]["status"] != "pending":
                     continue
 
-                tipped = archive[match_id]["prediction"]["top_tip"]
-                is_ko = archive[match_id]["metadata"]["is_ko_phase"]
-                archive[match_id]["post_match_result"]["status"] = "completed"
-                archive[match_id]["post_match_result"]["actual_score"] = actual_score_str
-                archive[match_id]["post_match_result"]["points_earned"] = MathEngine.calculate_actual_points(
-                    tipped, actual_score_str, is_ko
+                algo_tip  = archive[match_id]["prediction"].get("top_tip")
+                user_tip  = archive[match_id]["prediction"].get("user_tip")
+                is_ko     = archive[match_id]["metadata"]["is_ko_phase"]
+                active_tip = user_tip if user_tip else algo_tip
+                archive[match_id]["post_match_result"]["status"]        = "completed"
+                archive[match_id]["post_match_result"]["actual_score"]  = actual_score_str
+                archive[match_id]["post_match_result"]["points_earned"] = (
+                    MathEngine.calculate_actual_points(active_tip, actual_score_str, is_ko)
+                    if active_tip else None
+                )
+                archive[match_id]["post_match_result"]["algo_points"] = (
+                    MathEngine.calculate_actual_points(algo_tip, actual_score_str, is_ko)
+                    if algo_tip else None
                 )
                 graded += 1
 

@@ -2174,5 +2174,89 @@
             "actual_score": null,
             "points_earned": null
         }
+    },
+    "80d82d1113934bfbea4ce8daf37a2433": {
+        "metadata": {
+            "home_team": "Mexico",
+            "away_team": "South Africa",
+            "home_disp": "Mexico",
+            "away_disp": "South Africa",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": null,
+        "prediction": {
+            "top_tip": null,
+            "max_xp": null,
+            "user_tip": "2:0"
+        },
+        "post_match_result": {
+            "status": "completed",
+            "actual_score": "2:0",
+            "points_earned": 10,
+            "algo_points": null
+        }
+    },
+    "384cbb5d76b535896a24fe65f93cfac8": {
+        "metadata": {
+            "home_team": "South Korea",
+            "away_team": "Czech Republic",
+            "home_disp": "\ud83c\uddf0\ud83c\uddf7 South Korea",
+            "away_disp": "\ud83c\udde8\ud83c\uddff Czech Republic",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": null,
+        "prediction": {
+            "top_tip": null,
+            "max_xp": null,
+            "user_tip": "1:0"
+        },
+        "post_match_result": {
+            "status": "completed",
+            "actual_score": "2:1",
+            "points_earned": 8,
+            "algo_points": null
+        }
+    },
+    "d1f4f946c70a0b4e81f5d43e9d32361c": {
+        "metadata": {
+            "home_team": "Canada",
+            "away_team": "Bosnia & Herzegovina",
+            "home_disp": "Canada",
+            "away_disp": "Bosnia & Herzegovina",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": null,
+        "prediction": {
+            "top_tip": null,
+            "max_xp": null,
+            "user_tip": "2:1"
+        },
+        "post_match_result": {
+            "status": "completed",
+            "actual_score": "1:1",
+            "points_earned": 1,
+            "algo_points": null
+        }
+    },
+    "c12986f447a515fbe641addd786dbb24": {
+        "metadata": {
+            "home_team": "USA",
+            "away_team": "Paraguay",
+            "home_disp": "\ud83c\uddfa\ud83c\uddf8 USA",
+            "away_disp": "Paraguay",
+            "is_ko_phase": false
+        },
+        "pre_match_snapshot": null,
+        "prediction": {
+            "top_tip": null,
+            "max_xp": null,
+            "user_tip": "2:1"
+        },
+        "post_match_result": {
+            "status": "completed",
+            "actual_score": "4:1",
+            "points_earned": 6,
+            "algo_points": null
+        }
     }
 }
