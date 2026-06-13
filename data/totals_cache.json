@@ -1,0 +1,963 @@
+{
+    "26634922d3f78c146440816023e40de8": {
+        "timestamp": 1781341835.651558,
+        "bookmakers": [
+            {
+                "key": "unibet_se",
+                "title": "Unibet (SE)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:30Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.65,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.28,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "unibet_nl",
+                "title": "Unibet (NL)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:17Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.62,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.25,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "pmu_fr",
+                "title": "PMU (FR)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:17Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.57,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.2,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betonlineag",
+                "title": "BetOnline.ag",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:09:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.64,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.38,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "williamhill",
+                "title": "William Hill",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:29Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.55,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.3,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "pinnacle",
+                "title": "Pinnacle",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:31Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.98,
+                                "point": 3.0
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.93,
+                                "point": 3.0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "coolbet",
+                "title": "Coolbet",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:17Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.03,
+                                "point": 3.0
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.9,
+                                "point": 3.0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "mybookieag",
+                "title": "MyBookie.ag",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:09:15Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.04,
+                                "point": 3.0
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.79,
+                                "point": 3.0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betsson",
+                "title": "Betsson",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:30Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.58,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.4,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "gtbets",
+                "title": "GTbets",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:19Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.62,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.32,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "nordicbet",
+                "title": "Nordic Bet",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:33Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.58,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.4,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "onexbet",
+                "title": "1xBet",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:29Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.6,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.38,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betanysports",
+                "title": "BetAnything",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:17Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.45,
+                                "point": 3.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.57,
+                                "point": 3.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "codere_it",
+                "title": "Codere (IT)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:10:30Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.53,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.28,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "f6c8748a16516e0998f95de14235432a": {
+        "timestamp": 1781342782.453108,
+        "bookmakers": [
+            {
+                "key": "pinnacle",
+                "title": "Pinnacle",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:01Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.97,
+                                "point": 2.25
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.93,
+                                "point": 2.25
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "coolbet",
+                "title": "Coolbet",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:25:21Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.25,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.74,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "williamhill",
+                "title": "William Hill",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:25:21Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.15,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.65,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "unibet_nl",
+                "title": "Unibet (NL)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:11Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.06,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.73,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "unibet_se",
+                "title": "Unibet (SE)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:25:20Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.1,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.76,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betonlineag",
+                "title": "BetOnline.ag",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:25:33Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.23,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.71,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "pmu_fr",
+                "title": "PMU (FR)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:12Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.02,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.7,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "mybookieag",
+                "title": "MyBookie.ag",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:15Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.19,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.68,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betsson",
+                "title": "Betsson",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:25:36Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.25,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.65,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "gtbets",
+                "title": "GTbets",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:25:13Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.12,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.69,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "nordicbet",
+                "title": "Nordic Bet",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:25:49Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.25,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.65,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "onexbet",
+                "title": "1xBet",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:25:20Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.19,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.7,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betanysports",
+                "title": "BetAnything",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:11Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 3.0,
+                                "point": 3.0
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.38,
+                                "point": 3.0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "codere_it",
+                "title": "Codere (IT)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:25:34Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 2.09,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.63,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "5ae41a06735c926eeb7f74006933adce": {
+        "timestamp": 1781342799.6323142,
+        "bookmakers": [
+            {
+                "key": "pinnacle",
+                "title": "Pinnacle",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:26Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.93,
+                                "point": 2.75
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.98,
+                                "point": 2.75
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "coolbet",
+                "title": "Coolbet",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:25Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.78,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.18,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "williamhill",
+                "title": "William Hill",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:24Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.67,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.1,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "unibet_nl",
+                "title": "Unibet (NL)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:11Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.76,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.02,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "unibet_se",
+                "title": "Unibet (SE)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:24Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.79,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.05,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betonlineag",
+                "title": "BetOnline.ag",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:37Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.77,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.14,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "pmu_fr",
+                "title": "PMU (FR)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:12Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.72,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.96,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "mybookieag",
+                "title": "MyBookie.ag",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:15Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.76,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.08,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betsson",
+                "title": "Betsson",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:25:36Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.68,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.22,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "gtbets",
+                "title": "GTbets",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:26Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.73,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.06,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "nordicbet",
+                "title": "Nordic Bet",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:25:49Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.68,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.22,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "onexbet",
+                "title": "1xBet",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:25Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.7,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.17,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "matchbook",
+                "title": "Matchbook",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:38Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.76,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 2.28,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betanysports",
+                "title": "BetAnything",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:12Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.35,
+                                "point": 2.0
+                            },
+                            {
+                                "name": "Under",
+                                "price": 3.15,
+                                "point": 2.0
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "codere_it",
+                "title": "Codere (IT)",
+                "markets": [
+                    {
+                        "key": "totals",
+                        "last_update": "2026-06-13T09:26:38Z",
+                        "outcomes": [
+                            {
+                                "name": "Over",
+                                "price": 1.7,
+                                "point": 2.5
+                            },
+                            {
+                                "name": "Under",
+                                "price": 1.99,
+                                "point": 2.5
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
