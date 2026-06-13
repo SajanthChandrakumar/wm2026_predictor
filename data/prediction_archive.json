@@ -2185,7 +2185,7 @@
         },
         "pre_match_snapshot": null,
         "prediction": {
-            "top_tip": null,
+            "top_tip": "2:0",
             "max_xp": null,
             "user_tip": "2:0"
         },
@@ -2193,7 +2193,7 @@
             "status": "completed",
             "actual_score": "2:0",
             "points_earned": 10,
-            "algo_points": null
+            "algo_points": 10
         }
     },
     "384cbb5d76b535896a24fe65f93cfac8": {
@@ -2206,7 +2206,7 @@
         },
         "pre_match_snapshot": null,
         "prediction": {
-            "top_tip": null,
+            "top_tip": "2:1",
             "max_xp": null,
             "user_tip": "1:0"
         },
@@ -2214,7 +2214,7 @@
             "status": "completed",
             "actual_score": "2:1",
             "points_earned": 8,
-            "algo_points": null
+            "algo_points": 10
         }
     },
     "d1f4f946c70a0b4e81f5d43e9d32361c": {
@@ -2227,7 +2227,7 @@
         },
         "pre_match_snapshot": null,
         "prediction": {
-            "top_tip": null,
+            "top_tip": "1:0",
             "max_xp": null,
             "user_tip": "2:1"
         },
@@ -2235,7 +2235,7 @@
             "status": "completed",
             "actual_score": "1:1",
             "points_earned": 1,
-            "algo_points": null
+            "algo_points": 1
         }
     },
     "c12986f447a515fbe641addd786dbb24": {
@@ -2248,7 +2248,7 @@
         },
         "pre_match_snapshot": null,
         "prediction": {
-            "top_tip": null,
+            "top_tip": "1:0",
             "max_xp": null,
             "user_tip": "2:1"
         },
@@ -2256,7 +2256,7 @@
             "status": "completed",
             "actual_score": "4:1",
             "points_earned": 6,
-            "algo_points": null
+            "algo_points": 5
         }
     }
 }
