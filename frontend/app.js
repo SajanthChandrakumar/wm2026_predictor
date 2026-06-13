@@ -131,7 +131,7 @@ async function syncElo() {
     } catch {
         btn.textContent = '✗ Sync failed';
     }
-    setTimeout(() => { btn.textContent = '⚡ Sync Elo Ratings'; btn.disabled = false; }, 3000);
+    setTimeout(() => { btn.textContent = 'Sync Elo Ratings'; btn.disabled = false; }, 3000);
 }
 
 async function updatePrediction() {
@@ -168,17 +168,43 @@ async function updatePrediction() {
     }
 }
 
-// ── Render: Match Grid ────────────────────────────────────────
+// ── Render: Match Grid (fixture-list grouped by day) ──────────
 function renderMatchGrid(matches) {
     const grid = document.getElementById('matches-grid');
     grid.innerHTML = '';
+
     const sorted = [...matches].sort((a, b) =>
         new Date(a.raw_match.commence_time) - new Date(b.raw_match.commence_time));
 
-    sorted.forEach((match, i) => {
-        const card = buildMatchCard(match, i, false);
-        card.addEventListener('click', () => openMatch(match.id));
-        grid.appendChild(card);
+    const groups = {};
+    sorted.forEach(match => {
+        const d = new Date(match.raw_match.commence_time);
+        const key = d.toLocaleDateString('de-CH', {
+            weekday: 'long', day: 'numeric', month: 'long',
+            timeZone: 'Europe/Zurich'
+        });
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(match);
+    });
+
+    Object.entries(groups).forEach(([day, dayMatches]) => {
+        const group = document.createElement('div');
+        group.className = 'day-group';
+
+        const header = document.createElement('div');
+        header.className = 'day-header';
+        header.textContent = day;
+        group.appendChild(header);
+
+        const list = document.createElement('div');
+        list.className = 'fixture-group-list';
+        dayMatches.forEach(match => {
+            const row = buildFixtureRow(match);
+            row.addEventListener('click', () => openMatch(match.id));
+            list.appendChild(row);
+        });
+        group.appendChild(list);
+        grid.appendChild(group);
     });
 }
 
@@ -189,52 +215,61 @@ function renderValueBets(matches) {
         .filter(m => m.max_xp > 0)
         .sort((a, b) => b.max_xp - a.max_xp);
 
-    sorted.forEach((match, i) => {
-        const card = buildMatchCard(match, i, true);
-        card.addEventListener('click', () => openMatch(match.id));
-        grid.appendChild(card);
+    const list = document.createElement('div');
+    list.className = 'fixture-group-list';
+    sorted.forEach(match => {
+        const row = buildFixtureRow(match, true);
+        row.addEventListener('click', () => openMatch(match.id));
+        list.appendChild(row);
     });
+    grid.appendChild(list);
 }
 
-function buildMatchCard(match, index, isValue) {
-    const card = document.createElement('div');
-    card.className = `match-card${isValue ? ' value-card' : ''}`;
-    card.style.animationDelay = `${Math.min(index * 0.04, 0.4)}s`;
+function buildFixtureRow(match, showXp = false) {
+    const row = document.createElement('div');
+    row.className = 'fixture-row';
 
     const d = new Date(match.raw_match.commence_time);
-    const timeStr = d.toLocaleDateString('de-DE', {
-        weekday: 'short', day: '2-digit', month: '2-digit',
-        hour: '2-digit', minute: '2-digit'
+    const now = new Date();
+    const isPast = d < now;
+
+    const timeStr = d.toLocaleTimeString('de-CH', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich'
     });
 
     const probs = computeImpliedProbs(match.odds);
-    const tipHtml = match.top_tip && match.top_tip !== 'N/A'
-        ? `<div class="card-tip-row">
-             <span class="card-tip-label">Top tip</span>
-             <span class="card-tip-badge">${match.top_tip}</span>
-           </div>`
-        : '';
+    const hPct = probs.home * 100, dPct = probs.draw * 100, aPct = probs.away * 100;
 
-    card.innerHTML = `
-        <div class="card-time">${timeStr}</div>
-        <div class="card-teams">
-            <span class="card-team">${match.home_disp}</span>
-            <span class="card-vs">vs</span>
-            <span class="card-team">${match.away_disp}</span>
+    const tipHtml = match.top_tip && match.top_tip !== 'N/A'
+        ? `<div class="fixture-tip">${match.top_tip}</div>`
+        : `<div class="fixture-tip na">–</div>`;
+
+    const xpBadge = showXp && match.max_xp > 0
+        ? `<div class="fixture-tip" style="color:var(--green);background:var(--green-dim);border-color:rgba(30,171,90,0.3)">${match.max_xp.toFixed(1)} xP</div>`
+        : tipHtml;
+
+    row.innerHTML = `
+        <div class="fixture-time${isPast ? ' past' : ''}">${timeStr}</div>
+        <div class="fixture-body">
+            <div class="fixture-teams">
+                <span class="fixture-home">${match.home_disp}</span>
+                <div class="fix-bar">
+                    <div class="bar-h" style="width:${hPct}%"></div>
+                    <div class="bar-d" style="width:${dPct}%"></div>
+                    <div class="bar-a" style="width:${aPct}%"></div>
+                </div>
+                <span class="fixture-away">${match.away_disp}</span>
+            </div>
+            <div class="fixture-probs">
+                <span class="fp-h">${pct(probs.home)}</span>
+                <span class="fp-d">${pct(probs.draw)} X</span>
+                <span class="fp-a">${pct(probs.away)}</span>
+            </div>
         </div>
-        <div class="prob-bar">
-            <div class="prob-home" style="width:${probs.home*100}%"></div>
-            <div class="prob-draw" style="width:${probs.draw*100}%"></div>
-            <div class="prob-away" style="width:${probs.away*100}%"></div>
-        </div>
-        <div class="prob-labels">
-            <span class="home-pct">${pct(probs.home)}</span>
-            <span class="draw-pct">${pct(probs.draw)}</span>
-            <span class="away-pct">${pct(probs.away)}</span>
-        </div>
-        ${tipHtml}
+        ${xpBadge}
+        <div class="fixture-chevron">›</div>
     `;
-    return card;
+    return row;
 }
 
 function openMatch(id) {
@@ -478,11 +513,11 @@ function renderEloChart(history, team) {
             datasets: [{
                 label: `${team} Elo`,
                 data,
-                borderColor: '#38bdf8',
-                backgroundColor: 'rgba(56,189,248,0.08)',
+                borderColor: '#c8901a',
+                backgroundColor: 'rgba(200,144,26,0.08)',
                 borderWidth: 2.5,
                 pointRadius: 5,
-                pointBackgroundColor: '#38bdf8',
+                pointBackgroundColor: '#e6a51e',
                 fill: true,
                 tension: 0.3,
             }]
@@ -511,19 +546,17 @@ function computeImpliedProbs(odds) {
 function pct(p) { return (p * 100).toFixed(0) + '%'; }
 
 function probColor(prob, maxProb) {
-    if (!prob || !maxProb) return 'rgba(255,255,255,0.03)';
+    if (!prob || !maxProb) return '#0d1220';
     const r = Math.min(prob / maxProb, 1);
-    // Dark slate → sky blue → emerald → amber
+    // Dark navy → deep amber → gold
     const stops = [
-        [18, 28, 48],
-        [56, 189, 248],
-        [16, 185, 129],
-        [245, 158, 11],
+        [13,  18,  32],
+        [90,  55,  10],
+        [210, 148,  26],
     ];
     let c1, c2, t;
-    if (r < 0.33)      { c1 = stops[0]; c2 = stops[1]; t = r / 0.33; }
-    else if (r < 0.66) { c1 = stops[1]; c2 = stops[2]; t = (r - 0.33) / 0.33; }
-    else               { c1 = stops[2]; c2 = stops[3]; t = (r - 0.66) / 0.34; }
+    if (r < 0.5) { c1 = stops[0]; c2 = stops[1]; t = r / 0.5; }
+    else         { c1 = stops[1]; c2 = stops[2]; t = (r - 0.5) / 0.5; }
     const mix = (i) => Math.round(c1[i] + (c2[i] - c1[i]) * t);
     return `rgb(${mix(0)},${mix(1)},${mix(2)})`;
 }
