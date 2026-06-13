@@ -14,6 +14,7 @@ class MathEngine:
     def __init__(self, elo_csv_path: str, name_mapping: dict = None):
         self.elo_csv_path = elo_csv_path
         self.elo_df = pd.read_csv(elo_csv_path)
+        self.elo_df['elo_rating'] = self.elo_df['elo_rating'].astype(float)
         self.name_mapping = name_mapping or {}
 
     @staticmethod
@@ -54,6 +55,7 @@ class MathEngine:
         """ Reloads the latest Elo dataframe from the CSV file to ensure global state is up-to-date """
         if os.path.exists(self.elo_csv_path):
             self.elo_df = pd.read_csv(self.elo_csv_path)
+            self.elo_df['elo_rating'] = self.elo_df['elo_rating'].astype(float)
 
     def get_match_elo_probabilities(self, home_team: str, away_team: str, home_resting: bool = False, away_resting: bool = False) -> tuple[float, float]:
         home_norm = self.name_mapping.get(home_team, home_team)
@@ -426,8 +428,8 @@ class MathEngine:
                     
                 new_elo_home, new_elo_away = self._calculate_new_elo(elo_home, elo_away, result_home, is_a_host=is_home_host, is_b_host=is_away_host, goal_diff=home_score - away_score)
                 
-                self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'] = new_elo_home
-                self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'] = new_elo_away
+                self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'] = float(new_elo_home)
+                self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'] = float(new_elo_away)
                 
                 # Elo History Logging
                 history_json_path = os.path.join(os.path.dirname(os.path.abspath(processed_matches_file)), 'elo_history.json')

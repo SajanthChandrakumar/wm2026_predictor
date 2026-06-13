@@ -474,6 +474,7 @@ def perform_elo_sync() -> dict:
             print(f"Automated Elo sync completed: {updates} updates.")
 
         # Post-match grading: score archived predictions against actual results
+        # Also create retroactive entries for completed matches played before the app started
         try:
             archive = {}
             if os.path.exists(archive_json_path):
@@ -481,11 +482,10 @@ def perform_elo_sync() -> dict:
                     archive = json.load(f)
 
             graded = 0
+            retro = 0
             for match in completed_matches:
                 match_id = match.get("id")
                 if not match_id or not match.get("completed"):
-                    continue
-                if match_id not in archive or archive[match_id]["post_match_result"]["status"] != "pending":
                     continue
 
                 home_team = match.get("home_team")
@@ -502,9 +502,33 @@ def perform_elo_sync() -> dict:
                     continue
 
                 actual_score_str = f"{home_score}:{away_score}"
+
+                if match_id not in archive:
+                    # Match was played before this app started tracking — create a retroactive entry
+                    archive[match_id] = {
+                        "metadata": {
+                            "home_team": home_team,
+                            "away_team": away_team,
+                            "home_disp": DISPLAY_MAPPING.get(home_team, home_team),
+                            "away_disp": DISPLAY_MAPPING.get(away_team, away_team),
+                            "is_ko_phase": False
+                        },
+                        "pre_match_snapshot": None,
+                        "prediction": {"top_tip": None, "max_xp": None},
+                        "post_match_result": {
+                            "status": "completed",
+                            "actual_score": actual_score_str,
+                            "points_earned": None
+                        }
+                    }
+                    retro += 1
+                    continue
+
+                if archive[match_id]["post_match_result"]["status"] != "pending":
+                    continue
+
                 tipped = archive[match_id]["prediction"]["top_tip"]
                 is_ko = archive[match_id]["metadata"]["is_ko_phase"]
-
                 archive[match_id]["post_match_result"]["status"] = "completed"
                 archive[match_id]["post_match_result"]["actual_score"] = actual_score_str
                 archive[match_id]["post_match_result"]["points_earned"] = MathEngine.calculate_actual_points(
@@ -512,10 +536,14 @@ def perform_elo_sync() -> dict:
                 )
                 graded += 1
 
-            if graded > 0:
+            if graded > 0 or retro > 0:
+                os.makedirs(os.path.dirname(archive_json_path), exist_ok=True)
                 with open(archive_json_path, 'w', encoding='utf-8') as f:
                     json.dump(archive, f, indent=4)
-                print(f"Archive grading completed: {graded} predictions scored.")
+                if graded:
+                    print(f"Archive grading completed: {graded} predictions scored.")
+                if retro:
+                    print(f"Retroactive archive entries created: {retro} matches.")
         except Exception as e:
             print(f"Archive grading failed: {e}")
 

@@ -567,7 +567,22 @@ async function loadPerformanceView() {
         totalPoints += pts;
         if (pts >= 5) correctTendency++;
 
-        const borderColor = pts >= 8 ? 'var(--green)' : pts >= 5 ? 'var(--amber)' : 'var(--red)';
+        const hasPrediction = match.prediction?.top_tip != null;
+        const borderColor = !hasPrediction ? 'var(--text-3)'
+            : pts >= 8 ? 'var(--green)'
+            : pts >= 5 ? 'var(--amber)'
+            : 'var(--red)';
+
+        const tipLine = hasPrediction
+            ? `<span style="font-size:1.15rem;font-weight:800;color:var(--text-1);">${match.prediction.top_tip}</span>
+               <span style="font-size:0.82rem;color:var(--text-2);margin-left:10px;">Resultat: ${match.post_match_result.actual_score}</span>`
+            : `<span style="font-size:0.82rem;color:var(--text-2);">Resultat: ${match.post_match_result.actual_score}</span>`;
+
+        const ptsLine = hasPrediction
+            ? `<div style="display:inline-block;background:rgba(255,255,255,0.05);color:${borderColor};
+                           padding:3px 10px;border-radius:4px;font-weight:700;font-size:0.82rem;
+                           border:1px solid ${borderColor}33;">+${pts} Punkte</div>`
+            : `<div style="display:inline-block;color:var(--text-3);font-size:0.72rem;font-style:italic;">Kein Tipp erfasst</div>`;
 
         const card = document.createElement('div');
         card.className = 'glass-card';
@@ -576,19 +591,8 @@ async function loadPerformanceView() {
             <div style="font-size:0.72rem;color:var(--text-2);margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                 ${match.metadata.home_disp} vs ${match.metadata.away_disp}
             </div>
-            <div style="margin-bottom:12px;">
-                <span style="font-size:1.15rem;font-weight:800;color:var(--text-1);">
-                    ${match.prediction.top_tip}
-                </span>
-                <span style="font-size:0.82rem;color:var(--text-2);margin-left:10px;">
-                    Resultat: ${match.post_match_result.actual_score}
-                </span>
-            </div>
-            <div style="display:inline-block;background:rgba(255,255,255,0.05);color:${borderColor};
-                        padding:3px 10px;border-radius:4px;font-weight:700;font-size:0.82rem;
-                        border:1px solid ${borderColor}33;">
-                +${pts} Punkte
-            </div>
+            <div style="margin-bottom:12px;">${tipLine}</div>
+            ${ptsLine}
         `;
         grid.appendChild(card);
     });
