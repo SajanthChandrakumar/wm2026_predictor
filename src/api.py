@@ -257,7 +257,16 @@ def get_matches(force: bool = False):
             except Exception:
                 pass
         for r in results:
-            existing_matches[r["id"]] = r  # update live matches, keep disappeared ones
+            prev = existing_matches.get(r["id"])
+            if prev:
+                old_o, new_o = prev.get("odds", {}), r.get("odds", {})
+                odds_changed = any(
+                    abs(new_o.get(k, 0) - old_o.get(k, 0)) > 0.02
+                    for k in ["home", "draw", "away"]
+                )
+                if not odds_changed:
+                    continue  # keep old entry unchanged
+            existing_matches[r["id"]] = r
         merged = sorted(existing_matches.values(), key=lambda m: m.get("raw_match", {}).get("commence_time", ""))
         with open(cache_file_path, "w", encoding="utf-8") as f:
             json.dump({"timestamp": time.time(), "data": merged}, f, indent=4)
