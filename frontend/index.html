@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WM 2026 Predictor</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=6">
+    <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
     <div class="app-container">
@@ -31,6 +31,9 @@
                     </li>
                     <li id="nav-value-bets">
                         <span class="nav-icon">↑</span> Top Value Bets
+                    </li>
+                    <li id="nav-edge">
+                        <span class="nav-icon">⇄</span> Model Edge
                     </li>
                     <li id="nav-elo-history">
                         <span class="nav-icon">∿</span> Team Form
@@ -133,6 +136,15 @@
                 <div id="value-bets-grid" class="matches-grid"></div>
             </div>
 
+            <!-- Model Edge View -->
+            <div id="edge-view" style="display:none;">
+                <div class="page-header">
+                    <h1>Model Edge</h1>
+                    <p class="page-subtitle">Wo die Elo dem Buchmacher am stärksten widerspricht — potenzieller Vorsprung gegenüber dem Feld</p>
+                </div>
+                <div id="edge-grid"></div>
+            </div>
+
             <!-- Performance View -->
             <div id="performance-view" style="display:none;">
                 <div class="page-header">
@@ -205,6 +217,11 @@
                         <div id="panel-pool" class="tab-panel" style="display:none;">
                             <div id="pool-container"></div>
                         </div>
+
+                        <button id="adopt-tip-btn" class="sidebar-btn primary" style="width:100%;margin-top:14px;">
+                            Tipp übernehmen
+                        </button>
+                        <div id="adopt-tip-status" style="font-size:0.72rem;text-align:center;margin-top:8px;min-height:16px;"></div>
                     </section>
                 </div>
             </div>
@@ -218,6 +235,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="app.js?v=6"></script>
+    <script src="app.js?v=7"></script>
 </body>
 </html>

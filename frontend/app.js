@@ -18,6 +18,10 @@ function initSidebar() {
         showView('value-bets');
         renderValueBets(currentMatches);
     });
+    document.getElementById('nav-edge').addEventListener('click', () => {
+        showView('edge');
+        renderEdgeView(currentMatches);
+    });
     document.getElementById('nav-elo-history').addEventListener('click', () => {
         showView('elo-history');
         loadEloHistoryView();
@@ -60,7 +64,7 @@ function initSidebar() {
 
 // ── Views ─────────────────────────────────────────────────────
 function showView(view) {
-    ['matches-view', 'value-bets-view', 'elo-history-view', 'performance-view', 'detail-view', 'loading-spinner']
+    ['matches-view', 'value-bets-view', 'edge-view', 'elo-history-view', 'performance-view', 'detail-view', 'loading-spinner']
         .forEach(id => document.getElementById(id).style.display = 'none');
 
     document.querySelectorAll('nav li').forEach(li => li.classList.remove('active'));
@@ -68,6 +72,7 @@ function showView(view) {
     const map = {
         'dashboard':   ['matches-view',      'nav-dashboard'],
         'value-bets':  ['value-bets-view',   'nav-value-bets'],
+        'edge':        ['edge-view',         'nav-edge'],
         'elo-history': ['elo-history-view',  'nav-elo-history'],
         'performance': ['performance-view',  'nav-performance'],
         'detail':      ['detail-view',        null],
@@ -358,6 +363,54 @@ function renderDetail(matchInfo, calc) {
     // Keep active tab
     const activeTab = document.querySelector('.tab.active')?.id === 'tab-pool' ? 'pool' : 'safe';
     switchTab(activeTab);
+
+    document.getElementById('adopt-tip-status').textContent = '';
+    updateAdoptButton();
+}
+
+function currentActiveTip() {
+    if (!lastCalcData) return null;
+    const isPool = document.querySelector('.tab.active')?.id === 'tab-pool';
+    const tips = isPool ? lastCalcData.pool_tips : lastCalcData.xp_tips;
+    return tips?.[0]?.Tipp ?? null;
+}
+
+function updateAdoptButton() {
+    const btn = document.getElementById('adopt-tip-btn');
+    if (!btn) return;
+    const tip = currentActiveTip();
+    const isPool = document.querySelector('.tab.active')?.id === 'tab-pool';
+    btn.textContent = tip ? `Tipp übernehmen: ${tip} (${isPool ? 'Pool' : 'Safe'})` : 'Tipp übernehmen';
+    btn.disabled = !tip;
+    btn.onclick = () => adoptCurrentTip();
+}
+
+async function adoptCurrentTip() {
+    const tip = currentActiveTip();
+    if (!tip || !selectedMatchId) return;
+    const btn = document.getElementById('adopt-tip-btn');
+    const status = document.getElementById('adopt-tip-status');
+    btn.disabled = true;
+    const prev = btn.textContent;
+    btn.textContent = 'Speichere…';
+    try {
+        const res = await fetch('/api/archive/user_tip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ match_id: selectedMatchId, user_tip: tip })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Fehler');
+        status.style.color = 'var(--green)';
+        status.textContent = `✓ ${tip} als dein Tipp gespeichert`;
+        btn.textContent = prev;
+        btn.disabled = false;
+    } catch (e) {
+        status.style.color = 'var(--red)';
+        status.textContent = `✗ ${e.message}`;
+        btn.textContent = prev;
+        btn.disabled = false;
+    }
 }
 
 function renderSafeTips(tips) {
@@ -447,6 +500,7 @@ function switchTab(tab) {
     document.getElementById('tab-pool').classList.toggle('active', tab === 'pool');
     document.getElementById('panel-safe').style.display = tab === 'safe' ? '' : 'none';
     document.getElementById('panel-pool').style.display = tab === 'pool' ? '' : 'none';
+    updateAdoptButton();
 }
 
 // ── Heatmap ───────────────────────────────────────────────────
@@ -541,6 +595,78 @@ function renderEloChart(history, team) {
     });
 }
 
+// ── Model Edge ────────────────────────────────────────────────
+function renderEdgeView(matches) {
+    const grid = document.getElementById('edge-grid');
+    grid.innerHTML = '';
+    const now = new Date();
+
+    const rows = matches
+        .filter(m => m.edge_home != null && new Date(m.raw_match.commence_time) > now)
+        .sort((a, b) => Math.abs(b.edge_home) - Math.abs(a.edge_home));
+
+    if (!rows.length) {
+        grid.innerHTML = `<p style="color:var(--text-2);font-size:0.85rem;">Keine Edge-Daten verfügbar — Daten aktualisieren.</p>`;
+        return;
+    }
+
+    rows.forEach(m => {
+        const edgePts = m.edge_home * 100;
+        const absEdge = Math.abs(edgePts);
+        // Model favours home if edge > 0, away if < 0
+        const favTeam = edgePts >= 0 ? m.home_disp : m.away_disp;
+        const dir = edgePts >= 0 ? 'home' : 'away';
+        const strength = absEdge >= 12 ? 'var(--green)' : absEdge >= 6 ? 'var(--amber)' : 'var(--text-3)';
+
+        const mShare = (m.market_home_share * 100);
+        const eShare = (m.elo_home_share * 100);
+
+        const d = new Date(m.raw_match.commence_time);
+        const when = d.toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'Europe/Zurich' });
+
+        const card = document.createElement('div');
+        card.className = 'glass-card';
+        card.style.cssText = `border-left:4px solid ${strength};padding:14px 18px;margin-bottom:10px;cursor:pointer;`;
+        card.addEventListener('click', () => openMatch(m.id));
+        card.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="min-width:0;">
+                    <div style="font-size:0.95rem;font-weight:800;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        ${m.home_disp} <span style="color:var(--text-3);font-weight:600;">vs</span> ${m.away_disp}
+                    </div>
+                    <div style="font-size:0.68rem;color:var(--text-3);margin-top:2px;">${when}</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;">
+                    <div style="font-size:1.2rem;font-weight:900;color:${strength};line-height:1;">
+                        ${edgePts >= 0 ? '+' : ''}${edgePts.toFixed(1)}<span style="font-size:0.7rem;">pp</span>
+                    </div>
+                    <div style="font-size:0.62rem;color:var(--text-2);margin-top:3px;text-transform:uppercase;letter-spacing:0.5px;">
+                        Elo favorisiert <strong style="color:var(--text-1);">${favTeam.replace(/^\S+\s/, '')}</strong>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px;">
+                ${edgeBar('Markt', mShare, 'var(--blue)', m.home_disp, m.away_disp)}
+                ${edgeBar('Elo',   eShare, 'var(--gold)', m.home_disp, m.away_disp)}
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function edgeBar(label, homePct, color, homeDisp, awayDisp) {
+    return `
+        <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:0.6rem;color:var(--text-3);font-weight:700;text-transform:uppercase;min-width:34px;">${label}</span>
+            <span style="font-size:0.62rem;color:var(--text-2);min-width:30px;text-align:right;">${homePct.toFixed(0)}%</span>
+            <div style="flex:1;height:7px;background:var(--surface-3);border-radius:4px;overflow:hidden;display:flex;">
+                <div style="width:${homePct}%;height:100%;background:${color};"></div>
+            </div>
+            <span style="font-size:0.62rem;color:var(--text-2);min-width:30px;">${(100-homePct).toFixed(0)}%</span>
+        </div>
+    `;
+}
+
 // ── Performance Dashboard ─────────────────────────────────────
 async function loadPerformanceView() {
     const grid = document.getElementById('performance-grid');
@@ -559,6 +685,7 @@ async function loadPerformanceView() {
 
     let completedMatches = 0, totalPoints = 0, correctTendency = 0;
     let algoTotal = 0, algoCorrectTendency = 0, algoMatchCount = 0;
+    let hasReconstructed = false;
 
     Object.entries(archiveData).forEach(([match_id, match]) => {
         if (match.post_match_result?.status !== 'completed') return;
@@ -609,9 +736,15 @@ async function loadPerformanceView() {
                    </button>
                </div>`;
 
+        const isReconstructed = match.prediction?.algo_reconstructed === true;
+        if (isReconstructed) hasReconstructed = true;
+        const algoLabel = isReconstructed
+            ? `<span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;" title="Aus Elo rekonstruiert — keine historischen Quoten verfügbar">Algo<span style="color:var(--amber);">*</span></span>`
+            : `<span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Algo</span>`;
+
         const algoTipHtml = algoTip
             ? `<div style="display:flex;align-items:center;gap:8px;">
-                   <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Algo</span>
+                   ${algoLabel}
                    <span style="font-size:1rem;font-weight:800;color:var(--text-2);">${algoTip}</span>
                    <span style="margin-left:auto;font-size:0.78rem;font-weight:700;color:${algoColor};">${algoPts != null ? '+'+algoPts+' Pts' : '–'}</span>
                </div>`
@@ -709,6 +842,11 @@ async function loadPerformanceView() {
 
     if (completedMatches === 0) {
         grid.innerHTML = `<p style="color:var(--text-2);font-size:0.85rem;">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
+    } else if (hasReconstructed) {
+        const note = document.createElement('p');
+        note.style.cssText = 'grid-column:1/-1;font-size:0.7rem;color:var(--text-3);margin-top:6px;font-style:italic;';
+        note.innerHTML = '<span style="color:var(--amber);">*</span> Algo-Tipp aus Elo-Ratings rekonstruiert (Spiel vor App-Start, keine historischen Quoten verfügbar) — angenähert, nicht das volle Quoten-Modell.';
+        grid.appendChild(note);
     }
 }
 
