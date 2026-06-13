@@ -558,6 +558,7 @@ async function loadPerformanceView() {
     }
 
     let completedMatches = 0, totalPoints = 0, correctTendency = 0;
+    let algoTotal = 0, algoCorrectTendency = 0, algoMatchCount = 0;
 
     Object.entries(archiveData).forEach(([match_id, match]) => {
         if (match.post_match_result?.status !== 'completed') return;
@@ -566,6 +567,9 @@ async function loadPerformanceView() {
         const pts = match.post_match_result.points_earned || 0;
         totalPoints += pts;
         if (pts >= 5) correctTendency++;
+
+        const ap = match.post_match_result?.algo_points;
+        if (ap != null) { algoTotal += ap; algoMatchCount++; if (ap >= 5) algoCorrectTendency++; }
 
         const userTip  = match.prediction?.user_tip  ?? null;
         const algoTip  = match.prediction?.top_tip   ?? null;
@@ -637,6 +641,71 @@ async function loadPerformanceView() {
     document.getElementById('kpi-hitrate').textContent = completedMatches > 0
         ? ((correctTendency / completedMatches) * 100).toFixed(1) + '%'
         : '0.0%';
+
+    // ── You vs Algo Panel ────────────────────────────────────────
+    const h2h = document.getElementById('h2h-panel');
+    if (completedMatches === 0 || algoMatchCount === 0) {
+        h2h.innerHTML = '';
+    } else {
+        const userHitRate  = ((correctTendency  / completedMatches) * 100).toFixed(1);
+        const algoHitRate  = ((algoCorrectTendency / algoMatchCount) * 100).toFixed(1);
+        const maxPts       = Math.max(totalPoints, algoTotal, 1);
+        const userBarPct   = (totalPoints / maxPts * 100).toFixed(1);
+        const algoBarPct   = (algoTotal   / maxPts * 100).toFixed(1);
+
+        const diff         = totalPoints - algoTotal;
+        const diffLabel    = diff > 0
+            ? `<span style="color:var(--gold-l);font-weight:800;">Du führst +${diff} Pts</span>`
+            : diff < 0
+            ? `<span style="color:var(--blue);font-weight:800;">Algo führt +${Math.abs(diff)} Pts</span>`
+            : `<span style="color:var(--text-2);font-weight:700;">Gleichstand</span>`;
+
+        h2h.innerHTML = `
+            <div class="glass-card" style="padding:20px 24px;">
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;
+                            color:var(--text-3);font-weight:700;margin-bottom:16px;">You vs Algo</div>
+
+                <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;margin-bottom:16px;">
+                    <!-- Du -->
+                    <div>
+                        <div style="font-size:0.72rem;color:var(--gold-l);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Du</div>
+                        <div style="font-size:2.4rem;font-weight:900;color:var(--gold-l);line-height:1;letter-spacing:-1px;">${totalPoints}</div>
+                        <div style="font-size:0.72rem;color:var(--text-2);margin-top:3px;">${userHitRate}% Tendenz</div>
+                    </div>
+
+                    <!-- Differenz -->
+                    <div style="text-align:center;font-size:0.82rem;">${diffLabel}</div>
+
+                    <!-- Algo -->
+                    <div style="text-align:right;">
+                        <div style="font-size:0.72rem;color:var(--blue);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Algo</div>
+                        <div style="font-size:2.4rem;font-weight:900;color:var(--blue);line-height:1;letter-spacing:-1px;">${algoTotal}</div>
+                        <div style="font-size:0.72rem;color:var(--text-2);margin-top:3px;">${algoHitRate}% Tendenz</div>
+                    </div>
+                </div>
+
+                <!-- Progress bars -->
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:0.62rem;color:var(--gold-l);font-weight:700;min-width:28px;text-align:right;">Du</span>
+                        <div style="flex:1;height:8px;background:var(--surface-3);border-radius:4px;overflow:hidden;">
+                            <div style="width:${userBarPct}%;height:100%;background:var(--gold);border-radius:4px;
+                                        transition:width 0.6s ease;"></div>
+                        </div>
+                        <span style="font-size:0.72rem;color:var(--text-2);font-weight:600;min-width:36px;">${totalPoints} Pts</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:0.62rem;color:var(--blue);font-weight:700;min-width:28px;text-align:right;">Algo</span>
+                        <div style="flex:1;height:8px;background:var(--surface-3);border-radius:4px;overflow:hidden;">
+                            <div style="width:${algoBarPct}%;height:100%;background:var(--blue);border-radius:4px;
+                                        transition:width 0.6s ease;"></div>
+                        </div>
+                        <span style="font-size:0.72rem;color:var(--text-2);font-weight:600;min-width:36px;">${algoTotal} Pts</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 
     if (completedMatches === 0) {
         grid.innerHTML = `<p style="color:var(--text-2);font-size:0.85rem;">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
