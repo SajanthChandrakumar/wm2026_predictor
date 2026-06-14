@@ -657,6 +657,26 @@ async function loadPerformanceView() {
                    <span style="font-size:0.72rem;color:var(--text-3);font-style:italic;">Kein Algo-Tipp</span>
                </div>`;
 
+        // Bot rows
+        const BOT_SHORT = { chalk: 'Chalk', odds_pure: 'Odds', elo_pure: 'Elo', draw_hunter: 'Draw', random: 'Rnd' };
+        const bots = match.prediction?.bots ?? {};
+        const botPts = match.post_match_result?.bot_points ?? {};
+        const botRowsHtml = Object.entries(bots).map(([bot, info]) => {
+            const tip = info?.tip;
+            if (!tip) return '';
+            const bp = botPts[bot];
+            const c = bp == null ? 'var(--text-3)' : bp >= 8 ? 'var(--green)' : bp >= 5 ? 'var(--amber)' : 'var(--red)';
+            return `<div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:0.58rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:600;min-width:52px;">${BOT_SHORT[bot] ?? bot}</span>
+                <span style="font-size:0.9rem;font-weight:700;color:var(--text-3);">${tip}</span>
+                <span style="margin-left:auto;font-size:0.72rem;font-weight:700;color:${c};">${bp != null ? '+'+bp+' Pts' : '–'}</span>
+            </div>`;
+        }).join('');
+
+        const botsSection = botRowsHtml
+            ? `<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;display:flex;flex-direction:column;gap:2px;">${botRowsHtml}</div>`
+            : '';
+
         const card = document.createElement('div');
         card.className = 'glass-card';
         card.style.cssText = `border-left:4px solid ${borderColor};padding:14px 18px;`;
@@ -669,6 +689,7 @@ async function loadPerformanceView() {
                 ${myTipHtml}
                 ${algoTipHtml}
             </div>
+            ${botsSection}
         `;
         grid.appendChild(card);
     });
