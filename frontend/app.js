@@ -44,6 +44,27 @@ function initSidebar() {
         });
     });
 
+    // Theme toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+            document.body.setAttribute('data-theme', 'light');
+            themeToggle.checked = true;
+        }
+        themeToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                document.body.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.body.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+            }
+            if (selectedMatchId) updatePrediction();
+            if (eloChartInstance) loadEloHistoryView(); // redrawn chart
+        });
+    }
+
     // Back
     document.getElementById('back-btn').addEventListener('click', () => {
         selectedMatchId = null;
@@ -279,13 +300,37 @@ function renderDetail(matchInfo, calc) {
         isKo ? '<span class="meta-chip ko">🏆 K.O. Phase</span>' : '<span class="meta-chip">Group Stage</span>',
         `<span class="meta-chip">xG ${calc.xg_home.toFixed(2)} – ${calc.xg_away.toFixed(2)}</span>`,
     ];
+
+    if (matchInfo.h2h && matchInfo.home_team_id && matchInfo.away_team_id) {
+        const h2h = matchInfo.h2h;
+        const w1 = h2h[matchInfo.home_team_id] || 0;
+        const w2 = h2h[matchInfo.away_team_id] || 0;
+        const d = h2h.draws || 0;
+        if (w1 > 0 || w2 > 0 || d > 0) {
+            metaChips.push(`<span class="meta-chip">⚔️ H2H: ${w1}W - ${d}D - ${w2}L</span>`);
+        }
+    }
+
     document.getElementById('match-meta').innerHTML = metaChips.join('');
 
     // xG row
     const homeFire = matchInfo.home_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
     const awayFire = matchInfo.away_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
 
+    const lineupDiffs = matchInfo.lineup_diff || {};
+    let lineupAlertHtml = '';
+    const homeDiff = lineupDiffs[matchInfo.home_team]?.missing || [];
+    const awayDiff = lineupDiffs[matchInfo.away_team]?.missing || [];
+    
+    if (homeDiff.length > 0 || awayDiff.length > 0) {
+        let msg = [];
+        if (homeDiff.length > 0) msg.push(`<strong>${matchInfo.home_disp}</strong> missing: ${homeDiff.join(', ')}`);
+        if (awayDiff.length > 0) msg.push(`<strong>${matchInfo.away_disp}</strong> missing: ${awayDiff.join(', ')}`);
+        lineupAlertHtml = `<div class="lineup-alert">⚠️ <strong>Lineup Alert:</strong> ${msg.join(' | ')}</div>`;
+    }
+
     document.getElementById('xg-row').innerHTML = `
+        ${lineupAlertHtml}
         <div class="xg-team home">
             <span class="xg-team-name">${matchInfo.home_disp}${homeFire}</span>
             ${renderFormBlocks(matchInfo.home_form?.form)}
@@ -454,30 +499,21 @@ function renderHeatmap(matchInfo, calc) {
 // ── Elo History ───────────────────────────────────────────────
 async function loadEloHistoryView() {
     try {
-        const payload = await (await fetch('/api/elo_history')).json();
-        const teams = Object.keys(payload).sort();
+        const history = await (await fetch('/api/elo_history')).json();
+        const teams = Object.keys(history).sort();
         const sel = document.getElementById('history-team-selector');
         sel.innerHTML = teams.map(t => `<option value="${t}">${t}</option>`).join('');
-        sel.onchange = () => renderEloChart(payload, sel.value);
-        if (teams.length) renderEloChart(payload, teams[0]);
+        sel.onchange = () => renderEloChart(history, sel.value);
+        if (teams.length) renderEloChart(history, teams[0]);
     } catch (e) {
         document.getElementById('elo-history-view').innerHTML += `<p style="color:var(--danger)">Error: ${e.message}</p>`;
     }
 }
 
-function renderEloChart(payload, team) {
-    const dataObj = payload[team] || { history: [], form: [], on_fire: false };
-    const entries = dataObj.history || [];
-    const labels = entries.map(e => e.label || (e.match_id === 'baseline' ? 'Start' : `Match ${e.match_id}`));
+function renderEloChart(history, team) {
+    const entries = history[team] || [];
+    const labels = entries.map(e => e.match_id === 'baseline' ? 'Start' : `Match ${e.match_id}`);
     const data   = entries.map(e => e.elo);
-
-    // Inject Team Form UI
-    const formUiContainer = document.getElementById('history-team-form-ui');
-    if (formUiContainer) {
-        const fireHtml = dataObj.on_fire ? '<span class="fire-badge" style="font-size:1.1rem;" title="Team is on fire! 🔥">🔥 On Fire</span>' : '';
-        const blocksHtml = renderFormBlocks(dataObj.form);
-        formUiContainer.innerHTML = `${blocksHtml} ${fireHtml}`;
-    }
 
     if (eloChartInstance) eloChartInstance.destroy();
     eloChartInstance = new Chart(document.getElementById('eloChart'), {
@@ -919,14 +955,24 @@ function computeImpliedProbs(odds) {
 function pct(p) { return (p * 100).toFixed(0) + '%'; }
 
 function probColor(prob, maxProb) {
-    if (!prob || !maxProb) return '#0d1220';
+    const isLight = document.body.getAttribute('data-theme') === 'light';
+    if (!prob || !maxProb) return isLight ? '#f5f0e6' : '#0d1220';
     const r = Math.min(prob / maxProb, 1);
-    // Dark navy → deep amber → gold
-    const stops = [
+    
+    // Dark: Navy → deep amber → gold
+    const darkStops = [
         [13,  18,  32],
         [90,  55,  10],
         [210, 148,  26],
     ];
+    // Light: Beige → terracotta → dark orange
+    const lightStops = [
+        [245, 240, 230],
+        [217, 140, 88],
+        [200, 121, 65],
+    ];
+    const stops = isLight ? lightStops : darkStops;
+    
     let c1, c2, t;
     if (r < 0.5) { c1 = stops[0]; c2 = stops[1]; t = r / 0.5; }
     else         { c1 = stops[1]; c2 = stops[2]; t = (r - 0.5) / 0.5; }

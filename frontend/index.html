@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WM 2026 Predictor</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
     <div class="app-container">
@@ -91,6 +91,25 @@
 
             <div class="sidebar-divider"></div>
 
+            <div class="sidebar-section">
+                <div class="section-label">Appearance</div>
+                <label class="toggle-row">
+                    <span class="toggle-text">
+                        <span class="toggle-icon">☼</span>
+                        <span>
+                            <strong>Light Mode</strong>
+                            <small>Premium Beige Theme</small>
+                        </span>
+                    </span>
+                    <div class="toggle-wrap">
+                        <input type="checkbox" id="theme-toggle">
+                        <span class="toggle-track"></span>
+                    </div>
+                </label>
+            </div>
+
+            <div class="sidebar-divider"></div>
+
             <button id="refresh-btn" class="sidebar-btn primary">
                 Refresh Data
             </button>
@@ -162,7 +181,6 @@
                 <div class="glass-card" style="margin-bottom:20px;padding:20px;">
                     <label for="history-team-selector" class="field-label">Select Team</label>
                     <select id="history-team-selector" class="select-field"></select>
-                    <div id="history-team-form-ui" style="margin-top: 15px; display: flex; align-items: center; gap: 10px;"></div>
                 </div>
                 <div class="glass-card" style="padding:24px;">
                     <canvas id="eloChart" height="400"></canvas>
@@ -209,6 +227,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
 </body>
 </html>
