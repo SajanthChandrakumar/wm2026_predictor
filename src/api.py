@@ -761,8 +761,8 @@ def perform_elo_sync() -> dict:
                 )
                 if not bots:
                     continue
-                tip = bots["chalk"]["tip"]
-                max_xp = bots["chalk"]["xp"]
+                tip = bots["professor"]["tip"]
+                max_xp = bots["professor"].get("xp", 0)
                 if not tip:
                     continue
 
