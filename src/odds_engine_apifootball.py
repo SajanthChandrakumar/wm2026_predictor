@@ -20,7 +20,7 @@ load_dotenv()
 class OddsApiEngine:
     BASE_URL = "https://v3.football.api-sports.io"
     WC_LEAGUE_ID = 1  # FIFA World Cup
-    SEASON = 2022     # Free plan workaround for 2026
+    SEASON = 2026     # Free plan workaround for 2026
 
     def __init__(self):
         self.api_key = os.getenv("API_FOOTBALL_KEY")
@@ -83,6 +83,11 @@ class OddsApiEngine:
         out = []
         for fid, fixture in fixtures_by_id.items():
             odd = odds_by_fixture.get(fid)
+            
+            # WICHTIG: Da API-Football im Free-Plan keine alten Quoten für 2022 liefert,
+            # MUSS hier ein Dummy-Wert gesetzt werden. Ansonsten filtert api.py alle 
+            # 64 Spiele heraus (weil eine Quoten-App keine Spiele ohne Quoten anzeigt) 
+            # und das Dashboard bleibt komplett leer!
             if not odd:
                 odd = {
                     "bookmakers": [{
@@ -100,6 +105,7 @@ class OddsApiEngine:
                         ]
                     }]
                 }
+            
             normalized = self._normalize_odds_entry(fixture, odd)
             if normalized:
                 normalized["home_team_id"] = fixture.get("teams", {}).get("home", {}).get("id")
@@ -283,7 +289,7 @@ class OddsApiEngine:
     # ── Internal normalizers ─────────────────────────────────────────────────
 
     @staticmethod
-    def _normalize_odds_entry(fixture: dict, odd: dict) -> dict | None:
+    def _normalize_odds_entry(fixture: dict, odd: dict | None) -> dict | None:
         teams = fixture.get("teams") or {}
         home = (teams.get("home") or {}).get("name")
         away = (teams.get("away") or {}).get("name")
@@ -292,46 +298,49 @@ class OddsApiEngine:
             return None
 
         legacy_bookies = []
-        for b in odd.get("bookmakers", []):
-            markets = []
-            h2h_outcomes = []
-            totals_outcomes = []
-            for bet in b.get("bets", []):
-                bid = bet.get("id")
-                if bid == 1:  # Match Winner
-                    for v in bet.get("values", []):
-                        try:
-                            price = float(v["odd"])
-                        except (KeyError, TypeError, ValueError):
-                            continue
-                        nm = v.get("value")
-                        if nm == "Home":
-                            h2h_outcomes.append({"name": home, "price": price})
-                        elif nm == "Draw":
-                            h2h_outcomes.append({"name": "Draw", "price": price})
-                        elif nm == "Away":
-                            h2h_outcomes.append({"name": away, "price": price})
-                elif bid == 5:  # Goals Over/Under
-                    for v in bet.get("values", []):
-                        try:
-                            price = float(v["odd"])
-                        except (KeyError, TypeError, ValueError):
-                            continue
-                        nm = v.get("value", "")
-                        if nm == "Over 2.5":
-                            totals_outcomes.append({"name": "Over", "price": price, "point": 2.5})
-                        elif nm == "Under 2.5":
-                            totals_outcomes.append({"name": "Under", "price": price, "point": 2.5})
-            if h2h_outcomes:
-                markets.append({"key": "h2h", "outcomes": h2h_outcomes})
-            if totals_outcomes:
-                markets.append({"key": "totals", "outcomes": totals_outcomes})
-            if markets:
-                legacy_bookies.append({
-                    "key": str(b.get("id", "")) or b.get("name", "unknown"),
-                    "title": b.get("name", ""),
-                    "markets": markets,
-                })
+        if odd:
+            for b in odd.get("bookmakers", []):
+                markets = []
+                h2h_outcomes = []
+                totals_outcomes = []
+                for bet in b.get("bets", []):
+                    bid = bet.get("id")
+                    if bid == 1:  # Match Winner
+                        for v in bet.get("values", []):
+                            try:
+                                price = float(v["odd"])
+                            except (KeyError, TypeError, ValueError):
+                                continue
+                            nm = v.get("value")
+                            if nm == "Home":
+                                h2h_outcomes.append({"name": home, "price": price})
+                            elif nm == "Draw":
+                                h2h_outcomes.append({"name": "Draw", "price": price})
+                            elif nm == "Away":
+                                h2h_outcomes.append({"name": away, "price": price})
+                    elif bid == 5:  # Goals Over/Under
+                        for v in bet.get("values", []):
+                            try:
+                                price = float(v["odd"])
+                            except (KeyError, TypeError, ValueError):
+                                continue
+                            nm = v.get("value", "")
+                            if nm.lower().startswith("over"):
+                                totals_outcomes.append({"name": "Over", "price": price, "point": 2.5})
+                            elif nm.lower().startswith("under"):
+                                totals_outcomes.append({"name": "Under", "price": price, "point": 2.5})
+                
+                if h2h_outcomes:
+                    markets.append({"key": "h2h", "outcomes": h2h_outcomes})
+                if totals_outcomes:
+                    markets.append({"key": "totals", "outcomes": totals_outcomes})
+                
+                if markets:
+                    legacy_bookies.append({
+                        "key": str(b.get("id", "")) or b.get("name", "unknown"),
+                        "title": b.get("name", ""),
+                        "markets": markets,
+                    })
 
         return {
             "id": str(fixture_meta["id"]),
