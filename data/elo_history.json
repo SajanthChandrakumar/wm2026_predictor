@@ -190,5 +190,29 @@
             "match_id": "564084f52cc9f1abcc18187c168a7cdc",
             "elo": 1792.3941500177402
         }
+    ],
+    "Germany": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 2018.4295428204925
+        },
+        {
+            "timestamp": 1781464725.661319,
+            "match_id": "d79edbd6aaeb578d33e313446b18d333",
+            "elo": 2018.4295428204925
+        }
+    ],
+    "Cura\u00e7ao": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1541.5704571795075
+        },
+        {
+            "timestamp": 1781464725.661622,
+            "match_id": "d79edbd6aaeb578d33e313446b18d333",
+            "elo": 1541.5704571795075
+        }
     ]
 }
