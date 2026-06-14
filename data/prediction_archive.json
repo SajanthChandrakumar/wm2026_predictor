@@ -26,25 +26,20 @@
             "max_xp": 5.564210732298132,
             "user_tip": "0:3",
             "bots": {
-                "chalk": {
-                    "tip": "0:2",
-                    "xp": 5.5642
+                "broker": {
+                    "tip": "0:2"
                 },
-                "odds_pure": {
-                    "tip": "0:2",
-                    "xp": 5.5642
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "1:3",
-                    "xp": 4.3131
+                "rebel": {
+                    "tip": "0:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:2",
-                    "xp": 5.5642
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:3",
-                    "xp": 4.6682
+                "gambler": {
+                    "tip": "1:3"
                 }
             }
         },
@@ -54,11 +49,11 @@
             "points_earned": 0,
             "algo_points": 0,
             "bot_points": {
-                "chalk": 0,
-                "odds_pure": 0,
-                "elo_pure": 1,
-                "draw_hunter": 0,
-                "random": 0
+                "broker": 0,
+                "professor": 0,
+                "rebel": 0,
+                "sniper": 10,
+                "gambler": 0
             }
         }
     },
@@ -89,25 +84,20 @@
             "max_xp": 4.243419460357673,
             "user_tip": "2:1",
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.2434
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.2434
+                "professor": {
+                    "tip": "1:0"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 3.5997
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.2434
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:1",
-                    "xp": 3.3528
+                "gambler": {
+                    "tip": "3:2"
                 }
             }
         },
@@ -117,11 +107,11 @@
             "points_earned": 1,
             "algo_points": 1,
             "bot_points": {
-                "chalk": 1,
-                "odds_pure": 1,
-                "elo_pure": 0,
-                "draw_hunter": 1,
-                "random": 1
+                "broker": 0,
+                "professor": 0,
+                "rebel": 0,
+                "sniper": 10,
+                "gambler": 0
             }
         }
     },
@@ -152,25 +142,20 @@
             "max_xp": 4.385432951059648,
             "user_tip": "0:2",
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 4.3854
+                "broker": {
+                    "tip": "1:2"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 4.3854
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "1:3",
-                    "xp": 4.8275
+                "rebel": {
+                    "tip": "0:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 4.3854
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "0:1",
-                    "xp": 4.4836
+                "gambler": {
+                    "tip": "0:3"
                 }
             }
         },
@@ -180,11 +165,11 @@
             "points_earned": 6,
             "algo_points": 10,
             "bot_points": {
-                "chalk": 10,
-                "odds_pure": 10,
-                "elo_pure": 5,
-                "draw_hunter": 10,
-                "random": 10
+                "broker": 8,
+                "professor": 6,
+                "rebel": 6,
+                "sniper": 0,
+                "gambler": 6
             }
         }
     },
@@ -215,25 +200,20 @@
             "max_xp": 4.158992793153818,
             "user_tip": "1:2",
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 4.159
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 4.159
+                "professor": {
+                    "tip": "1:2"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 3.0386
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 4.159
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "1:3",
-                    "xp": 3.4298
+                "gambler": {
+                    "tip": "0:1"
                 }
             }
         },
@@ -243,11 +223,11 @@
             "points_earned": 0,
             "algo_points": 0,
             "bot_points": {
-                "chalk": 0,
-                "odds_pure": 0,
-                "elo_pure": 5,
-                "draw_hunter": 0,
-                "random": 0
+                "broker": 0,
+                "professor": 0,
+                "rebel": 0,
+                "sniper": 0,
+                "gambler": 0
             }
         }
     },
@@ -278,25 +258,20 @@
             "max_xp": 6.106555051560106,
             "user_tip": "4:0",
             "bots": {
-                "chalk": {
-                    "tip": "3:0",
-                    "xp": 6.1066
+                "broker": {
+                    "tip": "3:0"
                 },
-                "odds_pure": {
-                    "tip": "3:0",
-                    "xp": 6.1066
+                "professor": {
+                    "tip": "3:1"
                 },
-                "elo_pure": {
-                    "tip": "2:0",
-                    "xp": 5.4774
+                "rebel": {
+                    "tip": "3:0"
                 },
-                "draw_hunter": {
-                    "tip": "3:0",
-                    "xp": 6.1066
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:1",
-                    "xp": 5.6506
+                "gambler": {
+                    "tip": "2:0"
                 }
             }
         },
@@ -339,25 +314,20 @@
             "top_tip": "1:0",
             "max_xp": 3.6544049846414675,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.6544
+                "broker": {
+                    "tip": "2:1"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.6544
+                "professor": {
+                    "tip": "2:1"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 3.474
+                "rebel": {
+                    "tip": "2:1"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 2.9761
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "1:0",
-                    "xp": 3.5944
+                "gambler": {
+                    "tip": "2:1"
                 }
             }
         },
@@ -400,25 +370,20 @@
             "top_tip": "0:0",
             "max_xp": 3.4965153034020684,
             "bots": {
-                "chalk": {
-                    "tip": "0:0",
-                    "xp": 3.4965
+                "broker": {
+                    "tip": "1:1"
                 },
-                "odds_pure": {
-                    "tip": "0:0",
-                    "xp": 3.4965
+                "professor": {
+                    "tip": "0:1"
                 },
-                "elo_pure": {
-                    "tip": "2:3",
-                    "xp": 4.034
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "0:0",
-                    "xp": 3.4802
+                "sniper": {
+                    "tip": "0:0"
                 },
-                "random": {
-                    "tip": "3:3",
-                    "xp": 2.8555
+                "gambler": {
+                    "tip": "1:1"
                 }
             }
         },
@@ -461,25 +426,20 @@
             "top_tip": "1:0",
             "max_xp": 3.8802988496859547,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.8803
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.8803
+                "professor": {
+                    "tip": "1:0"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 3.6596
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.0826
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:2",
-                    "xp": 3.3936
+                "gambler": {
+                    "tip": "2:0"
                 }
             }
         },
@@ -522,25 +482,20 @@
             "top_tip": "2:0",
             "max_xp": 5.961481571761151,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 5.9615
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 5.9615
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "2:0",
-                    "xp": 5.5239
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 5.9615
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:0",
-                    "xp": 5.6541
+                "gambler": {
+                    "tip": "4:1"
                 }
             }
         },
@@ -583,25 +538,20 @@
             "top_tip": "1:0",
             "max_xp": 4.328629344527039,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.3286
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.3286
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 4.3009
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.3286
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:2",
-                    "xp": 3.7558
+                "gambler": {
+                    "tip": "3:1"
                 }
             }
         },
@@ -644,25 +594,20 @@
             "top_tip": "0:2",
             "max_xp": 4.800152568189645,
             "bots": {
-                "chalk": {
-                    "tip": "0:2",
-                    "xp": 4.8002
+                "broker": {
+                    "tip": "0:2"
                 },
-                "odds_pure": {
-                    "tip": "0:2",
-                    "xp": 4.8002
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "1:3",
-                    "xp": 4.5928
+                "rebel": {
+                    "tip": "0:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:2",
-                    "xp": 4.8002
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "1:2",
-                    "xp": 4.5924
+                "gambler": {
+                    "tip": "1:3"
                 }
             }
         },
@@ -705,25 +650,20 @@
             "top_tip": "1:0",
             "max_xp": 4.0412900219020935,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.0413
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.0413
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 4.4229
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.0413
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:3",
-                    "xp": 3.4665
+                "gambler": {
+                    "tip": "2:1"
                 }
             }
         },
@@ -766,25 +706,20 @@
             "top_tip": "2:0",
             "max_xp": 4.651010466538569,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 4.651
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 4.651
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 4.3628
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 4.651
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:1",
-                    "xp": 4.0038
+                "gambler": {
+                    "tip": "2:0"
                 }
             }
         },
@@ -827,25 +762,20 @@
             "top_tip": "0:2",
             "max_xp": 5.565998687844348,
             "bots": {
-                "chalk": {
-                    "tip": "0:2",
-                    "xp": 5.566
+                "broker": {
+                    "tip": "0:2"
                 },
-                "odds_pure": {
-                    "tip": "0:2",
-                    "xp": 5.566
+                "professor": {
+                    "tip": "1:2"
                 },
-                "elo_pure": {
-                    "tip": "2:3",
-                    "xp": 4.0905
+                "rebel": {
+                    "tip": "0:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:2",
-                    "xp": 5.566
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:5",
-                    "xp": 4.5135
+                "gambler": {
+                    "tip": "0:2"
                 }
             }
         },
@@ -888,25 +818,20 @@
             "top_tip": "2:0",
             "max_xp": 4.9200184624258165,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 4.92
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 4.92
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 5.0238
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 4.92
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:2",
-                    "xp": 4.3435
+                "gambler": {
+                    "tip": "2:0"
                 }
             }
         },
@@ -949,25 +874,20 @@
             "top_tip": "2:0",
             "max_xp": 5.038099470262142,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 5.0381
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 5.0381
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 4.3009
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 5.0381
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:0",
-                    "xp": 4.5788
+                "gambler": {
+                    "tip": "3:0"
                 }
             }
         },
@@ -1010,25 +930,20 @@
             "top_tip": "2:0",
             "max_xp": 5.253771078633845,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 5.2538
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 5.2538
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "2:0",
-                    "xp": 5.2283
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 5.2538
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:0",
-                    "xp": 5.0198
+                "gambler": {
+                    "tip": "2:1"
                 }
             }
         },
@@ -1071,25 +986,20 @@
             "top_tip": "1:0",
             "max_xp": 4.145336754277571,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.1453
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.1453
+                "professor": {
+                    "tip": "2:1"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 3.2764
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.1453
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:1",
-                    "xp": 3.8278
+                "gambler": {
+                    "tip": "2:0"
                 }
             }
         },
@@ -1132,25 +1042,20 @@
             "top_tip": "1:0",
             "max_xp": 3.499583133807567,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.4996
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.4996
+                "professor": {
+                    "tip": "1:0"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 3.1404
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.1935
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:0",
-                    "xp": 3.0573
+                "gambler": {
+                    "tip": "2:0"
                 }
             }
         },
@@ -1193,25 +1098,20 @@
             "top_tip": "0:2",
             "max_xp": 4.95443674887246,
             "bots": {
-                "chalk": {
-                    "tip": "0:2",
-                    "xp": 4.9544
+                "broker": {
+                    "tip": "0:2"
                 },
-                "odds_pure": {
-                    "tip": "0:2",
-                    "xp": 4.9544
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "0:2",
-                    "xp": 5.0684
+                "rebel": {
+                    "tip": "0:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:2",
-                    "xp": 4.9544
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "0:3",
-                    "xp": 4.6693
+                "gambler": {
+                    "tip": "1:3"
                 }
             }
         },
@@ -1254,25 +1154,20 @@
             "top_tip": "1:0",
             "max_xp": 4.062603316612919,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.0626
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.0626
+                "professor": {
+                    "tip": "2:1"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 3.4092
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.0626
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:0",
-                    "xp": 3.6601
+                "gambler": {
+                    "tip": "3:1"
                 }
             }
         },
@@ -1315,25 +1210,20 @@
             "top_tip": "1:0",
             "max_xp": 4.383968173108362,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.384
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.384
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:2",
-                    "xp": 4.2504
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.384
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:1",
-                    "xp": 3.7303
+                "gambler": {
+                    "tip": "2:1"
                 }
             }
         },
@@ -1376,25 +1266,20 @@
             "top_tip": "2:0",
             "max_xp": 5.206927282569282,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 5.2069
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 5.2069
+                "professor": {
+                    "tip": "2:1"
                 },
-                "elo_pure": {
-                    "tip": "3:2",
-                    "xp": 3.7959
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 5.2069
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:1",
-                    "xp": 4.6368
+                "gambler": {
+                    "tip": "3:0"
                 }
             }
         },
@@ -1437,25 +1322,20 @@
             "top_tip": "1:0",
             "max_xp": 3.7457763037730514,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.7458
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.7458
+                "professor": {
+                    "tip": "1:0"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 3.1404
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.204
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:0",
-                    "xp": 3.2416
+                "gambler": {
+                    "tip": "1:0"
                 }
             }
         },
@@ -1498,25 +1378,20 @@
             "top_tip": "1:0",
             "max_xp": 4.350989437382332,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.351
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.351
+                "professor": {
+                    "tip": "1:0"
                 },
-                "elo_pure": {
-                    "tip": "3:2",
-                    "xp": 3.7403
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.351
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "5:4",
-                    "xp": 3.5308
+                "gambler": {
+                    "tip": "1:0"
                 }
             }
         },
@@ -1559,25 +1434,20 @@
             "top_tip": "0:1",
             "max_xp": 3.767095634051431,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 3.7671
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 3.7671
+                "professor": {
+                    "tip": "0:1"
                 },
-                "elo_pure": {
-                    "tip": "3:4",
-                    "xp": 3.6649
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.1399
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:4",
-                    "xp": 3.11
+                "gambler": {
+                    "tip": "2:3"
                 }
             }
         },
@@ -1620,25 +1490,20 @@
             "top_tip": "3:0",
             "max_xp": 5.956809831088827,
             "bots": {
-                "chalk": {
-                    "tip": "3:0",
-                    "xp": 5.9568
+                "broker": {
+                    "tip": "3:0"
                 },
-                "odds_pure": {
-                    "tip": "3:0",
-                    "xp": 5.9568
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "2:0",
-                    "xp": 5.7683
+                "rebel": {
+                    "tip": "3:0"
                 },
-                "draw_hunter": {
-                    "tip": "3:0",
-                    "xp": 5.9568
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:0",
-                    "xp": 5.7456
+                "gambler": {
+                    "tip": "4:1"
                 }
             }
         },
@@ -1681,25 +1546,20 @@
             "top_tip": "1:0",
             "max_xp": 3.6571615407563125,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.6572
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.6572
+                "professor": {
+                    "tip": "1:0"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 2.9502
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.1978
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:2",
-                    "xp": 2.9107
+                "gambler": {
+                    "tip": "3:1"
                 }
             }
         },
@@ -1742,25 +1602,20 @@
             "top_tip": "1:0",
             "max_xp": 4.253111376085524,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.2531
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.2531
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:2",
-                    "xp": 4.1963
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.2531
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:2",
-                    "xp": 3.6939
+                "gambler": {
+                    "tip": "2:0"
                 }
             }
         },
@@ -1803,25 +1658,20 @@
             "top_tip": "1:0",
             "max_xp": 4.365601746112192,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.3656
+                "broker": {
+                    "tip": "2:1"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.3656
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 4.3628
+                "rebel": {
+                    "tip": "2:1"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.3656
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:3",
-                    "xp": 3.8251
+                "gambler": {
+                    "tip": "3:1"
                 }
             }
         },
@@ -1864,25 +1714,20 @@
             "top_tip": "2:0",
             "max_xp": 5.623237845253907,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 5.6232
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 5.6232
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "2:0",
-                    "xp": 5.1759
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 5.6232
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:2",
-                    "xp": 4.7924
+                "gambler": {
+                    "tip": "2:1"
                 }
             }
         },
@@ -1925,25 +1770,20 @@
             "top_tip": "0:1",
             "max_xp": 4.219090919818623,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 4.2191
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 4.2191
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "1:3",
-                    "xp": 4.3628
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 4.2191
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "0:3",
-                    "xp": 3.7054
+                "gambler": {
+                    "tip": "0:1"
                 }
             }
         },
@@ -1986,25 +1826,20 @@
             "top_tip": "2:0",
             "max_xp": 6.024532710788809,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 6.0245
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 6.0245
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 5.0238
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 6.0245
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:0",
-                    "xp": 5.7818
+                "gambler": {
+                    "tip": "4:0"
                 }
             }
         },
@@ -2047,25 +1882,20 @@
             "top_tip": "2:0",
             "max_xp": 4.813449730895382,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 4.8134
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 4.8134
+                "professor": {
+                    "tip": "2:1"
                 },
-                "elo_pure": {
-                    "tip": "3:2",
-                    "xp": 3.8534
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 4.8134
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:2",
-                    "xp": 4.0098
+                "gambler": {
+                    "tip": "2:1"
                 }
             }
         },
@@ -2108,25 +1938,20 @@
             "top_tip": "2:0",
             "max_xp": 4.699875215606223,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 4.6999
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 4.6999
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 5.0238
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 4.6999
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:3",
-                    "xp": 4.12
+                "gambler": {
+                    "tip": "3:1"
                 }
             }
         },
@@ -2169,25 +1994,20 @@
             "top_tip": "0:1",
             "max_xp": 4.118980128527251,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 4.119
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 4.119
+                "professor": {
+                    "tip": "0:1"
                 },
-                "elo_pure": {
-                    "tip": "2:3",
-                    "xp": 3.976
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 4.119
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:4",
-                    "xp": 3.4513
+                "gambler": {
+                    "tip": "0:2"
                 }
             }
         },
@@ -2230,25 +2050,20 @@
             "top_tip": "1:0",
             "max_xp": 4.2762102433029,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.2762
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.2762
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 4.6455
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.2762
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "5:4",
-                    "xp": 3.6783
+                "gambler": {
+                    "tip": "3:2"
                 }
             }
         },
@@ -2291,25 +2106,20 @@
             "top_tip": "2:0",
             "max_xp": 5.893154235614642,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 5.8932
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 5.8932
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "2:0",
-                    "xp": 5.4774
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 5.8932
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:1",
-                    "xp": 5.2805
+                "gambler": {
+                    "tip": "3:0"
                 }
             }
         },
@@ -2352,25 +2162,20 @@
             "top_tip": "1:0",
             "max_xp": 3.458956095916354,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.459
+                "broker": {
+                    "tip": "2:1"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.459
+                "professor": {
+                    "tip": "1:2"
                 },
-                "elo_pure": {
-                    "tip": "3:4",
-                    "xp": 3.2764
+                "rebel": {
+                    "tip": "2:1"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.0675
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:0",
-                    "xp": 2.8871
+                "gambler": {
+                    "tip": "2:1"
                 }
             }
         },
@@ -2413,25 +2218,20 @@
             "top_tip": "0:1",
             "max_xp": 4.516751044555619,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 4.5168
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 4.5168
+                "professor": {
+                    "tip": "1:2"
                 },
-                "elo_pure": {
-                    "tip": "2:3",
-                    "xp": 3.7897
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 4.5168
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:4",
-                    "xp": 3.7688
+                "gambler": {
+                    "tip": "1:2"
                 }
             }
         },
@@ -2474,25 +2274,20 @@
             "top_tip": "2:0",
             "max_xp": 5.291334360013266,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 5.2913
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 5.2913
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 4.9907
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 5.2913
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:1",
-                    "xp": 4.8032
+                "gambler": {
+                    "tip": "1:0"
                 }
             }
         },
@@ -2535,25 +2330,20 @@
             "top_tip": "2:0",
             "max_xp": 5.061971654352684,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 5.062
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 5.062
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 4.8356
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 5.062
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:2",
-                    "xp": 4.49
+                "gambler": {
+                    "tip": "3:0"
                 }
             }
         },
@@ -2596,25 +2386,20 @@
             "top_tip": "0:1",
             "max_xp": 4.459774571871993,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 4.4598
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 4.4598
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "1:3",
-                    "xp": 4.7448
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 4.4598
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "0:4",
-                    "xp": 3.8053
+                "gambler": {
+                    "tip": "0:2"
                 }
             }
         },
@@ -2657,25 +2442,20 @@
             "top_tip": "1:0",
             "max_xp": 4.71700611513156,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.717
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.717
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "2:0",
-                    "xp": 5.3309
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.717
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "1:0",
-                    "xp": 4.8428
+                "gambler": {
+                    "tip": "1:0"
                 }
             }
         },
@@ -2718,25 +2498,20 @@
             "top_tip": "1:0",
             "max_xp": 4.306267017325383,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.3063
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.3063
+                "professor": {
+                    "tip": "2:1"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 3.0095
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.3063
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:2",
-                    "xp": 3.5402
+                "gambler": {
+                    "tip": "3:2"
                 }
             }
         },
@@ -2779,25 +2554,20 @@
             "top_tip": "1:0",
             "max_xp": 3.5137527439661893,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.5138
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.5138
+                "professor": {
+                    "tip": "2:1"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 3.5435
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.1107
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "0:0",
-                    "xp": 2.9875
+                "gambler": {
+                    "tip": "2:0"
                 }
             }
         },
@@ -2840,25 +2610,20 @@
             "top_tip": "0:2",
             "max_xp": 4.59781230401201,
             "bots": {
-                "chalk": {
-                    "tip": "0:2",
-                    "xp": 4.5978
+                "broker": {
+                    "tip": "0:2"
                 },
-                "odds_pure": {
-                    "tip": "0:2",
-                    "xp": 4.5978
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "2:3",
-                    "xp": 4.2504
+                "rebel": {
+                    "tip": "0:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:2",
-                    "xp": 4.5978
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "0:1",
-                    "xp": 4.5114
+                "gambler": {
+                    "tip": "0:1"
                 }
             }
         },
@@ -2901,25 +2666,20 @@
             "top_tip": "2:0",
             "max_xp": 5.000307594447875,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 5.0003
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 5.0003
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "2:0",
-                    "xp": 5.326
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 5.0003
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:0",
-                    "xp": 4.4823
+                "gambler": {
+                    "tip": "1:0"
                 }
             }
         },
@@ -2962,25 +2722,20 @@
             "top_tip": "0:1",
             "max_xp": 3.958782416522008,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 3.9588
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 3.9588
+                "professor": {
+                    "tip": "0:1"
                 },
-                "elo_pure": {
-                    "tip": "2:3",
-                    "xp": 3.976
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 3.9588
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "1:4",
-                    "xp": 3.2591
+                "gambler": {
+                    "tip": "0:1"
                 }
             }
         },
@@ -3023,25 +2778,20 @@
             "top_tip": "0:1",
             "max_xp": 4.314611243739261,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 4.3146
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 4.3146
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "2:3",
-                    "xp": 4.1963
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 4.3146
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "1:2",
-                    "xp": 4.2124
+                "gambler": {
+                    "tip": "0:1"
                 }
             }
         },
@@ -3084,25 +2834,20 @@
             "top_tip": "0:2",
             "max_xp": 5.451028741783614,
             "bots": {
-                "chalk": {
-                    "tip": "0:2",
-                    "xp": 5.451
+                "broker": {
+                    "tip": "0:2"
                 },
-                "odds_pure": {
-                    "tip": "0:2",
-                    "xp": 5.451
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "1:3",
-                    "xp": 4.3628
+                "rebel": {
+                    "tip": "0:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:2",
-                    "xp": 5.451
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "0:4",
-                    "xp": 4.631
+                "gambler": {
+                    "tip": "0:2"
                 }
             }
         },
@@ -3145,25 +2890,20 @@
             "top_tip": "0:1",
             "max_xp": 4.0215372664670745,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 4.0215
+                "broker": {
+                    "tip": "1:2"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 4.0215
+                "professor": {
+                    "tip": "1:2"
                 },
-                "elo_pure": {
-                    "tip": "3:4",
-                    "xp": 3.3432
+                "rebel": {
+                    "tip": "1:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 4.0215
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:4",
-                    "xp": 3.2897
+                "gambler": {
+                    "tip": "0:1"
                 }
             }
         },
@@ -3206,25 +2946,20 @@
             "top_tip": "1:0",
             "max_xp": 3.5274428163114693,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.5274
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.5274
+                "professor": {
+                    "tip": "2:1"
                 },
-                "elo_pure": {
-                    "tip": "3:2",
-                    "xp": 3.7245
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.0894
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:1",
-                    "xp": 3.1994
+                "gambler": {
+                    "tip": "3:1"
                 }
             }
         },
@@ -3267,25 +3002,20 @@
             "top_tip": "0:1",
             "max_xp": 4.494210270264499,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 4.4942
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 4.4942
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "1:3",
-                    "xp": 4.7913
+                "rebel": {
+                    "tip": "0:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 4.4942
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "1:3",
-                    "xp": 4.3624
+                "gambler": {
+                    "tip": "0:1"
                 }
             }
         },
@@ -3328,25 +3058,20 @@
             "top_tip": "1:0",
             "max_xp": 3.5171250033119987,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.5171
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.5171
+                "professor": {
+                    "tip": "1:0"
                 },
-                "elo_pure": {
-                    "tip": "3:4",
-                    "xp": 3.0552
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.2264
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:3",
-                    "xp": 2.7247
+                "gambler": {
+                    "tip": "2:0"
                 }
             }
         },
@@ -3389,25 +3114,20 @@
             "top_tip": "1:1",
             "max_xp": 3.0191700053083212,
             "bots": {
-                "chalk": {
-                    "tip": "1:1",
-                    "xp": 3.0192
+                "broker": {
+                    "tip": "1:2"
                 },
-                "odds_pure": {
-                    "tip": "1:1",
-                    "xp": 3.0192
+                "professor": {
+                    "tip": "1:2"
                 },
-                "elo_pure": {
-                    "tip": "2:3",
-                    "xp": 3.8383
+                "rebel": {
+                    "tip": "1:2"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.0022
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:4",
-                    "xp": 2.7029
+                "gambler": {
+                    "tip": "1:1"
                 }
             }
         },
@@ -3450,25 +3170,20 @@
             "top_tip": "0:1",
             "max_xp": 3.8859832343709058,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 3.886
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 3.886
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "1:3",
-                    "xp": 4.6455
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 3.886
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:4",
-                    "xp": 3.4803
+                "gambler": {
+                    "tip": "1:2"
                 }
             }
         },
@@ -3511,25 +3226,20 @@
             "top_tip": "2:0",
             "max_xp": 4.78681399800377,
             "bots": {
-                "chalk": {
-                    "tip": "2:0",
-                    "xp": 4.7868
+                "broker": {
+                    "tip": "2:0"
                 },
-                "odds_pure": {
-                    "tip": "2:0",
-                    "xp": 4.7868
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 4.3628
+                "rebel": {
+                    "tip": "2:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:0",
-                    "xp": 4.7868
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:2",
-                    "xp": 4.1222
+                "gambler": {
+                    "tip": "2:1"
                 }
             }
         },
@@ -3572,25 +3282,20 @@
             "top_tip": "1:0",
             "max_xp": 3.225765607993228,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.2258
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.2258
+                "professor": {
+                    "tip": "1:2"
                 },
-                "elo_pure": {
-                    "tip": "3:4",
-                    "xp": 3.5993
+                "rebel": {
+                    "tip": "1:1"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.1691
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:3",
-                    "xp": 2.6443
+                "gambler": {
+                    "tip": "0:0"
                 }
             }
         },
@@ -3633,25 +3338,20 @@
             "top_tip": "0:1",
             "max_xp": 4.220533113003749,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 4.2205
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 4.2205
+                "professor": {
+                    "tip": "1:2"
                 },
-                "elo_pure": {
-                    "tip": "3:4",
-                    "xp": 3.5993
+                "rebel": {
+                    "tip": "1:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:1",
-                    "xp": 4.2205
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:5",
-                    "xp": 3.4094
+                "gambler": {
+                    "tip": "2:3"
                 }
             }
         },
@@ -3694,25 +3394,20 @@
             "top_tip": "0:2",
             "max_xp": 5.168532630398832,
             "bots": {
-                "chalk": {
-                    "tip": "0:2",
-                    "xp": 5.1685
+                "broker": {
+                    "tip": "0:2"
                 },
-                "odds_pure": {
-                    "tip": "0:2",
-                    "xp": 5.1685
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "0:2",
-                    "xp": 5.0684
+                "rebel": {
+                    "tip": "0:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:2",
-                    "xp": 5.1685
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:5",
-                    "xp": 4.4607
+                "gambler": {
+                    "tip": "1:3"
                 }
             }
         },
@@ -3755,25 +3450,20 @@
             "top_tip": "1:0",
             "max_xp": 3.473944805142766,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.4739
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.4739
+                "professor": {
+                    "tip": "0:1"
                 },
-                "elo_pure": {
-                    "tip": "3:4",
-                    "xp": 3.474
+                "rebel": {
+                    "tip": "1:1"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.3838
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:1",
-                    "xp": 3.0223
+                "gambler": {
+                    "tip": "1:1"
                 }
             }
         },
@@ -3816,25 +3506,20 @@
             "top_tip": "1:0",
             "max_xp": 4.272640210921454,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.2726
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.2726
+                "professor": {
+                    "tip": "2:0"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 4.5928
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.2726
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:1",
-                    "xp": 4.0364
+                "gambler": {
+                    "tip": "2:0"
                 }
             }
         },
@@ -3877,25 +3562,20 @@
             "top_tip": "0:2",
             "max_xp": 5.135516905114383,
             "bots": {
-                "chalk": {
-                    "tip": "0:2",
-                    "xp": 5.1355
+                "broker": {
+                    "tip": "0:2"
                 },
-                "odds_pure": {
-                    "tip": "0:2",
-                    "xp": 5.1355
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "1:3",
-                    "xp": 4.9553
+                "rebel": {
+                    "tip": "0:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:2",
-                    "xp": 5.1355
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "1:3",
-                    "xp": 4.9361
+                "gambler": {
+                    "tip": "0:1"
                 }
             }
         },
@@ -3938,25 +3618,20 @@
             "top_tip": "0:1",
             "max_xp": 3.506067111664379,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 3.5061
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 3.5061
+                "professor": {
+                    "tip": "2:1"
                 },
-                "elo_pure": {
-                    "tip": "4:3",
-                    "xp": 3.0716
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.1442
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "2:2",
-                    "xp": 2.8806
+                "gambler": {
+                    "tip": "0:1"
                 }
             }
         },
@@ -3999,25 +3674,20 @@
             "top_tip": "1:0",
             "max_xp": 3.2684431085450183,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 3.2684
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 3.2684
+                "professor": {
+                    "tip": "0:1"
                 },
-                "elo_pure": {
-                    "tip": "3:4",
-                    "xp": 3.2764
+                "rebel": {
+                    "tip": "1:1"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.2394
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "1:1",
-                    "xp": 3.2394
+                "gambler": {
+                    "tip": "2:2"
                 }
             }
         },
@@ -4060,25 +3730,20 @@
             "top_tip": "0:1",
             "max_xp": 3.499689162133518,
             "bots": {
-                "chalk": {
-                    "tip": "0:1",
-                    "xp": 3.4997
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "0:1",
-                    "xp": 3.4997
+                "professor": {
+                    "tip": "1:2"
                 },
-                "elo_pure": {
-                    "tip": "3:4",
-                    "xp": 3.5374
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "1:1",
-                    "xp": 3.1496
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "1:3",
-                    "xp": 3.0866
+                "gambler": {
+                    "tip": "1:3"
                 }
             }
         },
@@ -4121,25 +3786,20 @@
             "top_tip": "0:2",
             "max_xp": 5.528826162913569,
             "bots": {
-                "chalk": {
-                    "tip": "0:2",
-                    "xp": 5.5288
+                "broker": {
+                    "tip": "0:2"
                 },
-                "odds_pure": {
-                    "tip": "0:2",
-                    "xp": 5.5288
+                "professor": {
+                    "tip": "0:2"
                 },
-                "elo_pure": {
-                    "tip": "0:2",
-                    "xp": 5.6546
+                "rebel": {
+                    "tip": "0:2"
                 },
-                "draw_hunter": {
-                    "tip": "0:2",
-                    "xp": 5.5288
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "1:4",
-                    "xp": 5.0173
+                "gambler": {
+                    "tip": "1:2"
                 }
             }
         },
@@ -4171,25 +3831,20 @@
             "user_tip": "2:0",
             "algo_reconstructed": true,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.8411
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.8411
+                "professor": {
+                    "tip": "4:2"
                 },
-                "elo_pure": {
-                    "tip": "3:1",
-                    "xp": 4.3628
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.8411
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "4:0",
-                    "xp": 4.1114
+                "gambler": {
+                    "tip": "1:0"
                 }
             }
         },
@@ -4199,11 +3854,11 @@
             "points_earned": 10,
             "algo_points": 6,
             "bot_points": {
-                "chalk": 6,
-                "odds_pure": 6,
-                "elo_pure": 8,
-                "draw_hunter": 6,
-                "random": 6
+                "broker": 6,
+                "professor": 8,
+                "rebel": 6,
+                "sniper": 0,
+                "gambler": 6
             }
         }
     },
@@ -4222,25 +3877,20 @@
             "user_tip": "1:0",
             "algo_reconstructed": true,
             "bots": {
-                "chalk": {
-                    "tip": "2:1",
-                    "xp": 3.9572
+                "broker": {
+                    "tip": "2:1"
                 },
-                "odds_pure": {
-                    "tip": "2:1",
-                    "xp": 3.9572
+                "professor": {
+                    "tip": "4:3"
                 },
-                "elo_pure": {
-                    "tip": "3:2",
-                    "xp": 3.7897
+                "rebel": {
+                    "tip": "2:1"
                 },
-                "draw_hunter": {
-                    "tip": "2:1",
-                    "xp": 3.9572
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:2",
-                    "xp": 3.6628
+                "gambler": {
+                    "tip": "2:1"
                 }
             }
         },
@@ -4250,11 +3900,11 @@
             "points_earned": 8,
             "algo_points": 10,
             "bot_points": {
-                "chalk": 10,
-                "odds_pure": 10,
-                "elo_pure": 8,
-                "draw_hunter": 10,
-                "random": 8
+                "broker": 10,
+                "professor": 8,
+                "rebel": 10,
+                "sniper": 0,
+                "gambler": 10
             }
         }
     },
@@ -4273,25 +3923,20 @@
             "user_tip": "2:1",
             "algo_reconstructed": true,
             "bots": {
-                "chalk": {
-                    "tip": "2:1",
-                    "xp": 3.9586
+                "broker": {
+                    "tip": "1:0"
                 },
-                "odds_pure": {
-                    "tip": "2:1",
-                    "xp": 3.9586
+                "professor": {
+                    "tip": "3:1"
                 },
-                "elo_pure": {
-                    "tip": "3:2",
-                    "xp": 3.7245
+                "rebel": {
+                    "tip": "1:0"
                 },
-                "draw_hunter": {
-                    "tip": "2:1",
-                    "xp": 3.9586
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:0",
-                    "xp": 3.4617
+                "gambler": {
+                    "tip": "1:0"
                 }
             }
         },
@@ -4301,11 +3946,11 @@
             "points_earned": 1,
             "algo_points": 1,
             "bot_points": {
-                "chalk": 1,
-                "odds_pure": 1,
-                "elo_pure": 0,
-                "draw_hunter": 1,
-                "random": 0
+                "broker": 0,
+                "professor": 0,
+                "rebel": 0,
+                "sniper": 10,
+                "gambler": 0
             }
         }
     },
@@ -4324,25 +3969,20 @@
             "user_tip": "2:1",
             "algo_reconstructed": true,
             "bots": {
-                "chalk": {
-                    "tip": "1:0",
-                    "xp": 4.4946
+                "broker": {
+                    "tip": "0:1"
                 },
-                "odds_pure": {
-                    "tip": "1:0",
-                    "xp": 4.4946
+                "professor": {
+                    "tip": "1:3"
                 },
-                "elo_pure": {
-                    "tip": "3:2",
-                    "xp": 3.8534
+                "rebel": {
+                    "tip": "0:1"
                 },
-                "draw_hunter": {
-                    "tip": "1:0",
-                    "xp": 4.4946
+                "sniper": {
+                    "tip": "1:1"
                 },
-                "random": {
-                    "tip": "3:2",
-                    "xp": 4.0342
+                "gambler": {
+                    "tip": "0:2"
                 }
             }
         },
@@ -4352,11 +3992,11 @@
             "points_earned": 6,
             "algo_points": 5,
             "bot_points": {
-                "chalk": 5,
-                "odds_pure": 5,
-                "elo_pure": 5,
-                "draw_hunter": 5,
-                "random": 5
+                "broker": 0,
+                "professor": 0,
+                "rebel": 0,
+                "sniper": 0,
+                "gambler": 0
             }
         }
     }

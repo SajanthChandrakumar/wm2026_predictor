@@ -580,14 +580,14 @@ class MathEngine:
         if sm is None:
             return None
         true_probs = {"home": p_home, "draw": p_draw, "away": p_away}
+        base_xp_df = self.calculate_expected_points(sm, is_ko_phase=is_ko)
         return self.compute_bot_tips(
             score_matrix=sm,
+            base_xp_df=base_xp_df,
             true_probs=true_probs,
             prob_over25=None,
             home_team=home_team,
             away_team=away_team,
             match_id=match_id,
-            is_ko_phase=is_ko,
-            chalk_tip=tip,
-            chalk_xp=xp,
+            is_ko_phase=is_ko
         )
