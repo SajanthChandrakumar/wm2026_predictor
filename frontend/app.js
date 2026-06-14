@@ -575,6 +575,11 @@ async function loadPerformanceView() {
     let algoTotal = 0, algoCorrectTendency = 0, algoMatchCount = 0;
     let hasReconstructed = false;
 
+    // Bot accumulators: {botName: {pts, tipped, tendency}}
+    const BOT_NAMES = ['chalk', 'odds_pure', 'elo_pure', 'draw_hunter', 'random'];
+    const botStats = {};
+    BOT_NAMES.forEach(b => { botStats[b] = { pts: 0, tipped: 0, tendency: 0 }; });
+
     Object.entries(archiveData).forEach(([match_id, match]) => {
         if (match.post_match_result?.status !== 'completed') return;
 
@@ -585,6 +590,17 @@ async function loadPerformanceView() {
 
         const ap = match.post_match_result?.algo_points;
         if (ap != null) { algoTotal += ap; algoMatchCount++; if (ap >= 5) algoCorrectTendency++; }
+
+        // Accumulate bot stats
+        const botPoints = match.post_match_result?.bot_points ?? {};
+        BOT_NAMES.forEach(bot => {
+            const bp = botPoints[bot];
+            if (bp != null) {
+                botStats[bot].pts += bp;
+                botStats[bot].tipped++;
+                if (bp >= 5) botStats[bot].tendency++;
+            }
+        });
 
         const userTip  = match.prediction?.user_tip  ?? null;
         const algoTip  = match.prediction?.top_tip   ?? null;
@@ -726,6 +742,57 @@ async function loadPerformanceView() {
                 </div>
             </div>
         `;
+    }
+
+    // ── Bot Scoreboard ────────────────────────────────────────────
+    const botPanel = document.getElementById('bot-scoreboard');
+    const BOT_LABELS = { chalk: 'Chalk', odds_pure: 'Odds Pure', elo_pure: 'Elo Pure', draw_hunter: 'Draw Hunter', random: 'Random' };
+    const BOT_COLORS = { chalk: 'var(--gold-l)', odds_pure: 'var(--green)', elo_pure: 'var(--blue)', draw_hunter: 'var(--amber)', random: 'var(--text-2)' };
+
+    const hasBotData = BOT_NAMES.some(b => botStats[b].tipped > 0);
+    if (completedMatches > 0 && hasBotData) {
+        // Build rows sorted by total pts desc
+        const allRows = [
+            { label: 'Du', pts: totalPoints, tipped: completedMatches, tendency: correctTendency, color: 'var(--gold-l)', isUser: true },
+            ...BOT_NAMES.map(b => ({
+                label: BOT_LABELS[b], pts: botStats[b].pts, tipped: botStats[b].tipped,
+                tendency: botStats[b].tendency, color: BOT_COLORS[b], isUser: false
+            }))
+        ].sort((a, b) => b.pts - a.pts);
+
+        const rowsHtml = allRows.map((r, i) => {
+            const avg = r.tipped > 0 ? (r.pts / r.tipped).toFixed(2) : '—';
+            const tendPct = r.tipped > 0 ? ((r.tendency / r.tipped) * 100).toFixed(0) + '%' : '—';
+            const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+            return `<tr style="border-top:1px solid var(--border);">
+                <td style="padding:9px 12px;font-size:0.8rem;font-weight:${r.isUser ? '800' : '600'};color:${r.color};">
+                    <span style="color:var(--text-3);margin-right:6px;">${rank}</span>${r.label}
+                </td>
+                <td style="padding:9px 12px;text-align:right;font-size:0.9rem;font-weight:800;color:${r.color};">${r.pts}</td>
+                <td style="padding:9px 12px;text-align:right;font-size:0.8rem;color:var(--text-2);">${r.tipped}</td>
+                <td style="padding:9px 12px;text-align:right;font-size:0.8rem;color:var(--text-2);">${avg}</td>
+                <td style="padding:9px 12px;text-align:right;font-size:0.8rem;color:var(--text-3);">${tendPct}</td>
+            </tr>`;
+        }).join('');
+
+        botPanel.innerHTML = `
+            <div class="glass-card" style="padding:20px 24px;">
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:14px;">Bot Scoreboard</div>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th style="padding:6px 12px;text-align:left;font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">Bot</th>
+                            <th style="padding:6px 12px;text-align:right;font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">Pts</th>
+                            <th style="padding:6px 12px;text-align:right;font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">Tipped</th>
+                            <th style="padding:6px 12px;text-align:right;font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">Avg/Match</th>
+                            <th style="padding:6px 12px;text-align:right;font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">Tendency</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>`;
+    } else {
+        botPanel.innerHTML = '';
     }
 
     if (completedMatches === 0) {

@@ -24,12 +24,42 @@
         "prediction": {
             "top_tip": "0:2",
             "max_xp": 5.564210732298132,
-            "user_tip": null
+            "user_tip": "0:3",
+            "bots": {
+                "chalk": {
+                    "tip": "0:2",
+                    "xp": 5.5642
+                },
+                "odds_pure": {
+                    "tip": "0:2",
+                    "xp": 5.5642
+                },
+                "elo_pure": {
+                    "tip": "1:3",
+                    "xp": 4.3131
+                },
+                "draw_hunter": {
+                    "tip": "0:2",
+                    "xp": 5.5642
+                },
+                "random": {
+                    "tip": "2:3",
+                    "xp": 4.6682
+                }
+            }
         },
         "post_match_result": {
-            "status": "pending",
-            "actual_score": null,
-            "points_earned": null
+            "status": "completed",
+            "actual_score": "1:1",
+            "points_earned": 0,
+            "algo_points": 0,
+            "bot_points": {
+                "chalk": 0,
+                "odds_pure": 0,
+                "elo_pure": 1,
+                "draw_hunter": 0,
+                "random": 0
+            }
         }
     },
     "f6c8748a16516e0998f95de14235432a": {
@@ -56,12 +86,43 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.243419460357673
+            "max_xp": 4.243419460357673,
+            "user_tip": "2:1",
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.2434
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.2434
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 3.5997
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.2434
+                },
+                "random": {
+                    "tip": "4:1",
+                    "xp": 3.3528
+                }
+            }
         },
         "post_match_result": {
-            "status": "pending",
-            "actual_score": null,
-            "points_earned": null
+            "status": "completed",
+            "actual_score": "1:1",
+            "points_earned": 1,
+            "algo_points": 1,
+            "bot_points": {
+                "chalk": 1,
+                "odds_pure": 1,
+                "elo_pure": 0,
+                "draw_hunter": 1,
+                "random": 1
+            }
         }
     },
     "5ae41a06735c926eeb7f74006933adce": {
@@ -88,12 +149,43 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 4.385432951059648
+            "max_xp": 4.385432951059648,
+            "user_tip": "0:2",
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 4.3854
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 4.3854
+                },
+                "elo_pure": {
+                    "tip": "1:3",
+                    "xp": 4.8275
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 4.3854
+                },
+                "random": {
+                    "tip": "0:1",
+                    "xp": 4.4836
+                }
+            }
         },
         "post_match_result": {
-            "status": "pending",
-            "actual_score": null,
-            "points_earned": null
+            "status": "completed",
+            "actual_score": "0:1",
+            "points_earned": 6,
+            "algo_points": 10,
+            "bot_points": {
+                "chalk": 10,
+                "odds_pure": 10,
+                "elo_pure": 5,
+                "draw_hunter": 10,
+                "random": 10
+            }
         }
     },
     "564084f52cc9f1abcc18187c168a7cdc": {
@@ -120,12 +212,43 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 4.158992793153818
+            "max_xp": 4.158992793153818,
+            "user_tip": "1:2",
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 4.159
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 4.159
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 3.0386
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 4.159
+                },
+                "random": {
+                    "tip": "1:3",
+                    "xp": 3.4298
+                }
+            }
         },
         "post_match_result": {
-            "status": "pending",
-            "actual_score": null,
-            "points_earned": null
+            "status": "completed",
+            "actual_score": "2:0",
+            "points_earned": 0,
+            "algo_points": 0,
+            "bot_points": {
+                "chalk": 0,
+                "odds_pure": 0,
+                "elo_pure": 5,
+                "draw_hunter": 0,
+                "random": 0
+            }
         }
     },
     "d79edbd6aaeb578d33e313446b18d333": {
@@ -152,12 +275,42 @@
         },
         "prediction": {
             "top_tip": "3:0",
-            "max_xp": 6.106555051560106
+            "max_xp": 6.106555051560106,
+            "user_tip": "4:0",
+            "bots": {
+                "chalk": {
+                    "tip": "3:0",
+                    "xp": 6.1066
+                },
+                "odds_pure": {
+                    "tip": "3:0",
+                    "xp": 6.1066
+                },
+                "elo_pure": {
+                    "tip": "2:0",
+                    "xp": 5.4774
+                },
+                "draw_hunter": {
+                    "tip": "3:0",
+                    "xp": 6.1066
+                },
+                "random": {
+                    "tip": "3:1",
+                    "xp": 5.6506
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "32ec06abda2398ac41501c86eb9aa376": {
@@ -184,12 +337,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.6544049846414675
+            "max_xp": 3.6544049846414675,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.6544
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.6544
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 3.474
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 2.9761
+                },
+                "random": {
+                    "tip": "1:0",
+                    "xp": 3.5944
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "05752bb341e197001387b64f3a06b9b2": {
@@ -216,12 +398,41 @@
         },
         "prediction": {
             "top_tip": "0:0",
-            "max_xp": 3.4965153034020684
+            "max_xp": 3.4965153034020684,
+            "bots": {
+                "chalk": {
+                    "tip": "0:0",
+                    "xp": 3.4965
+                },
+                "odds_pure": {
+                    "tip": "0:0",
+                    "xp": 3.4965
+                },
+                "elo_pure": {
+                    "tip": "2:3",
+                    "xp": 4.034
+                },
+                "draw_hunter": {
+                    "tip": "0:0",
+                    "xp": 3.4802
+                },
+                "random": {
+                    "tip": "3:3",
+                    "xp": 2.8555
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "b55f9569de3f4d731bc5537ff5ff43e4": {
@@ -248,12 +459,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.8802988496859547
+            "max_xp": 3.8802988496859547,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.8803
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.8803
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 3.6596
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.0826
+                },
+                "random": {
+                    "tip": "3:2",
+                    "xp": 3.3936
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "c54f00b11925751d2b62988775c6c239": {
@@ -280,12 +520,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 5.961481571761151
+            "max_xp": 5.961481571761151,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 5.9615
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 5.9615
+                },
+                "elo_pure": {
+                    "tip": "2:0",
+                    "xp": 5.5239
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 5.9615
+                },
+                "random": {
+                    "tip": "4:0",
+                    "xp": 5.6541
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "fbfb95c62003fd6d828b309f96ee1f9b": {
@@ -312,12 +581,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.328629344527039
+            "max_xp": 4.328629344527039,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.3286
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.3286
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 4.3009
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.3286
+                },
+                "random": {
+                    "tip": "4:2",
+                    "xp": 3.7558
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "64b91c5f2db61c7358a4f05459e83c52": {
@@ -344,12 +642,41 @@
         },
         "prediction": {
             "top_tip": "0:2",
-            "max_xp": 4.800152568189645
+            "max_xp": 4.800152568189645,
+            "bots": {
+                "chalk": {
+                    "tip": "0:2",
+                    "xp": 4.8002
+                },
+                "odds_pure": {
+                    "tip": "0:2",
+                    "xp": 4.8002
+                },
+                "elo_pure": {
+                    "tip": "1:3",
+                    "xp": 4.5928
+                },
+                "draw_hunter": {
+                    "tip": "0:2",
+                    "xp": 4.8002
+                },
+                "random": {
+                    "tip": "1:2",
+                    "xp": 4.5924
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "ec51b9c44ad5e34552f3ab53f7262813": {
@@ -376,12 +703,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.0412900219020935
+            "max_xp": 4.0412900219020935,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.0413
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.0413
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 4.4229
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.0413
+                },
+                "random": {
+                    "tip": "4:3",
+                    "xp": 3.4665
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "73a4fcd14cc9766b9b9bfd50b8ca153a": {
@@ -408,12 +764,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 4.651010466538569
+            "max_xp": 4.651010466538569,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 4.651
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 4.651
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 4.3628
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 4.651
+                },
+                "random": {
+                    "tip": "4:1",
+                    "xp": 4.0038
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "4d4f2b9b78182b557d4fbf8dcf4f4af2": {
@@ -440,12 +825,41 @@
         },
         "prediction": {
             "top_tip": "0:2",
-            "max_xp": 5.565998687844348
+            "max_xp": 5.565998687844348,
+            "bots": {
+                "chalk": {
+                    "tip": "0:2",
+                    "xp": 5.566
+                },
+                "odds_pure": {
+                    "tip": "0:2",
+                    "xp": 5.566
+                },
+                "elo_pure": {
+                    "tip": "2:3",
+                    "xp": 4.0905
+                },
+                "draw_hunter": {
+                    "tip": "0:2",
+                    "xp": 5.566
+                },
+                "random": {
+                    "tip": "3:5",
+                    "xp": 4.5135
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "f31b2ee9e1cc6f7e641467f8237eaa21": {
@@ -472,12 +886,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 4.9200184624258165
+            "max_xp": 4.9200184624258165,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 4.92
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 4.92
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 5.0238
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 4.92
+                },
+                "random": {
+                    "tip": "4:2",
+                    "xp": 4.3435
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "25161cf6cf0cd9be17ae2e7e224a1f45": {
@@ -504,12 +947,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 5.038099470262142
+            "max_xp": 5.038099470262142,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 5.0381
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 5.0381
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 4.3009
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 5.0381
+                },
+                "random": {
+                    "tip": "3:0",
+                    "xp": 4.5788
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "6cc871c121a1869b4612d3fb22fa9d55": {
@@ -536,12 +1008,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 5.253771078633845
+            "max_xp": 5.253771078633845,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 5.2538
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 5.2538
+                },
+                "elo_pure": {
+                    "tip": "2:0",
+                    "xp": 5.2283
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 5.2538
+                },
+                "random": {
+                    "tip": "3:0",
+                    "xp": 5.0198
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "689096c8cd7e2753b9fec95321943c5d": {
@@ -568,12 +1069,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.145336754277571
+            "max_xp": 4.145336754277571,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.1453
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.1453
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 3.2764
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.1453
+                },
+                "random": {
+                    "tip": "2:1",
+                    "xp": 3.8278
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "87afdb85c977b451e1c00f5e3e632601": {
@@ -600,12 +1130,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.499583133807567
+            "max_xp": 3.499583133807567,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.4996
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.4996
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 3.1404
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.1935
+                },
+                "random": {
+                    "tip": "2:0",
+                    "xp": 3.0573
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "22083e7a8e5362c711bc05c1e1319a1f": {
@@ -632,12 +1191,41 @@
         },
         "prediction": {
             "top_tip": "0:2",
-            "max_xp": 4.95443674887246
+            "max_xp": 4.95443674887246,
+            "bots": {
+                "chalk": {
+                    "tip": "0:2",
+                    "xp": 4.9544
+                },
+                "odds_pure": {
+                    "tip": "0:2",
+                    "xp": 4.9544
+                },
+                "elo_pure": {
+                    "tip": "0:2",
+                    "xp": 5.0684
+                },
+                "draw_hunter": {
+                    "tip": "0:2",
+                    "xp": 4.9544
+                },
+                "random": {
+                    "tip": "0:3",
+                    "xp": 4.6693
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "66ebb9e3f949caded535d97ce686ca09": {
@@ -664,12 +1252,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.062603316612919
+            "max_xp": 4.062603316612919,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.0626
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.0626
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 3.4092
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.0626
+                },
+                "random": {
+                    "tip": "2:0",
+                    "xp": 3.6601
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "289bc2e9f5adad8ae4d9a75a7c5461ad": {
@@ -696,12 +1313,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.383968173108362
+            "max_xp": 4.383968173108362,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.384
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.384
+                },
+                "elo_pure": {
+                    "tip": "3:2",
+                    "xp": 4.2504
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.384
+                },
+                "random": {
+                    "tip": "4:1",
+                    "xp": 3.7303
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "fa9502285b257b03e62968d50d9229fc": {
@@ -728,12 +1374,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 5.206927282569282
+            "max_xp": 5.206927282569282,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 5.2069
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 5.2069
+                },
+                "elo_pure": {
+                    "tip": "3:2",
+                    "xp": 3.7959
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 5.2069
+                },
+                "random": {
+                    "tip": "2:1",
+                    "xp": 4.6368
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "0f2aeae6ac8e77223848d23a4ca86b0d": {
@@ -760,12 +1435,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.7457763037730514
+            "max_xp": 3.7457763037730514,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.7458
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.7458
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 3.1404
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.204
+                },
+                "random": {
+                    "tip": "2:0",
+                    "xp": 3.2416
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "065b3573e875f8d23803357f73e5b99e": {
@@ -792,12 +1496,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.350989437382332
+            "max_xp": 4.350989437382332,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.351
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.351
+                },
+                "elo_pure": {
+                    "tip": "3:2",
+                    "xp": 3.7403
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.351
+                },
+                "random": {
+                    "tip": "5:4",
+                    "xp": 3.5308
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "4cd769aa7bae0ad9762bd69b80ef2903": {
@@ -824,12 +1557,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 3.767095634051431
+            "max_xp": 3.767095634051431,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 3.7671
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 3.7671
+                },
+                "elo_pure": {
+                    "tip": "3:4",
+                    "xp": 3.6649
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.1399
+                },
+                "random": {
+                    "tip": "3:4",
+                    "xp": 3.11
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "ef0f74a991d3e35798ae5af77667bce1": {
@@ -856,12 +1618,41 @@
         },
         "prediction": {
             "top_tip": "3:0",
-            "max_xp": 5.956809831088827
+            "max_xp": 5.956809831088827,
+            "bots": {
+                "chalk": {
+                    "tip": "3:0",
+                    "xp": 5.9568
+                },
+                "odds_pure": {
+                    "tip": "3:0",
+                    "xp": 5.9568
+                },
+                "elo_pure": {
+                    "tip": "2:0",
+                    "xp": 5.7683
+                },
+                "draw_hunter": {
+                    "tip": "3:0",
+                    "xp": 5.9568
+                },
+                "random": {
+                    "tip": "4:0",
+                    "xp": 5.7456
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "f955d4b3395ce6e3b5ac1031ca52ca4e": {
@@ -888,12 +1679,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.6571615407563125
+            "max_xp": 3.6571615407563125,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.6572
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.6572
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 2.9502
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.1978
+                },
+                "random": {
+                    "tip": "2:2",
+                    "xp": 2.9107
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "4f0c518545b0096c68326daf25bffc1e": {
@@ -920,12 +1740,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.253111376085524
+            "max_xp": 4.253111376085524,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.2531
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.2531
+                },
+                "elo_pure": {
+                    "tip": "3:2",
+                    "xp": 4.1963
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.2531
+                },
+                "random": {
+                    "tip": "4:2",
+                    "xp": 3.6939
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "f1ab0f69832972a329243522ceaa7804": {
@@ -952,12 +1801,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.365601746112192
+            "max_xp": 4.365601746112192,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.3656
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.3656
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 4.3628
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.3656
+                },
+                "random": {
+                    "tip": "4:3",
+                    "xp": 3.8251
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "681895f294b670b4c7b14495dfb583bc": {
@@ -984,12 +1862,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 5.623237845253907
+            "max_xp": 5.623237845253907,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 5.6232
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 5.6232
+                },
+                "elo_pure": {
+                    "tip": "2:0",
+                    "xp": 5.1759
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 5.6232
+                },
+                "random": {
+                    "tip": "3:2",
+                    "xp": 4.7924
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "dfc5202cf1b8ae002cf952cd04f235b9": {
@@ -1016,12 +1923,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 4.219090919818623
+            "max_xp": 4.219090919818623,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 4.2191
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 4.2191
+                },
+                "elo_pure": {
+                    "tip": "1:3",
+                    "xp": 4.3628
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 4.2191
+                },
+                "random": {
+                    "tip": "0:3",
+                    "xp": 3.7054
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "73529a242e319a86bf3d00ddb4accc37": {
@@ -1048,12 +1984,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 6.024532710788809
+            "max_xp": 6.024532710788809,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 6.0245
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 6.0245
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 5.0238
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 6.0245
+                },
+                "random": {
+                    "tip": "3:0",
+                    "xp": 5.7818
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "5f92f257386ec5bf7c6e2498a21f3a61": {
@@ -1080,12 +2045,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 4.813449730895382
+            "max_xp": 4.813449730895382,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 4.8134
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 4.8134
+                },
+                "elo_pure": {
+                    "tip": "3:2",
+                    "xp": 3.8534
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 4.8134
+                },
+                "random": {
+                    "tip": "4:2",
+                    "xp": 4.0098
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "852a3abe6d46820720febc0fedebff9a": {
@@ -1112,12 +2106,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 4.699875215606223
+            "max_xp": 4.699875215606223,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 4.6999
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 4.6999
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 5.0238
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 4.6999
+                },
+                "random": {
+                    "tip": "4:3",
+                    "xp": 4.12
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "c1ec9a65f4b4cf74477b368a7d6282de": {
@@ -1144,12 +2167,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 4.118980128527251
+            "max_xp": 4.118980128527251,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 4.119
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 4.119
+                },
+                "elo_pure": {
+                    "tip": "2:3",
+                    "xp": 3.976
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 4.119
+                },
+                "random": {
+                    "tip": "3:4",
+                    "xp": 3.4513
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "be6c63f416c67bca1300a98f5b89c3af": {
@@ -1176,12 +2228,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.2762102433029
+            "max_xp": 4.2762102433029,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.2762
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.2762
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 4.6455
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.2762
+                },
+                "random": {
+                    "tip": "5:4",
+                    "xp": 3.6783
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "7ad7a0ce2ef2618bb59b066da5642f70": {
@@ -1208,12 +2289,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 5.893154235614642
+            "max_xp": 5.893154235614642,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 5.8932
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 5.8932
+                },
+                "elo_pure": {
+                    "tip": "2:0",
+                    "xp": 5.4774
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 5.8932
+                },
+                "random": {
+                    "tip": "4:1",
+                    "xp": 5.2805
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "3f48473742ca0fd2a85930554720c75e": {
@@ -1240,12 +2350,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.458956095916354
+            "max_xp": 3.458956095916354,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.459
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.459
+                },
+                "elo_pure": {
+                    "tip": "3:4",
+                    "xp": 3.2764
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.0675
+                },
+                "random": {
+                    "tip": "2:0",
+                    "xp": 2.8871
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "fd8533b650e655030f6a7946f8795db2": {
@@ -1272,12 +2411,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 4.516751044555619
+            "max_xp": 4.516751044555619,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 4.5168
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 4.5168
+                },
+                "elo_pure": {
+                    "tip": "2:3",
+                    "xp": 3.7897
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 4.5168
+                },
+                "random": {
+                    "tip": "2:4",
+                    "xp": 3.7688
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "8ba93d190f1f934e33862a97a6353a6e": {
@@ -1304,12 +2472,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 5.291334360013266
+            "max_xp": 5.291334360013266,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 5.2913
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 5.2913
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 4.9907
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 5.2913
+                },
+                "random": {
+                    "tip": "4:1",
+                    "xp": 4.8032
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "2f49dd8deae3079dc4eb2d634d18a99c": {
@@ -1336,12 +2533,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 5.061971654352684
+            "max_xp": 5.061971654352684,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 5.062
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 5.062
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 4.8356
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 5.062
+                },
+                "random": {
+                    "tip": "3:2",
+                    "xp": 4.49
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "c1bc8c26480cd42b89a0de5329581314": {
@@ -1368,12 +2594,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 4.459774571871993
+            "max_xp": 4.459774571871993,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 4.4598
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 4.4598
+                },
+                "elo_pure": {
+                    "tip": "1:3",
+                    "xp": 4.7448
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 4.4598
+                },
+                "random": {
+                    "tip": "0:4",
+                    "xp": 3.8053
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "68bfc965eb267508e04d8e8d75c1a0ae": {
@@ -1400,12 +2655,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.71700611513156
+            "max_xp": 4.71700611513156,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.717
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.717
+                },
+                "elo_pure": {
+                    "tip": "2:0",
+                    "xp": 5.3309
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.717
+                },
+                "random": {
+                    "tip": "1:0",
+                    "xp": 4.8428
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "512ac18beb5aa936a59f7ea3e497ada2": {
@@ -1432,12 +2716,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.306267017325383
+            "max_xp": 4.306267017325383,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.3063
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.3063
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 3.0095
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.3063
+                },
+                "random": {
+                    "tip": "3:2",
+                    "xp": 3.5402
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "c9ef5822ee64fd5275f7c73251bb56c7": {
@@ -1464,12 +2777,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.5137527439661893
+            "max_xp": 3.5137527439661893,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.5138
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.5138
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 3.5435
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.1107
+                },
+                "random": {
+                    "tip": "0:0",
+                    "xp": 2.9875
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "885ba95805db310a7bcc3fb1a7a6dd28": {
@@ -1496,12 +2838,41 @@
         },
         "prediction": {
             "top_tip": "0:2",
-            "max_xp": 4.59781230401201
+            "max_xp": 4.59781230401201,
+            "bots": {
+                "chalk": {
+                    "tip": "0:2",
+                    "xp": 4.5978
+                },
+                "odds_pure": {
+                    "tip": "0:2",
+                    "xp": 4.5978
+                },
+                "elo_pure": {
+                    "tip": "2:3",
+                    "xp": 4.2504
+                },
+                "draw_hunter": {
+                    "tip": "0:2",
+                    "xp": 4.5978
+                },
+                "random": {
+                    "tip": "0:1",
+                    "xp": 4.5114
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "d1279ce7f33136a33e99ad442fc855e8": {
@@ -1528,12 +2899,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 5.000307594447875
+            "max_xp": 5.000307594447875,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 5.0003
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 5.0003
+                },
+                "elo_pure": {
+                    "tip": "2:0",
+                    "xp": 5.326
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 5.0003
+                },
+                "random": {
+                    "tip": "4:0",
+                    "xp": 4.4823
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "5993bd5196ca09f83990f0c3261e442e": {
@@ -1560,12 +2960,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 3.958782416522008
+            "max_xp": 3.958782416522008,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 3.9588
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 3.9588
+                },
+                "elo_pure": {
+                    "tip": "2:3",
+                    "xp": 3.976
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 3.9588
+                },
+                "random": {
+                    "tip": "1:4",
+                    "xp": 3.2591
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "c0355dfc6e26ec327e379b6ef5824a5f": {
@@ -1592,12 +3021,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 4.314611243739261
+            "max_xp": 4.314611243739261,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 4.3146
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 4.3146
+                },
+                "elo_pure": {
+                    "tip": "2:3",
+                    "xp": 4.1963
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 4.3146
+                },
+                "random": {
+                    "tip": "1:2",
+                    "xp": 4.2124
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "a5a0b544a984ab16e564264f3e859b43": {
@@ -1624,12 +3082,41 @@
         },
         "prediction": {
             "top_tip": "0:2",
-            "max_xp": 5.451028741783614
+            "max_xp": 5.451028741783614,
+            "bots": {
+                "chalk": {
+                    "tip": "0:2",
+                    "xp": 5.451
+                },
+                "odds_pure": {
+                    "tip": "0:2",
+                    "xp": 5.451
+                },
+                "elo_pure": {
+                    "tip": "1:3",
+                    "xp": 4.3628
+                },
+                "draw_hunter": {
+                    "tip": "0:2",
+                    "xp": 5.451
+                },
+                "random": {
+                    "tip": "0:4",
+                    "xp": 4.631
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "0ec28b84ec399bd4dffbe8d1bc72b3c4": {
@@ -1656,12 +3143,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 4.0215372664670745
+            "max_xp": 4.0215372664670745,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 4.0215
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 4.0215
+                },
+                "elo_pure": {
+                    "tip": "3:4",
+                    "xp": 3.3432
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 4.0215
+                },
+                "random": {
+                    "tip": "3:4",
+                    "xp": 3.2897
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "0ed0233bddc4eafc8507f86a9c17b998": {
@@ -1688,12 +3204,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.5274428163114693
+            "max_xp": 3.5274428163114693,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.5274
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.5274
+                },
+                "elo_pure": {
+                    "tip": "3:2",
+                    "xp": 3.7245
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.0894
+                },
+                "random": {
+                    "tip": "3:1",
+                    "xp": 3.1994
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "f3c4657daa143a0c5bd62cb370d01ce4": {
@@ -1720,12 +3265,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 4.494210270264499
+            "max_xp": 4.494210270264499,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 4.4942
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 4.4942
+                },
+                "elo_pure": {
+                    "tip": "1:3",
+                    "xp": 4.7913
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 4.4942
+                },
+                "random": {
+                    "tip": "1:3",
+                    "xp": 4.3624
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "22f6ac06dfcc88a847920f62633e6459": {
@@ -1752,12 +3326,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.5171250033119987
+            "max_xp": 3.5171250033119987,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.5171
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.5171
+                },
+                "elo_pure": {
+                    "tip": "3:4",
+                    "xp": 3.0552
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.2264
+                },
+                "random": {
+                    "tip": "4:3",
+                    "xp": 2.7247
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "f41aeac9a8343a84b4950f15ea25fba2": {
@@ -1784,12 +3387,41 @@
         },
         "prediction": {
             "top_tip": "1:1",
-            "max_xp": 3.0191700053083212
+            "max_xp": 3.0191700053083212,
+            "bots": {
+                "chalk": {
+                    "tip": "1:1",
+                    "xp": 3.0192
+                },
+                "odds_pure": {
+                    "tip": "1:1",
+                    "xp": 3.0192
+                },
+                "elo_pure": {
+                    "tip": "2:3",
+                    "xp": 3.8383
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.0022
+                },
+                "random": {
+                    "tip": "2:4",
+                    "xp": 2.7029
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "b86b4d60f773e9e3c46c00e9a6496e79": {
@@ -1816,12 +3448,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 3.8859832343709058
+            "max_xp": 3.8859832343709058,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 3.886
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 3.886
+                },
+                "elo_pure": {
+                    "tip": "1:3",
+                    "xp": 4.6455
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 3.886
+                },
+                "random": {
+                    "tip": "2:4",
+                    "xp": 3.4803
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "7e6aee294ea1a4792c59558791084528": {
@@ -1848,12 +3509,41 @@
         },
         "prediction": {
             "top_tip": "2:0",
-            "max_xp": 4.78681399800377
+            "max_xp": 4.78681399800377,
+            "bots": {
+                "chalk": {
+                    "tip": "2:0",
+                    "xp": 4.7868
+                },
+                "odds_pure": {
+                    "tip": "2:0",
+                    "xp": 4.7868
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 4.3628
+                },
+                "draw_hunter": {
+                    "tip": "2:0",
+                    "xp": 4.7868
+                },
+                "random": {
+                    "tip": "4:2",
+                    "xp": 4.1222
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "e07b1926be5a4d515c7eb108dbcee9c5": {
@@ -1880,12 +3570,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.225765607993228
+            "max_xp": 3.225765607993228,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.2258
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.2258
+                },
+                "elo_pure": {
+                    "tip": "3:4",
+                    "xp": 3.5993
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.1691
+                },
+                "random": {
+                    "tip": "3:3",
+                    "xp": 2.6443
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "dcff2e31c0bce001a4db5caaf4fa8822": {
@@ -1912,12 +3631,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 4.220533113003749
+            "max_xp": 4.220533113003749,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 4.2205
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 4.2205
+                },
+                "elo_pure": {
+                    "tip": "3:4",
+                    "xp": 3.5993
+                },
+                "draw_hunter": {
+                    "tip": "0:1",
+                    "xp": 4.2205
+                },
+                "random": {
+                    "tip": "4:5",
+                    "xp": 3.4094
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "581691da05dcd75b5c6d3be91ee9d2ab": {
@@ -1944,12 +3692,41 @@
         },
         "prediction": {
             "top_tip": "0:2",
-            "max_xp": 5.168532630398832
+            "max_xp": 5.168532630398832,
+            "bots": {
+                "chalk": {
+                    "tip": "0:2",
+                    "xp": 5.1685
+                },
+                "odds_pure": {
+                    "tip": "0:2",
+                    "xp": 5.1685
+                },
+                "elo_pure": {
+                    "tip": "0:2",
+                    "xp": 5.0684
+                },
+                "draw_hunter": {
+                    "tip": "0:2",
+                    "xp": 5.1685
+                },
+                "random": {
+                    "tip": "3:5",
+                    "xp": 4.4607
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "3e3b5fa2b3c963e74cf044c60db0b573": {
@@ -1976,12 +3753,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.473944805142766
+            "max_xp": 3.473944805142766,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.4739
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.4739
+                },
+                "elo_pure": {
+                    "tip": "3:4",
+                    "xp": 3.474
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.3838
+                },
+                "random": {
+                    "tip": "2:1",
+                    "xp": 3.0223
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "537c0997cd899394f47f16545b7068b2": {
@@ -2008,12 +3814,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 4.272640210921454
+            "max_xp": 4.272640210921454,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 4.2726
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 4.2726
+                },
+                "elo_pure": {
+                    "tip": "3:1",
+                    "xp": 4.5928
+                },
+                "draw_hunter": {
+                    "tip": "1:0",
+                    "xp": 4.2726
+                },
+                "random": {
+                    "tip": "3:1",
+                    "xp": 4.0364
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "4be17c8e1ccfecb0f2a5ef79e045c415": {
@@ -2040,12 +3875,41 @@
         },
         "prediction": {
             "top_tip": "0:2",
-            "max_xp": 5.135516905114383
+            "max_xp": 5.135516905114383,
+            "bots": {
+                "chalk": {
+                    "tip": "0:2",
+                    "xp": 5.1355
+                },
+                "odds_pure": {
+                    "tip": "0:2",
+                    "xp": 5.1355
+                },
+                "elo_pure": {
+                    "tip": "1:3",
+                    "xp": 4.9553
+                },
+                "draw_hunter": {
+                    "tip": "0:2",
+                    "xp": 5.1355
+                },
+                "random": {
+                    "tip": "1:3",
+                    "xp": 4.9361
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "67ae5751c401a98409b8566ae4897069": {
@@ -2072,12 +3936,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 3.506067111664379
+            "max_xp": 3.506067111664379,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 3.5061
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 3.5061
+                },
+                "elo_pure": {
+                    "tip": "4:3",
+                    "xp": 3.0716
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.1442
+                },
+                "random": {
+                    "tip": "2:2",
+                    "xp": 2.8806
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "13eab94a136b9c264ba974cf437a5f71": {
@@ -2104,12 +3997,41 @@
         },
         "prediction": {
             "top_tip": "1:0",
-            "max_xp": 3.2684431085450183
+            "max_xp": 3.2684431085450183,
+            "bots": {
+                "chalk": {
+                    "tip": "1:0",
+                    "xp": 3.2684
+                },
+                "odds_pure": {
+                    "tip": "1:0",
+                    "xp": 3.2684
+                },
+                "elo_pure": {
+                    "tip": "3:4",
+                    "xp": 3.2764
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.2394
+                },
+                "random": {
+                    "tip": "1:1",
+                    "xp": 3.2394
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "8756200e539155e571557c4f2e0d7f05": {
@@ -2136,12 +4058,41 @@
         },
         "prediction": {
             "top_tip": "0:1",
-            "max_xp": 3.499689162133518
+            "max_xp": 3.499689162133518,
+            "bots": {
+                "chalk": {
+                    "tip": "0:1",
+                    "xp": 3.4997
+                },
+                "odds_pure": {
+                    "tip": "0:1",
+                    "xp": 3.4997
+                },
+                "elo_pure": {
+                    "tip": "3:4",
+                    "xp": 3.5374
+                },
+                "draw_hunter": {
+                    "tip": "1:1",
+                    "xp": 3.1496
+                },
+                "random": {
+                    "tip": "1:3",
+                    "xp": 3.0866
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "54697f453437ab26276d773be1d72e9b": {
@@ -2168,12 +4119,41 @@
         },
         "prediction": {
             "top_tip": "0:2",
-            "max_xp": 5.528826162913569
+            "max_xp": 5.528826162913569,
+            "bots": {
+                "chalk": {
+                    "tip": "0:2",
+                    "xp": 5.5288
+                },
+                "odds_pure": {
+                    "tip": "0:2",
+                    "xp": 5.5288
+                },
+                "elo_pure": {
+                    "tip": "0:2",
+                    "xp": 5.6546
+                },
+                "draw_hunter": {
+                    "tip": "0:2",
+                    "xp": 5.5288
+                },
+                "random": {
+                    "tip": "1:4",
+                    "xp": 5.0173
+                }
+            }
         },
         "post_match_result": {
             "status": "pending",
             "actual_score": null,
-            "points_earned": null
+            "points_earned": null,
+            "bot_points": {
+                "chalk": null,
+                "odds_pure": null,
+                "elo_pure": null,
+                "draw_hunter": null,
+                "random": null
+            }
         }
     },
     "80d82d1113934bfbea4ce8daf37a2433": {
@@ -2186,8 +4166,8 @@
         },
         "pre_match_snapshot": null,
         "prediction": {
-            "top_tip": "2:0",
-            "max_xp": null,
+            "top_tip": "1:0",
+            "max_xp": 4.841073076320264,
             "user_tip": "2:0",
             "algo_reconstructed": true
         },
@@ -2195,7 +4175,7 @@
             "status": "completed",
             "actual_score": "2:0",
             "points_earned": 10,
-            "algo_points": 10
+            "algo_points": 6
         }
     },
     "384cbb5d76b535896a24fe65f93cfac8": {
@@ -2230,8 +4210,8 @@
         },
         "pre_match_snapshot": null,
         "prediction": {
-            "top_tip": "1:0",
-            "max_xp": null,
+            "top_tip": "2:1",
+            "max_xp": 3.958632516445955,
             "user_tip": "2:1",
             "algo_reconstructed": true
         },

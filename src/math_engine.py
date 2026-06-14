@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import hashlib
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -247,7 +248,7 @@ class MathEngine:
         variance = max(0.0, ev_sq - ev ** 2)
         return ev, variance ** 0.5
 
-    def calculate_expected_points(self, score_matrix: pd.DataFrame, is_ko_phase: bool = False) -> pd.DataFrame:
+    def calculate_expected_points(self, score_matrix: pd.DataFrame, is_ko_phase: bool = False, top_n: int = 5) -> pd.DataFrame:
         """
         Calculates the Expected Points (xP) for tips from 0:0 up to 5:5 based on the specific ruleset.
         """
@@ -260,8 +261,100 @@ class MathEngine:
                 results.append({"Tipp": f"{t_home}:{t_away}", "xP": xp})
 
         df_xp = pd.DataFrame(results)
-        df_xp = df_xp.sort_values(by="xP", ascending=False).head(5).reset_index(drop=True)
+        df_xp = df_xp.sort_values(by="xP", ascending=False).head(top_n).reset_index(drop=True)
         return df_xp
+
+    def compute_bot_tips(
+        self,
+        score_matrix: pd.DataFrame,
+        true_probs: dict,
+        prob_over25,
+        home_team: str,
+        away_team: str,
+        match_id: str,
+        is_ko_phase: bool = False,
+        chalk_tip: str = None,
+        chalk_xp: float = None,
+    ) -> dict:
+        """
+        Compute tips for all 5 prediction bots. Returns dict keyed by bot name.
+        score_matrix is the already-blended 70/30 Elo-odds matrix.
+        true_probs are the bookmaker-only probabilities (margin removed).
+        chalk_tip / chalk_xp are passed in directly from the already-computed top_tip.
+        """
+        bots = {}
+
+        # 1. chalk — reuse pre-computed top_tip (no recomputation)
+        bots["chalk"] = {"tip": chalk_tip, "xp": round(chalk_xp, 4) if chalk_xp is not None else None}
+
+        # 2. odds_pure — 100% bookmaker odds, 0% Elo
+        try:
+            xg_h, xg_a = self.derive_xg_from_odds(
+                true_probs["home"], true_probs["draw"], true_probs["away"], prob_over25
+            )
+            sm_odds = self.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
+            df_odds = self.calculate_expected_points(sm_odds, is_ko_phase=is_ko_phase)
+            bots["odds_pure"] = {
+                "tip": df_odds.iloc[0]["Tipp"] if not df_odds.empty else None,
+                "xp": round(float(df_odds.iloc[0]["xP"]), 4) if not df_odds.empty else None,
+            }
+        except Exception:
+            bots["odds_pure"] = {"tip": None, "xp": None}
+
+        # 3. elo_pure — 100% Elo, 0% odds
+        # get_match_elo_probabilities returns (p_home, p_away) that sum to 1.
+        # We apply a minimum draw floor of 0.15 and rescale win/loss accordingly.
+        try:
+            elo_p_home, elo_p_away = self.get_match_elo_probabilities(home_team, away_team)
+            prob_draw_elo = max(0.15, 1.0 - elo_p_home - elo_p_away)  # = max(0.15, 0) = 0.15
+            scale = 1.0 - prob_draw_elo
+            xg_h, xg_a = self.derive_xg_from_odds(
+                elo_p_home * scale, prob_draw_elo, elo_p_away * scale, None
+            )
+            sm_elo = self.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
+            df_elo = self.calculate_expected_points(sm_elo, is_ko_phase=is_ko_phase)
+            bots["elo_pure"] = {
+                "tip": df_elo.iloc[0]["Tipp"] if not df_elo.empty else None,
+                "xp": round(float(df_elo.iloc[0]["xP"]), 4) if not df_elo.empty else None,
+            }
+        except Exception:
+            bots["elo_pure"] = {"tip": None, "xp": None}
+
+        # 4. draw_hunter — from top-10, pick draw if P(draw) > 0.25, else chalk
+        try:
+            df_top10 = self.calculate_expected_points(score_matrix, is_ko_phase=is_ko_phase, top_n=10)
+            p_draw_matrix = float(np.sum(np.diag(score_matrix.values)))
+            draw_tip = None
+            if p_draw_matrix > 0.25:
+                for _, row in df_top10.iterrows():
+                    h, a = row["Tipp"].split(":")
+                    if h == a:
+                        draw_tip = (row["Tipp"], round(float(row["xP"]), 4))
+                        break
+            if draw_tip:
+                bots["draw_hunter"] = {"tip": draw_tip[0], "xp": draw_tip[1]}
+            else:
+                bots["draw_hunter"] = {"tip": chalk_tip, "xp": round(chalk_xp, 4) if chalk_xp is not None else None}
+        except Exception:
+            bots["draw_hunter"] = {"tip": chalk_tip, "xp": round(chalk_xp, 4) if chalk_xp is not None else None}
+
+        # 5. random — weighted sample from top-10, seeded by match_id for reproducibility
+        try:
+            df_top10 = self.calculate_expected_points(score_matrix, is_ko_phase=is_ko_phase, top_n=10)
+            seed = int(hashlib.md5(match_id.encode()).hexdigest()[:8], 16) % (2 ** 31)
+            rng = np.random.default_rng(seed)
+            weights = df_top10["xP"].values.astype(float)
+            weights = np.maximum(weights, 0)
+            weights = weights / weights.sum()
+            idx = int(rng.choice(len(df_top10), p=weights))
+            bots["random"] = {
+                "tip": df_top10.iloc[idx]["Tipp"],
+                "xp": round(float(df_top10.iloc[idx]["xP"]), 4),
+            }
+        except Exception:
+            bots["random"] = {"tip": chalk_tip, "xp": round(chalk_xp, 4) if chalk_xp is not None else None}
+
+        return bots
 
     def _calculate_new_elo(self, rating_a: float, rating_b: float, actual_result_a: float, k_factor: int = 60, is_a_host: bool = False, is_b_host: bool = False, goal_diff: int = 0) -> tuple[float, float]:
         """
