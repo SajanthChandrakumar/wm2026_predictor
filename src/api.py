@@ -12,7 +12,17 @@ from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.odds_engine import OddsApiEngine
+
+# Engine switch: set USE_API_FOOTBALL=true in .env when the Odds-API quota is
+# exhausted. The API-Football engine normalizes responses to the legacy
+# Odds-API shape, so the rest of api.py needs no changes.
+if os.getenv("USE_API_FOOTBALL", "").lower() in ("1", "true", "yes"):
+    from src.odds_engine_apifootball import OddsApiEngine
+    print("Odds engine: API-Football (api-sports.io)")
+else:
+    from src.odds_engine import OddsApiEngine
+    print("Odds engine: The Odds API")
+
 from src.math_engine import MathEngine
 
 app = FastAPI(title="WM 2026 Predictor API")
