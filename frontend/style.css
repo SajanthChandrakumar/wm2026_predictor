@@ -115,6 +115,11 @@ body {
     padding: 12px 14px;
     margin-bottom: 6px;
     display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.quota-row {
+    display: flex;
     align-items: center;
     justify-content: space-between;
 }

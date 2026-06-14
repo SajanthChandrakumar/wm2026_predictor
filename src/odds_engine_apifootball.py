@@ -44,7 +44,7 @@ class OddsApiEngine:
             used = int(limit) - int(remaining)
         except (ValueError, TypeError):
             used = "Unknown"
-        quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota.json')
+        quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota_football.json')
         os.makedirs(os.path.dirname(quota_path), exist_ok=True)
         with open(quota_path, 'w', encoding='utf-8') as f:
             json.dump({"remaining": remaining, "used": used, "limit": limit}, f, indent=4)

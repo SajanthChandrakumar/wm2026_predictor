@@ -230,12 +230,20 @@ def _enrich_edge(matches: list) -> list:
 
 @app.get("/api/quota")
 def get_quota():
-    quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota.json')
+    quota_odds_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota_odds.json')
+    quota_football_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota_football.json')
+    
+    res = {"odds": {"remaining": "--", "used": "--"}, "football": {"remaining": "--", "used": "--"}}
     try:
-        with open(quota_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        if os.path.exists(quota_odds_path):
+            with open(quota_odds_path, 'r', encoding='utf-8') as f:
+                res["odds"] = json.load(f)
+        if os.path.exists(quota_football_path):
+            with open(quota_football_path, 'r', encoding='utf-8') as f:
+                res["football"] = json.load(f)
     except Exception:
-        return {"remaining": "Unknown", "used": "Unknown", "limit": "Unknown"}
+        pass
+    return res
 
 
 @app.get("/api/matches")

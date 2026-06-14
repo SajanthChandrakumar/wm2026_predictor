@@ -18,7 +18,7 @@ class OddsApiEngine:
         remaining = headers.get("x-requests-remaining", "Unknown")
         used = headers.get("x-requests-used", "Unknown")
         
-        quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota.json')
+        quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota_odds.json')
         os.makedirs(os.path.dirname(quota_path), exist_ok=True)
         
         with open(quota_path, 'w', encoding='utf-8') as f:

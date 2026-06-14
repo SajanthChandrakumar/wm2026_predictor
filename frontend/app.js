@@ -97,8 +97,14 @@ function showView(view) {
 async function fetchQuota() {
     try {
         const data = await (await fetch('/api/quota')).json();
-        document.getElementById('quota-value').textContent = data.remaining ?? '--';
-        document.getElementById('quota-delta').textContent = `${data.used ?? '?'} used`;
+        const odds = data.odds || {};
+        const fb = data.football || {};
+        
+        document.getElementById('quota-odds-value').textContent = odds.remaining ?? '--';
+        document.getElementById('quota-odds-delta').textContent = `${odds.used ?? '?'} used`;
+        
+        document.getElementById('quota-fb-value').textContent = fb.remaining ?? '--';
+        document.getElementById('quota-fb-delta').textContent = `${fb.used ?? '?'} used`;
     } catch {}
 }
 
