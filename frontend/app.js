@@ -2,7 +2,6 @@ let currentMatches = [];
 let selectedMatchId = null;
 let lastCalcData = null;
 let eloChartInstance = null;
-let aggressivenessDebounce = null;
 
 // ── Boot ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -50,16 +49,6 @@ function initSidebar() {
         selectedMatchId = null;
         showView('dashboard');
     });
-
-    // Aggressiveness slider
-    const slider = document.getElementById('aggressiveness-slider');
-    slider.addEventListener('input', () => {
-        updateStrategyUI(parseFloat(slider.value));
-        if (!selectedMatchId) return;
-        clearTimeout(aggressivenessDebounce);
-        aggressivenessDebounce = setTimeout(() => updatePrediction(), 400);
-    });
-    updateStrategyUI(0);
 }
 
 // ── Views ─────────────────────────────────────────────────────
@@ -81,31 +70,6 @@ function showView(view) {
     const [viewId, navId] = map[view] || ['matches-view', 'nav-dashboard'];
     document.getElementById(viewId).style.display = '';
     if (navId) document.getElementById(navId).classList.add('active');
-}
-
-// ── Strategy UI ───────────────────────────────────────────────
-function updateStrategyUI(val) {
-    document.getElementById('aggressiveness-label').textContent = val.toFixed(1);
-    const badge  = document.getElementById('strategy-badge');
-    const hint   = document.getElementById('strategy-hint');
-
-    if (val === 0) {
-        badge.className = 'strategy-mode-badge';
-        badge.textContent = 'Safe';
-        hint.textContent = 'Tipping the most likely score. Best when leading or in a small pool.';
-    } else if (val <= 0.3) {
-        badge.className = 'strategy-mode-badge';
-        badge.textContent = 'Soft';
-        hint.textContent = 'Same tendency as the field, different exact score. Low cost, good differentiation.';
-    } else if (val <= 0.7) {
-        badge.className = 'strategy-mode-badge aggressive';
-        badge.textContent = 'Contrarian';
-        hint.textContent = 'Accepting lower average points to build a ceiling over the field. Good when chasing.';
-    } else {
-        badge.className = 'strategy-mode-badge max-aggro';
-        badge.textContent = 'High Risk';
-        hint.textContent = 'Maximum variance — betting the field gets the result completely wrong. KO phase / big deficit only.';
-    }
 }
 
 // ── API Calls ─────────────────────────────────────────────────
@@ -149,7 +113,6 @@ async function updatePrediction() {
     const matchData = currentMatches.find(m => m.id === selectedMatchId);
     if (!matchData) return;
 
-    const aggressiveness = parseFloat(document.getElementById('aggressiveness-slider').value);
     showView('loading');
 
     try {
@@ -161,7 +124,6 @@ async function updatePrediction() {
                 is_ko: document.getElementById('ko-toggle').checked,
                 home_resting: document.getElementById('home-resting-toggle').checked,
                 away_resting: document.getElementById('away-resting-toggle').checked,
-                aggressiveness,
             })
         });
         if (!res.ok) {
@@ -354,33 +316,21 @@ function renderDetail(matchInfo, calc) {
         </div>
     `;
 
-    // Safe tips
     renderSafeTips(calc.xp_tips);
-
-    // Pool tips
-    renderPoolTips(calc.pool_tips);
-
-    // Keep active tab
-    const activeTab = document.querySelector('.tab.active')?.id === 'tab-pool' ? 'pool' : 'safe';
-    switchTab(activeTab);
 
     document.getElementById('adopt-tip-status').textContent = '';
     updateAdoptButton();
 }
 
 function currentActiveTip() {
-    if (!lastCalcData) return null;
-    const isPool = document.querySelector('.tab.active')?.id === 'tab-pool';
-    const tips = isPool ? lastCalcData.pool_tips : lastCalcData.xp_tips;
-    return tips?.[0]?.Tipp ?? null;
+    return lastCalcData?.xp_tips?.[0]?.Tipp ?? null;
 }
 
 function updateAdoptButton() {
     const btn = document.getElementById('adopt-tip-btn');
     if (!btn) return;
     const tip = currentActiveTip();
-    const isPool = document.querySelector('.tab.active')?.id === 'tab-pool';
-    btn.textContent = tip ? `Tipp übernehmen: ${tip} (${isPool ? 'Pool' : 'Safe'})` : 'Tipp übernehmen';
+    btn.textContent = tip ? `Tipp übernehmen: ${tip}` : 'Tipp übernehmen';
     btn.disabled = !tip;
     btn.onclick = () => adoptCurrentTip();
 }
@@ -439,68 +389,6 @@ function renderSafeTips(tips) {
         `;
     }
     document.getElementById('xp-container').innerHTML = html;
-}
-
-function renderPoolTips(tips) {
-    if (!tips?.length) { document.getElementById('pool-container').innerHTML = '<p style="color:var(--text-muted)">No pool tips available.</p>'; return; }
-    const agg = parseFloat(document.getElementById('aggressiveness-slider').value);
-    const top = tips[0];
-
-    const edgeClass = top.edge_vs_field >= 0 ? 'positive' : 'negative';
-    const edgeStr = top.edge_vs_field >= 0
-        ? `+${top.edge_vs_field.toFixed(2)} pts vs field`
-        : `${top.edge_vs_field.toFixed(2)} pts vs field`;
-
-    let bannerText = '';
-    if (agg === 0) bannerText = 'Set aggressiveness > 0 to see contrarian picks that differentiate you from the field.';
-    else if (agg <= 0.3) bannerText = `Soft contrarian (λ=${agg}): same tendency as the field, different scoreline. Minimal xP cost, real differentiation.`;
-    else if (agg <= 0.7) bannerText = `Contrarian mode (λ=${agg}): accepting lower average to get a ceiling above the field. Best when chasing.`;
-    else bannerText = `High-risk mode (λ=${agg}): betting the field gets the result wrong. Use in KO phase when trailing badly.`;
-
-    let html = `
-        <div class="pool-mode-banner">${bannerText}</div>
-        <div class="pool-top">
-            <div class="pool-top-header">
-                <div>
-                    <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Pool Pick</div>
-                    <div class="pool-top-score">${top.Tipp}</div>
-                </div>
-                <div class="pool-top-xp">${top.xP.toFixed(2)} xP</div>
-            </div>
-            <div class="pool-stats">
-                <div class="pool-stat">
-                    <span class="pool-stat-label">Edge vs field</span>
-                    <span class="pool-stat-value ${edgeClass}">${edgeStr}</span>
-                </div>
-                <div class="pool-stat">
-                    <span class="pool-stat-label">Upside (σ)</span>
-                    <span class="pool-stat-value neutral">${top.upside.toFixed(2)}</span>
-                </div>
-            </div>
-        </div>
-    `;
-    for (let i = 1; i < Math.min(4, tips.length); i++) {
-        const t = tips[i];
-        const ec = t.edge_vs_field >= 0 ? 'pos' : 'neg';
-        const es = t.edge_vs_field >= 0 ? `+${t.edge_vs_field.toFixed(2)}` : t.edge_vs_field.toFixed(2);
-        html += `
-            <div class="pool-row">
-                <span class="pool-row-score">${t.Tipp}</span>
-                <span class="pool-row-xp">${t.xP.toFixed(2)} xP</span>
-                <span class="pool-row-edge ${ec}">${es} edge</span>
-            </div>
-        `;
-    }
-    document.getElementById('pool-container').innerHTML = html;
-}
-
-// ── Tab switching ─────────────────────────────────────────────
-function switchTab(tab) {
-    document.getElementById('tab-safe').classList.toggle('active', tab === 'safe');
-    document.getElementById('tab-pool').classList.toggle('active', tab === 'pool');
-    document.getElementById('panel-safe').style.display = tab === 'safe' ? '' : 'none';
-    document.getElementById('panel-pool').style.display = tab === 'pool' ? '' : 'none';
-    updateAdoptButton();
 }
 
 // ── Heatmap ───────────────────────────────────────────────────
@@ -687,6 +575,11 @@ async function loadPerformanceView() {
     let algoTotal = 0, algoCorrectTendency = 0, algoMatchCount = 0;
     let hasReconstructed = false;
 
+    // Bot accumulators: {botName: {pts, tipped, tendency}}
+    const BOT_NAMES = ['chalk', 'odds_pure', 'elo_pure', 'draw_hunter', 'random'];
+    const botStats = {};
+    BOT_NAMES.forEach(b => { botStats[b] = { pts: 0, tipped: 0, tendency: 0 }; });
+
     Object.entries(archiveData).forEach(([match_id, match]) => {
         if (match.post_match_result?.status !== 'completed') return;
 
@@ -697,6 +590,17 @@ async function loadPerformanceView() {
 
         const ap = match.post_match_result?.algo_points;
         if (ap != null) { algoTotal += ap; algoMatchCount++; if (ap >= 5) algoCorrectTendency++; }
+
+        // Accumulate bot stats
+        const botPoints = match.post_match_result?.bot_points ?? {};
+        BOT_NAMES.forEach(bot => {
+            const bp = botPoints[bot];
+            if (bp != null) {
+                botStats[bot].pts += bp;
+                botStats[bot].tipped++;
+                if (bp >= 5) botStats[bot].tendency++;
+            }
+        });
 
         const userTip  = match.prediction?.user_tip  ?? null;
         const algoTip  = match.prediction?.top_tip   ?? null;
@@ -753,6 +657,26 @@ async function loadPerformanceView() {
                    <span style="font-size:0.72rem;color:var(--text-3);font-style:italic;">Kein Algo-Tipp</span>
                </div>`;
 
+        // Bot rows
+        const BOT_SHORT = { chalk: 'Chalk', odds_pure: 'Odds', elo_pure: 'Elo', draw_hunter: 'Draw', random: 'Rnd' };
+        const bots = match.prediction?.bots ?? {};
+        const botPts = match.post_match_result?.bot_points ?? {};
+        const botRowsHtml = Object.entries(bots).map(([bot, info]) => {
+            const tip = info?.tip;
+            if (!tip) return '';
+            const bp = botPts[bot];
+            const c = bp == null ? 'var(--text-3)' : bp >= 8 ? 'var(--green)' : bp >= 5 ? 'var(--amber)' : 'var(--red)';
+            return `<div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:0.58rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:600;min-width:52px;">${BOT_SHORT[bot] ?? bot}</span>
+                <span style="font-size:0.9rem;font-weight:700;color:var(--text-3);">${tip}</span>
+                <span style="margin-left:auto;font-size:0.72rem;font-weight:700;color:${c};">${bp != null ? '+'+bp+' Pts' : '–'}</span>
+            </div>`;
+        }).join('');
+
+        const botsSection = botRowsHtml
+            ? `<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;display:flex;flex-direction:column;gap:2px;">${botRowsHtml}</div>`
+            : '';
+
         const card = document.createElement('div');
         card.className = 'glass-card';
         card.style.cssText = `border-left:4px solid ${borderColor};padding:14px 18px;`;
@@ -765,6 +689,7 @@ async function loadPerformanceView() {
                 ${myTipHtml}
                 ${algoTipHtml}
             </div>
+            ${botsSection}
         `;
         grid.appendChild(card);
     });
@@ -838,6 +763,57 @@ async function loadPerformanceView() {
                 </div>
             </div>
         `;
+    }
+
+    // ── Bot Scoreboard ────────────────────────────────────────────
+    const botPanel = document.getElementById('bot-scoreboard');
+    const BOT_LABELS = { chalk: 'Chalk', odds_pure: 'Odds Pure', elo_pure: 'Elo Pure', draw_hunter: 'Draw Hunter', random: 'Random' };
+    const BOT_COLORS = { chalk: 'var(--gold-l)', odds_pure: 'var(--green)', elo_pure: 'var(--blue)', draw_hunter: 'var(--amber)', random: 'var(--text-2)' };
+
+    const hasBotData = BOT_NAMES.some(b => botStats[b].tipped > 0);
+    if (completedMatches > 0 && hasBotData) {
+        // Build rows sorted by total pts desc
+        const allRows = [
+            { label: 'Du', pts: totalPoints, tipped: completedMatches, tendency: correctTendency, color: 'var(--gold-l)', isUser: true },
+            ...BOT_NAMES.map(b => ({
+                label: BOT_LABELS[b], pts: botStats[b].pts, tipped: botStats[b].tipped,
+                tendency: botStats[b].tendency, color: BOT_COLORS[b], isUser: false
+            }))
+        ].sort((a, b) => b.pts - a.pts);
+
+        const rowsHtml = allRows.map((r, i) => {
+            const avg = r.tipped > 0 ? (r.pts / r.tipped).toFixed(2) : '—';
+            const tendPct = r.tipped > 0 ? ((r.tendency / r.tipped) * 100).toFixed(0) + '%' : '—';
+            const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+            return `<tr style="border-top:1px solid var(--border);">
+                <td style="padding:9px 12px;font-size:0.8rem;font-weight:${r.isUser ? '800' : '600'};color:${r.color};">
+                    <span style="color:var(--text-3);margin-right:6px;">${rank}</span>${r.label}
+                </td>
+                <td style="padding:9px 12px;text-align:right;font-size:0.9rem;font-weight:800;color:${r.color};">${r.pts}</td>
+                <td style="padding:9px 12px;text-align:right;font-size:0.8rem;color:var(--text-2);">${r.tipped}</td>
+                <td style="padding:9px 12px;text-align:right;font-size:0.8rem;color:var(--text-2);">${avg}</td>
+                <td style="padding:9px 12px;text-align:right;font-size:0.8rem;color:var(--text-3);">${tendPct}</td>
+            </tr>`;
+        }).join('');
+
+        botPanel.innerHTML = `
+            <div class="glass-card" style="padding:20px 24px;">
+                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:14px;">Bot Scoreboard</div>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th style="padding:6px 12px;text-align:left;font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">Bot</th>
+                            <th style="padding:6px 12px;text-align:right;font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">Pts</th>
+                            <th style="padding:6px 12px;text-align:right;font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">Tipped</th>
+                            <th style="padding:6px 12px;text-align:right;font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">Avg/Match</th>
+                            <th style="padding:6px 12px;text-align:right;font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">Tendency</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>`;
+    } else {
+        botPanel.innerHTML = '';
     }
 
     if (completedMatches === 0) {

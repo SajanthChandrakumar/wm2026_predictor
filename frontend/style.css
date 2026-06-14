@@ -193,41 +193,6 @@ nav li.active .nav-icon { color: var(--gold-l); }
 input:checked + .toggle-track { background: var(--gold); }
 input:checked + .toggle-track::after { background: #fff; transform: translateX(16px); }
 
-/* Strategy widget */
-.strategy-widget {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--r);
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.strategy-header { display: flex; align-items: center; justify-content: space-between; }
-.strategy-mode-badge {
-    font-size: 0.7rem; font-weight: 700;
-    padding: 2px 8px; border-radius: 3px;
-    background: var(--green-dim); color: var(--green);
-    border: 1px solid rgba(30,171,90,0.3);
-    transition: all 0.25s;
-}
-.strategy-mode-badge.aggressive { background: var(--amber-dim); color: var(--amber); border-color: rgba(232,160,32,0.3); }
-.strategy-mode-badge.max-aggro  { background: var(--red-dim);   color: var(--red);   border-color: rgba(224,64,64,0.3); }
-.strategy-value { font-size: 0.82rem; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
-
-.strategy-slider {
-    -webkit-appearance: none; width: 100%; height: 3px;
-    border-radius: 2px; background: var(--border-2); outline: none; cursor: pointer;
-}
-.strategy-slider::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 14px; height: 14px;
-    border-radius: 50%; background: var(--gold-l); cursor: pointer;
-    transition: transform 0.15s;
-}
-.strategy-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
-.strategy-scale { display: flex; justify-content: space-between; font-size: 0.64rem; color: var(--text-3); font-weight: 500; }
-.strategy-hint { font-size: 0.7rem; color: var(--text-2); line-height: 1.5; font-style: italic; }
-
 /* Sidebar buttons */
 .sidebar-btn {
     display: flex; align-items: center; justify-content: center; gap: 7px;
@@ -443,22 +408,7 @@ input:checked + .toggle-track::after { background: #fff; transform: translateX(1
     border-radius: var(--r-sm); padding: 3px 10px; color: var(--text-1);
 }
 
-/* Tabs */
-.tab-bar {
-    display: flex; gap: 4px;
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: var(--r); padding: 4px;
-}
-.tab {
-    flex: 1; padding: 8px 10px; border-radius: var(--r-sm);
-    font-size: 0.78rem; font-weight: 600; cursor: pointer;
-    border: none; background: transparent;
-    color: var(--text-2); transition: all 0.15s;
-}
-.tab.active { background: var(--surface-3); color: var(--text-1); }
-.tab-panel { display: flex; flex-direction: column; gap: 8px; }
-
-/* Safe tips */
+/* Tips */
 .tip-top {
     background: var(--green-dim); border: 1px solid rgba(30,171,90,0.25);
     border-radius: var(--r); padding: 16px 18px;
@@ -479,42 +429,6 @@ input:checked + .toggle-track::after { background: #fff; transform: translateX(1
 .tip-rank { font-size: 0.68rem; color: var(--text-3); font-weight: 600; min-width: 24px; }
 .tip-score { font-size: 1rem; font-weight: 800; color: var(--text-1); }
 .tip-xp-val { font-size: 0.78rem; font-weight: 700; color: var(--blue); }
-
-/* Pool tips */
-.pool-mode-banner {
-    background: var(--amber-dim); border: 1px solid rgba(232,160,32,0.25);
-    border-radius: var(--r-sm); padding: 9px 12px;
-    font-size: 0.73rem; color: var(--amber); font-weight: 500; line-height: 1.5;
-}
-.pool-top {
-    background: var(--amber-dim); border: 1px solid rgba(232,160,32,0.25);
-    border-radius: var(--r); padding: 16px 18px;
-}
-.pool-top-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.pool-top-score { font-size: 1.8rem; font-weight: 900; color: var(--gold-l); letter-spacing: -1px; }
-.pool-top-xp { font-size: 0.78rem; font-weight: 600; color: var(--text-2); }
-.pool-stats {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-    border-top: 1px solid rgba(232,160,32,0.18); padding-top: 10px;
-}
-.pool-stat { display: flex; flex-direction: column; gap: 2px; }
-.pool-stat-label { font-size: 0.65rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
-.pool-stat-value { font-size: 0.88rem; font-weight: 700; }
-.pool-stat-value.positive { color: var(--green); }
-.pool-stat-value.negative { color: var(--red); }
-.pool-stat-value.neutral  { color: var(--text-2); }
-
-.pool-row {
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: var(--r-sm); padding: 9px 14px;
-    display: flex; align-items: center; justify-content: space-between;
-    font-size: 0.78rem;
-}
-.pool-row-score { font-weight: 800; color: var(--text-1); }
-.pool-row-xp { color: var(--text-2); }
-.pool-row-edge { font-weight: 700; }
-.pool-row-edge.pos { color: var(--green); }
-.pool-row-edge.neg { color: var(--red); }
 
 /* Elo History */
 .field-label {

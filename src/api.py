@@ -230,23 +230,34 @@ def get_matches(force: bool = False):
     # 2. API Call — h2h only (1 request). Totals are fetched lazily per match on /api/predict.
     engine = OddsApiEngine()
     data = engine.get_world_cup_odds(market="h2h")
-    
+
     results = []
+    _bot_inputs = {}  # match_id -> {score_matrix, true_probs, prob_over25} — not saved to cache
     for m in data:
         home_raw = m.get("home_team")
         away_raw = m.get("away_team")
         try:
+            event_id = m.get("id", "")
+            # Merge cached totals using the same code path as /api/predict so
+            # top_tip in the fixture list always matches the detail view.
+            m = _fetch_or_cache_totals(event_id, m)
             odds = extract_odds(m)
-            
+
             try:
                 math_engine.ensure_teams_exist(
                     TEAM_MAPPING.get(home_raw, home_raw),
                     TEAM_MAPPING.get(away_raw, away_raw),
                 )
                 true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
-                prob_home = true_probs["home"]
+
+                # Elo-Blend (identisch zu /api/predict) damit top_tip auf der
+                # Fixture-Liste mit dem Detail-View übereinstimmt.
+                elo_home_share, elo_away_share = math_engine.get_match_elo_probabilities(home_raw, away_raw)
+                win_loss_pool = true_probs["home"] + true_probs["away"]
+                prob_home = (true_probs["home"] / win_loss_pool * 0.7 + elo_home_share * 0.3) * win_loss_pool
+                prob_away = (true_probs["away"] / win_loss_pool * 0.7 + elo_away_share * 0.3) * win_loss_pool
                 prob_draw = true_probs["draw"]
-                prob_away = true_probs["away"]
+
                 if "over25" in odds and "under25" in odds:
                     raw_over = 1.0 / odds["over25"]
                     raw_under = 1.0 / odds["under25"]
@@ -259,7 +270,7 @@ def get_matches(force: bool = False):
                 )
                 sm = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
                 df_xp = math_engine.calculate_expected_points(sm, is_ko_phase=False)
-                
+
                 if not df_xp.empty:
                     top_tip = df_xp.iloc[0]["Tipp"]
                     max_xp = float(df_xp.iloc[0]["xP"])
@@ -267,12 +278,16 @@ def get_matches(force: bool = False):
                     top_tip = "N/A"
                     max_xp = 0.0
 
-                # Edge: wo widerspricht die reine Elo dem Markt? Vergleich im
-                # Sieg/Niederlage-Pool (beide 2-Wege), damit Äpfel mit Äpfeln.
-                elo_home_share, _ = math_engine.get_match_elo_probabilities(home_raw, away_raw)
-                pool = prob_home + prob_away
-                market_home_share = (prob_home / pool) if pool > 0 else 0.5
+                market_home_share = (true_probs["home"] / win_loss_pool) if win_loss_pool > 0 else 0.5
                 edge_home = elo_home_share - market_home_share
+
+                # Store inputs for bot computation in archive section (not cached)
+                if event_id and top_tip != "N/A":
+                    _bot_inputs[event_id] = {
+                        "score_matrix": sm,
+                        "true_probs": true_probs,
+                        "prob_over25": prob_over25,
+                    }
             except Exception:
                 top_tip = "N/A"
                 max_xp = 0.0
@@ -327,6 +342,7 @@ def get_matches(force: bool = False):
         print(f"Fehler beim Speichern des Caches: {e}")
 
     # 4. Archive: log new pre-match snapshots (only first time a match_id is seen)
+    #    Also backfill bots for existing entries that predate this feature.
     try:
         archive = {}
         if os.path.exists(archive_json_path):
@@ -335,45 +351,82 @@ def get_matches(force: bool = False):
 
         changed = False
         for r in results:
-            if r["id"] in archive or r["top_tip"] == "N/A":
+            if r["top_tip"] == "N/A":
                 continue
 
-            home_norm = TEAM_MAPPING.get(r["home_team"], r["home_team"])
-            away_norm = TEAM_MAPPING.get(r["away_team"], r["away_team"])
-            elo_rows_home = math_engine.elo_df.loc[math_engine.elo_df['team_name'] == home_norm, 'elo_rating']
-            elo_rows_away = math_engine.elo_df.loc[math_engine.elo_df['team_name'] == away_norm, 'elo_rating']
-            elo_home_val = float(elo_rows_home.values[0]) if not elo_rows_home.empty else 1500.0
-            elo_away_val = float(elo_rows_away.values[0]) if not elo_rows_away.empty else 1500.0
+            bot_in = _bot_inputs.get(r["id"])
+            bots = None
+            if bot_in:
+                try:
+                    bots = math_engine.compute_bot_tips(
+                        score_matrix=bot_in["score_matrix"],
+                        true_probs=bot_in["true_probs"],
+                        prob_over25=bot_in["prob_over25"],
+                        home_team=r["home_team"],
+                        away_team=r["away_team"],
+                        match_id=r["id"],
+                        is_ko_phase=False,
+                        chalk_tip=r["top_tip"],
+                        chalk_xp=float(r["max_xp"]),
+                    )
+                except Exception as e:
+                    print(f"Bot tips failed for {r['id']}: {e}")
 
-            archive[r["id"]] = {
-                "metadata": {
-                    "home_team": r["home_team"],
-                    "away_team": r["away_team"],
-                    "home_disp": r["home_disp"],
-                    "away_disp": r["away_disp"],
-                    "is_ko_phase": False
-                },
-                "pre_match_snapshot": {
-                    "timestamp_recorded": datetime.now(timezone.utc).isoformat(),
-                    "odds": r["odds"],
-                    "elo_state": {
-                        "home_rating": elo_home_val,
-                        "away_rating": elo_away_val
+            if r["id"] not in archive:
+                # New entry
+                home_norm = TEAM_MAPPING.get(r["home_team"], r["home_team"])
+                away_norm = TEAM_MAPPING.get(r["away_team"], r["away_team"])
+                elo_rows_home = math_engine.elo_df.loc[math_engine.elo_df['team_name'] == home_norm, 'elo_rating']
+                elo_rows_away = math_engine.elo_df.loc[math_engine.elo_df['team_name'] == away_norm, 'elo_rating']
+                elo_home_val = float(elo_rows_home.values[0]) if not elo_rows_home.empty else 1500.0
+                elo_away_val = float(elo_rows_away.values[0]) if not elo_rows_away.empty else 1500.0
+
+                archive[r["id"]] = {
+                    "metadata": {
+                        "home_team": r["home_team"],
+                        "away_team": r["away_team"],
+                        "home_disp": r["home_disp"],
+                        "away_disp": r["away_disp"],
+                        "is_ko_phase": False
+                    },
+                    "pre_match_snapshot": {
+                        "timestamp_recorded": datetime.now(timezone.utc).isoformat(),
+                        "odds": r["odds"],
+                        "elo_state": {
+                            "home_rating": elo_home_val,
+                            "away_rating": elo_away_val
+                        }
+                    },
+                    "prediction": {
+                        "top_tip": r["top_tip"],
+                        "user_tip": None,
+                        "max_xp": float(r["max_xp"]),
+                        "bots": bots or {},
+                    },
+                    "post_match_result": {
+                        "status": "pending",
+                        "actual_score": None,
+                        "points_earned": None,
+                        "algo_points": None,
+                        "bot_points": {k: None for k in (bots or {})},
                     }
-                },
-                "prediction": {
-                    "top_tip": r["top_tip"],
-                    "user_tip": None,
-                    "max_xp": float(r["max_xp"])
-                },
-                "post_match_result": {
-                    "status": "pending",
-                    "actual_score": None,
-                    "points_earned": None,
-                    "algo_points": None
                 }
-            }
-            changed = True
+                changed = True
+            elif bots and "bots" not in archive[r["id"]].get("prediction", {}):
+                # Backfill bots for existing entry that predates this feature
+                archive[r["id"]]["prediction"]["bots"] = bots
+                pmr = archive[r["id"]]["post_match_result"]
+                if "bot_points" not in pmr:
+                    actual = pmr.get("actual_score")
+                    is_ko = archive[r["id"]]["metadata"].get("is_ko_phase", False)
+                    if actual:
+                        pmr["bot_points"] = {
+                            bot: MathEngine.calculate_actual_points(info["tip"], actual, is_ko)
+                            for bot, info in bots.items() if info.get("tip")
+                        }
+                    else:
+                        pmr["bot_points"] = {k: None for k in bots}
+                changed = True
 
         if changed:
             os.makedirs(os.path.dirname(archive_json_path), exist_ok=True)
@@ -391,7 +444,6 @@ def predict_match(payload: dict):
     is_ko = payload.get("is_ko", False)
     home_resting = payload.get("home_resting", False)
     away_resting = payload.get("away_resting", False)
-    aggressiveness = float(payload.get("aggressiveness", 0.0))
 
     if not match_data:
         raise HTTPException(status_code=400, detail="Match data required")
@@ -447,7 +499,6 @@ def predict_match(payload: dict):
 
         score_matrix = math_engine.generate_exact_score_matrix(xg_home, xg_away, max_goals=10)
         xp_df = math_engine.calculate_expected_points(score_matrix, is_ko_phase=is_ko)
-        pool_df = math_engine.calculate_pool_optimal_tips(score_matrix, is_ko_phase=is_ko, aggressiveness=aggressiveness)
 
         matrix_dict = {}
         for row in score_matrix.index:
@@ -462,8 +513,7 @@ def predict_match(payload: dict):
             "xg_away": xg_away,
             "matrix": matrix_dict,
             "max_prob": max_prob,
-            "xp_tips": xp_df.to_dict(orient="records"),
-            "pool_tips": pool_df.to_dict(orient="records")
+            "xp_tips": xp_df.to_dict(orient="records")
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -636,9 +686,56 @@ def perform_elo_sync() -> dict:
                     MathEngine.calculate_actual_points(algo_tip, actual_score_str, is_ko)
                     if algo_tip else None
                 )
+                bots = archive[match_id]["prediction"].get("bots", {})
+                if bots:
+                    archive[match_id]["post_match_result"]["bot_points"] = {
+                        bot: MathEngine.calculate_actual_points(info["tip"], actual_score_str, is_ko)
+                        for bot, info in bots.items() if info.get("tip")
+                    }
                 graded += 1
 
-            if graded > 0 or retro > 0:
+            # Reconstruction: Algo-Tipps für completed Einträge ohne pre_match_snapshot
+            # aus der Elo-only-Pipeline ableiten (z. B. Matches vor App-Start).
+            ct_map = {m.get('id'): m.get('commence_time') for m in completed_matches}
+            reconstructed = 0
+            for mid, entry in archive.items():
+                if entry.get('post_match_result', {}).get('status') != 'completed':
+                    continue
+                if entry.get('pre_match_snapshot') is not None:
+                    continue
+                actual = entry.get('post_match_result', {}).get('actual_score')
+                if not actual:
+                    continue
+
+                home = entry['metadata']['home_team']
+                away = entry['metadata']['away_team']
+                is_ko_match = entry['metadata'].get('is_ko_phase', False)
+
+                tip, max_xp = math_engine.reconstruct_algo_tip(
+                    home, away, commence_time=ct_map.get(mid), is_ko=is_ko_match
+                )
+                if not tip:
+                    continue
+
+                # Idempotenz: nur schreiben, wenn sich der Tipp ändert oder das Flag fehlt
+                if (entry['prediction'].get('top_tip') == tip
+                        and entry['prediction'].get('algo_reconstructed') is True):
+                    continue
+
+                entry['prediction']['top_tip'] = tip
+                entry['prediction']['max_xp'] = max_xp
+                entry['prediction']['algo_reconstructed'] = True
+                entry['post_match_result']['algo_points'] = MathEngine.calculate_actual_points(
+                    tip, actual, is_ko_match
+                )
+                user_tip = entry['prediction'].get('user_tip')
+                if user_tip:
+                    entry['post_match_result']['points_earned'] = MathEngine.calculate_actual_points(
+                        user_tip, actual, is_ko_match
+                    )
+                reconstructed += 1
+
+            if graded > 0 or retro > 0 or reconstructed > 0:
                 os.makedirs(os.path.dirname(archive_json_path), exist_ok=True)
                 with open(archive_json_path, 'w', encoding='utf-8') as f:
                     json.dump(archive, f, indent=4)
@@ -646,6 +743,8 @@ def perform_elo_sync() -> dict:
                     print(f"Archive grading completed: {graded} predictions scored.")
                 if retro:
                     print(f"Retroactive archive entries created: {retro} matches.")
+                if reconstructed:
+                    print(f"Algo tips reconstructed: {reconstructed} matches (Elo-only pipeline).")
         except Exception as e:
             print(f"Archive grading failed: {e}")
 

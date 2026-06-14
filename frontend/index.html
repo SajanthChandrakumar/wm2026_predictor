@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WM 2026 Predictor</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
     <div class="app-container">
@@ -91,24 +91,6 @@
 
             <div class="sidebar-divider"></div>
 
-            <div class="sidebar-section">
-                <div class="section-label">Pool Strategy</div>
-                <div class="strategy-widget">
-                    <div class="strategy-header">
-                        <span class="strategy-mode-badge" id="strategy-badge">Safe</span>
-                        <span class="strategy-value" id="aggressiveness-label">0.0</span>
-                    </div>
-                    <input type="range" id="aggressiveness-slider" class="strategy-slider" min="0" max="1.5" step="0.1" value="0">
-                    <div class="strategy-scale">
-                        <span>Chalk</span>
-                        <span>Contrarian</span>
-                    </div>
-                    <p class="strategy-hint" id="strategy-hint">Tipping the most likely score. Best when you're leading.</p>
-                </div>
-            </div>
-
-            <div class="sidebar-divider"></div>
-
             <button id="refresh-btn" class="sidebar-btn primary">
                 Refresh Data
             </button>
@@ -166,6 +148,7 @@
                     </div>
                 </div>
                 <div id="h2h-panel" style="margin-bottom:24px;"></div>
+                <div id="bot-scoreboard" style="margin-bottom:24px;"></div>
                 <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:12px;">Match History</div>
                 <div id="performance-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;"></div>
             </div>
@@ -206,17 +189,7 @@
                     <section class="tips-panel">
                         <div class="glass-card odds-card" id="odds-card"></div>
 
-                        <div class="tab-bar">
-                            <button class="tab active" id="tab-safe" onclick="switchTab('safe')">Safe Play</button>
-                            <button class="tab" id="tab-pool" onclick="switchTab('pool')">Pool Strategy</button>
-                        </div>
-
-                        <div id="panel-safe" class="tab-panel">
-                            <div id="xp-container"></div>
-                        </div>
-                        <div id="panel-pool" class="tab-panel" style="display:none;">
-                            <div id="pool-container"></div>
-                        </div>
+                        <div id="xp-container"></div>
 
                         <button id="adopt-tip-btn" class="sidebar-btn primary" style="width:100%;margin-top:14px;">
                             Tipp übernehmen
@@ -235,6 +208,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=10"></script>
 </body>
 </html>
