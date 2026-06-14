@@ -61,7 +61,7 @@ pip install -r requirements.txt
 echo "ODDS_API_KEY=your_key_here" > .env
 
 # 4. Start the server
-uvicorn src.api:app --reload
+uvicorn src.main:app --reload
 ```
 
 Open **http://127.0.0.1:8000** in your browser.
