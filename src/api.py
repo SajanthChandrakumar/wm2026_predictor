@@ -62,29 +62,38 @@ math_engine = MathEngine(elo_csv_path, TEAM_MAPPING)
 
 def extract_odds(match):
     """
-    Konsens-Quoten: Median über alle Buchmacher statt erstbester Quote.
-    Der Markt-Median ist robuster gegen Ausreisser einzelner Anbieter.
+    Konsens-Quoten (Median) aus API-Football Bookmaker-Markten.
+    Bet ID 1 = "Match Winner" (Home/Draw/Away).
+    Bet ID 5 = "Goals Over/Under" (Over 2.5 / Under 2.5).
     """
-    home_team = match.get("home_team")
-    away_team = match.get("away_team")
     collected = {"home": [], "draw": [], "away": [], "over25": [], "under25": []}
     for bookie in match.get("bookmakers", []):
-        for market in bookie.get("markets", []):
-            if market["key"] == "h2h":
-                for outcome in market.get("outcomes", []):
-                    if outcome["name"] == home_team:
-                        collected["home"].append(outcome["price"])
-                    elif outcome["name"] == away_team:
-                        collected["away"].append(outcome["price"])
-                    elif outcome["name"] == "Draw":
-                        collected["draw"].append(outcome["price"])
-            elif market["key"] == "totals":
-                for outcome in market.get("outcomes", []):
-                    if outcome.get("point") == 2.5:
-                        if outcome["name"] == "Over":
-                            collected["over25"].append(outcome["price"])
-                        elif outcome["name"] == "Under":
-                            collected["under25"].append(outcome["price"])
+        for bet in bookie.get("bets", []):
+            bet_id = bet.get("id")
+            if bet_id == 1:
+                for v in bet.get("values", []):
+                    try:
+                        odd = float(v["odd"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
+                    name = v.get("value")
+                    if name == "Home":
+                        collected["home"].append(odd)
+                    elif name == "Draw":
+                        collected["draw"].append(odd)
+                    elif name == "Away":
+                        collected["away"].append(odd)
+            elif bet_id == 5:
+                for v in bet.get("values", []):
+                    try:
+                        odd = float(v["odd"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
+                    name = v.get("value", "")
+                    if name == "Over 2.5":
+                        collected["over25"].append(odd)
+                    elif name == "Under 2.5":
+                        collected["under25"].append(odd)
     odds = {k: statistics.median(v) for k, v in collected.items() if v}
     required_keys = ["home", "draw", "away"]
     missing_keys = [k for k in required_keys if k not in odds]
@@ -106,7 +115,9 @@ def _dynamic_ttl(matches: list) -> int:
     now = time.time()
     soonest = None
     for m in matches:
-        ct = m.get("raw_match", m).get("commence_time", "")
+        # commence_time is mirrored at the top level so we don't have to
+        # care whether raw_match is API-Football (fixture.date) or legacy.
+        ct = m.get("commence_time") or m.get("raw_match", {}).get("fixture", {}).get("date", "")
         if ct:
             try:
                 dt = datetime.fromisoformat(ct.replace("Z", "+00:00"))
@@ -203,34 +214,40 @@ def get_matches(force: bool = False):
     Holt die Spiele. Nutzt den Cache, es sei denn, force=True wird übergeben.
     """
     math_engine.reload_elo_data()
-    # 1. Cache prüfen — TTL is dynamic based on soonest kickoff time
+    # 1. Cache prüfen — TTL is dynamic based on soonest kickoff time.
+    #    Skip the cache if its data is in the legacy Odds-API shape (no "fixture" key
+    #    in raw_match) so we don't crash on stale cross-API entries after migration.
     if not force and os.path.exists(cache_file_path):
         try:
             with open(cache_file_path, "r", encoding="utf-8") as f:
                 cached_data = json.load(f)
                 timestamp = cached_data.get("timestamp", 0)
                 data = cached_data.get("data")
-                if data is not None:
-                    ttl = _dynamic_ttl(data)
-                    if time.time() - timestamp < ttl:
-                        return _enrich_edge(data)
+                if data:
+                    sample_raw = (data[0] or {}).get("raw_match", {})
+                    if "fixture" in sample_raw:  # new API-Football shape
+                        ttl = _dynamic_ttl(data)
+                        if time.time() - timestamp < ttl:
+                            return _enrich_edge(data)
         except json.JSONDecodeError:
             pass
-        
-    # 2. API Call — h2h only (1 request). Totals are fetched lazily per match on /api/predict.
+
+    # 2. API Call — fetches /fixtures + /odds and merges them (2 requests total).
+    #    API-Football returns both Match Winner and Over/Under markets per bookmaker
+    #    in a single payload, so no separate totals call is needed.
     engine = OddsApiEngine()
-    data = engine.get_world_cup_odds(market="h2h")
+    data = engine.get_world_cup_odds()
 
     results = []
     _bot_inputs = {}  # match_id -> {score_matrix, true_probs, prob_over25} — not saved to cache
     for m in data:
-        home_raw = m.get("home_team")
-        away_raw = m.get("away_team")
+        home_raw = m.get("teams", {}).get("home", {}).get("name")
+        away_raw = m.get("teams", {}).get("away", {}).get("name")
+        if not home_raw or not away_raw:
+            continue
         try:
-            event_id = m.get("id", "")
-            # Merge cached totals using the same code path as /api/predict so
-            # top_tip in the fixture list always matches the detail view.
-            m = _fetch_or_cache_totals(event_id, m)
+            event_id = str(m.get("fixture", {}).get("id", ""))
+            commence_time = m.get("fixture", {}).get("date", "")
             odds = extract_odds(m)
 
             try:
@@ -286,7 +303,7 @@ def get_matches(force: bool = False):
                 edge_home = None
 
             results.append({
-                "id": m.get("id"),
+                "id": event_id,
                 "home_team": home_raw,
                 "away_team": away_raw,
                 "home_disp": DISPLAY_MAPPING.get(home_raw, home_raw),
@@ -297,6 +314,7 @@ def get_matches(force: bool = False):
                 "elo_home_share": elo_home_share,
                 "market_home_share": market_home_share,
                 "edge_home": edge_home,
+                "commence_time": commence_time,
                 "raw_match": m
             })
         except ValueError:
@@ -325,7 +343,10 @@ def get_matches(force: bool = False):
                 if not odds_changed and not missing_edge:
                     continue  # keep old entry unchanged
             existing_matches[r["id"]] = r
-        merged = sorted(existing_matches.values(), key=lambda m: m.get("raw_match", {}).get("commence_time", ""))
+        merged = sorted(
+            existing_matches.values(),
+            key=lambda m: m.get("commence_time") or m.get("raw_match", {}).get("fixture", {}).get("date", "")
+        )
         with open(cache_file_path, "w", encoding="utf-8") as f:
             json.dump({"timestamp": time.time(), "data": merged}, f, indent=4)
     except Exception as e:
@@ -439,15 +460,19 @@ def predict_match(payload: dict):
         raise HTTPException(status_code=400, detail="Match data required")
 
     try:
-        event_id = match_data.get("id", "")
-        match_data = _fetch_or_cache_totals(event_id, match_data)
+        # API-Football payload: team names live under teams.home.name / teams.away.name,
+        # and Over/Under markets ship in the same /odds response — no extra fetch needed.
+        home_name = match_data.get("teams", {}).get("home", {}).get("name")
+        away_name = match_data.get("teams", {}).get("away", {}).get("name")
+        if not home_name or not away_name:
+            raise HTTPException(status_code=400, detail="Match payload missing teams")
 
         math_engine.ensure_teams_exist(
-            TEAM_MAPPING.get(match_data.get("home_team"), match_data.get("home_team")),
-            TEAM_MAPPING.get(match_data.get("away_team"), match_data.get("away_team")),
+            TEAM_MAPPING.get(home_name, home_name),
+            TEAM_MAPPING.get(away_name, away_name),
         )
         odds = extract_odds(match_data)
-        
+
         true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
         b_prob_home = true_probs["home"]
         b_prob_draw = true_probs["draw"]
@@ -460,8 +485,8 @@ def predict_match(payload: dict):
             prob_over25 = None
 
         elo_prob_home, elo_prob_away = math_engine.get_match_elo_probabilities(
-            match_data.get("home_team"),
-            match_data.get("away_team"),
+            home_name,
+            away_name,
             home_resting,
             away_resting
         )
@@ -588,8 +613,12 @@ def perform_elo_sync() -> dict:
             except Exception:
                 pass
 
-        if time.time() - scores_cache.get("timestamp", 0) < SCORES_CACHE_TTL:
-            completed_matches = scores_cache.get("data", [])
+        # Stale scores_cache from the old Odds-API client is in a different shape.
+        # Invalidate if first entry doesn't look like an API-Football fixture.
+        cached_scores = scores_cache.get("data") or []
+        cache_shape_ok = (not cached_scores) or ("fixture" in cached_scores[0])
+        if cache_shape_ok and time.time() - scores_cache.get("timestamp", 0) < SCORES_CACHE_TTL:
+            completed_matches = cached_scores
             print("Elo sync: using cached scores (< 30 min old)")
         else:
             completed_matches = odds_engine.get_completed_scores(days_from=3)
@@ -600,16 +629,42 @@ def perform_elo_sync() -> dict:
             except Exception as e:
                 print(f"Scores cache write failed: {e}")
 
+        # Shim layer: MathEngine.update_elo_from_api_scores still expects the legacy
+        # Odds-API shape ({id, completed, home_team, away_team, scores: [{name, score}]}).
+        # We translate here so the engine itself stays untouched.
+        legacy_scores = []
+        for m in completed_matches:
+            goals = m.get("goals") or {}
+            teams = m.get("teams") or {}
+            fixture = m.get("fixture") or {}
+            if goals.get("home") is None or goals.get("away") is None:
+                continue
+            home = (teams.get("home") or {}).get("name")
+            away = (teams.get("away") or {}).get("name")
+            if not home or not away:
+                continue
+            legacy_scores.append({
+                "id": str(fixture.get("id", "")),
+                "completed": True,
+                "home_team": home,
+                "away_team": away,
+                "commence_time": fixture.get("date", ""),
+                "scores": [
+                    {"name": home, "score": str(goals["home"])},
+                    {"name": away, "score": str(goals["away"])},
+                ],
+            })
+
         updates = math_engine.update_elo_from_api_scores(
-            api_scores=completed_matches,
+            api_scores=legacy_scores,
             processed_matches_file=processed_json_path
         )
         if updates > 0:
             math_engine.elo_df.to_csv(math_engine.elo_csv_path, index=False)
             print(f"Automated Elo sync completed: {updates} updates.")
 
-        # Post-match grading: score archived predictions against actual results
-        # Also create retroactive entries for completed matches played before the app started
+        # Post-match grading: score archived predictions against actual results.
+        # Also create retroactive entries for matches played before the app started.
         try:
             archive = {}
             if os.path.exists(archive_json_path):
@@ -619,21 +674,26 @@ def perform_elo_sync() -> dict:
             graded = 0
             retro = 0
             for match in completed_matches:
-                match_id = match.get("id")
-                if not match_id or not match.get("completed"):
+                fixture = match.get("fixture") or {}
+                teams = match.get("teams") or {}
+                goals = match.get("goals") or {}
+                match_id = str(fixture.get("id", ""))
+                if not match_id:
+                    continue
+                # Only FT (full time) — API-Football uses status codes
+                if (fixture.get("status") or {}).get("short") not in ("FT", "AET", "PEN"):
                     continue
 
-                home_team = match.get("home_team")
-                away_team = match.get("away_team")
-                scores = match.get("scores") or []
-                home_score = next((s["score"] for s in scores if s["name"] == home_team), None)
-                away_score = next((s["score"] for s in scores if s["name"] == away_team), None)
-                if home_score is None or away_score is None:
+                home_team = (teams.get("home") or {}).get("name")
+                away_team = (teams.get("away") or {}).get("name")
+                home_score = goals.get("home")
+                away_score = goals.get("away")
+                if home_team is None or away_team is None or home_score is None or away_score is None:
                     continue
                 try:
                     home_score = int(home_score)
                     away_score = int(away_score)
-                except ValueError:
+                except (TypeError, ValueError):
                     continue
 
                 actual_score_str = f"{home_score}:{away_score}"
@@ -686,7 +746,10 @@ def perform_elo_sync() -> dict:
 
             # Reconstruction: Algo-Tipps für completed Einträge ohne pre_match_snapshot
             # aus der Elo-only-Pipeline ableiten (z. B. Matches vor App-Start).
-            ct_map = {m.get('id'): m.get('commence_time') for m in completed_matches}
+            ct_map = {
+                str((m.get('fixture') or {}).get('id', '')): (m.get('fixture') or {}).get('date', '')
+                for m in completed_matches
+            }
             reconstructed = 0
             for mid, entry in archive.items():
                 if entry.get('post_match_result', {}).get('status') != 'completed':
