@@ -711,23 +711,36 @@ def perform_elo_sync() -> dict:
                 away = entry['metadata']['away_team']
                 is_ko_match = entry['metadata'].get('is_ko_phase', False)
 
-                tip, max_xp = math_engine.reconstruct_algo_tip(
-                    home, away, commence_time=ct_map.get(mid), is_ko=is_ko_match
+                bots = math_engine.reconstruct_bot_tips(
+                    home, away, str(mid), commence_time=ct_map.get(mid), is_ko=is_ko_match
                 )
+                if not bots:
+                    continue
+                tip = bots["chalk"]["tip"]
+                max_xp = bots["chalk"]["xp"]
                 if not tip:
                     continue
 
-                # Idempotenz: nur schreiben, wenn sich der Tipp ändert oder das Flag fehlt
-                if (entry['prediction'].get('top_tip') == tip
-                        and entry['prediction'].get('algo_reconstructed') is True):
+                # Idempotenz: skip wenn Tipp + Flag + Bots schon korrekt
+                already_done = (
+                    entry['prediction'].get('top_tip') == tip
+                    and entry['prediction'].get('algo_reconstructed') is True
+                    and entry['prediction'].get('bots')
+                )
+                if already_done:
                     continue
 
                 entry['prediction']['top_tip'] = tip
                 entry['prediction']['max_xp'] = max_xp
                 entry['prediction']['algo_reconstructed'] = True
+                entry['prediction']['bots'] = bots
                 entry['post_match_result']['algo_points'] = MathEngine.calculate_actual_points(
                     tip, actual, is_ko_match
                 )
+                entry['post_match_result']['bot_points'] = {
+                    name: MathEngine.calculate_actual_points(info["tip"], actual, is_ko_match)
+                    for name, info in bots.items() if info.get("tip")
+                }
                 user_tip = entry['prediction'].get('user_tip')
                 if user_tip:
                     entry['post_match_result']['points_earned'] = MathEngine.calculate_actual_points(

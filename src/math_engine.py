@@ -513,19 +513,16 @@ class MathEngine:
             return float(team_history[0]['elo'])
         return float(valid[-1]['elo'])
 
-    def reconstruct_algo_tip(
+    def _reconstruct_pipeline(
         self,
         home_team: str,
         away_team: str,
         commence_time: str = None,
         is_ko: bool = False,
-    ) -> tuple:
+    ):
         """
-        Rekonstruiert einen Algo-Tipp für ein Match ohne historische Quoten
-        (z. B. wenn das Match vor App-Start lief). Pipeline: historische
-        Pre-Match-Elo → H/D/A (heuristische Draw-Rate) → xG → Score-Matrix →
-        Top-xP-Tipp. commence_time im ISO-Format; None → Baseline-Elo.
-        Returns (tip_str, max_xp) oder (None, None) bei Fehler.
+        Pipeline: historische Pre-Match-Elo → H/D/A → xG → Score-Matrix → Top-xP-Tipp.
+        Returns (score_matrix, p_home, p_draw, p_away, tip, xp) — alle None bei Fehler.
         """
         before_ts = None
         if commence_time:
@@ -557,7 +554,7 @@ class MathEngine:
         try:
             xg_h, xg_a = self.derive_xg_from_odds(p_home, p_draw, p_away, prob_over25=None)
         except Exception:
-            return None, None
+            return None, None, None, None, None, None
 
         if is_ko:
             base_matrix = self.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
@@ -570,5 +567,53 @@ class MathEngine:
         xp_df = self.calculate_expected_points(score_matrix, is_ko_phase=is_ko)
 
         if xp_df.empty:
-            return None, None
-        return xp_df.iloc[0]['Tipp'], float(xp_df.iloc[0]['xP'])
+            return None, None, None, None, None, None
+        return score_matrix, p_home, p_draw, p_away, xp_df.iloc[0]['Tipp'], float(xp_df.iloc[0]['xP'])
+
+    def reconstruct_algo_tip(
+        self,
+        home_team: str,
+        away_team: str,
+        commence_time: str = None,
+        is_ko: bool = False,
+    ) -> tuple:
+        """
+        Rekonstruiert einen Algo-Tipp für ein Match ohne historische Quoten
+        (z. B. wenn das Match vor App-Start lief). Returns (tip, max_xp).
+        """
+        _, _, _, _, tip, xp = self._reconstruct_pipeline(
+            home_team, away_team, commence_time, is_ko
+        )
+        return tip, xp
+
+    def reconstruct_bot_tips(
+        self,
+        home_team: str,
+        away_team: str,
+        match_id: str,
+        commence_time: str = None,
+        is_ko: bool = False,
+    ) -> dict | None:
+        """
+        Bot-Tipps für ein Match ohne historische Quoten. odds_pure ist
+        semantisch nicht definiert ohne Quoten — fällt deshalb auf die
+        Elo-Wahrscheinlichkeiten als "true_probs" zurück (was für diese Matches
+        odds_pure ≈ elo_pure ≈ chalk macht).
+        """
+        sm, p_home, p_draw, p_away, tip, xp = self._reconstruct_pipeline(
+            home_team, away_team, commence_time, is_ko
+        )
+        if sm is None:
+            return None
+        true_probs = {"home": p_home, "draw": p_draw, "away": p_away}
+        return self.compute_bot_tips(
+            score_matrix=sm,
+            true_probs=true_probs,
+            prob_over25=None,
+            home_team=home_team,
+            away_team=away_team,
+            match_id=match_id,
+            is_ko_phase=is_ko,
+            chalk_tip=tip,
+            chalk_xp=xp,
+        )
