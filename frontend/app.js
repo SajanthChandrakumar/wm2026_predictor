@@ -576,7 +576,7 @@ async function loadPerformanceView() {
     let hasReconstructed = false;
 
     // Bot accumulators: {botName: {pts, tipped, tendency}}
-    const BOT_NAMES = ['chalk', 'odds_pure', 'elo_pure', 'draw_hunter', 'random'];
+    const BOT_NAMES = ['chalk', 'odds_pure', 'elo_pure', 'draw_hunter', 'random', 'broker', 'professor', 'rebel', 'sniper', 'gambler'];
     const botStats = {};
     BOT_NAMES.forEach(b => { botStats[b] = { pts: 0, tipped: 0, tendency: 0 }; });
 
@@ -658,7 +658,7 @@ async function loadPerformanceView() {
                </div>`;
 
         // Bot rows
-        const BOT_SHORT = { chalk: 'Chalk', odds_pure: 'Odds', elo_pure: 'Elo', draw_hunter: 'Draw', random: 'Rnd' };
+        const BOT_SHORT = { chalk: 'Chalk', odds_pure: 'Odds', elo_pure: 'Elo', draw_hunter: 'Draw', random: 'Rnd', broker: 'Quoten', professor: 'Elo', rebel: 'Rebell', sniper: 'Sniper', gambler: 'Zocker' };
         const bots = match.prediction?.bots ?? {};
         const botPts = match.post_match_result?.bot_points ?? {};
         const botRowsHtml = Object.entries(bots).map(([bot, info]) => {
@@ -767,18 +767,29 @@ async function loadPerformanceView() {
 
     // ── Bot Scoreboard ────────────────────────────────────────────
     const botPanel = document.getElementById('bot-scoreboard');
-    const BOT_LABELS = { chalk: 'Chalk', odds_pure: 'Odds Pure', elo_pure: 'Elo Pure', draw_hunter: 'Draw Hunter', random: 'Random' };
-    const BOT_COLORS = { chalk: 'var(--gold-l)', odds_pure: 'var(--green)', elo_pure: 'var(--blue)', draw_hunter: 'var(--amber)', random: 'var(--text-2)' };
+    const BOT_COLORS = { chalk: 'var(--gold-l)', odds_pure: 'var(--green)', elo_pure: 'var(--blue)', draw_hunter: 'var(--amber)', random: 'var(--text-2)', broker: 'var(--blue)', professor: 'var(--green)', rebel: 'var(--amber)', sniper: 'var(--purple)', gambler: 'var(--text-2)' };
 
     const hasBotData = BOT_NAMES.some(b => botStats[b].tipped > 0);
     if (completedMatches > 0 && hasBotData) {
         // Build rows sorted by total pts desc
+        const botRows = BOT_NAMES.filter(b => botStats[b].tipped > 0).map(b => {
+            let displayName = '';
+            if (b === 'broker') displayName = "💼 Der Broker (Quoten)";
+            else if (b === 'professor') displayName = "🎓 Der Professor (Elo)";
+            else if (b === 'rebel') displayName = "🔥 Der Rebell (Kontra-Feld)";
+            else if (b === 'sniper') displayName = "🎯 Der X-Sniper (Draws)";
+            else if (b === 'gambler') displayName = "🎲 Der Zocker (Zufall)";
+            else displayName = b.charAt(0).toUpperCase() + b.slice(1);
+            
+            return {
+                label: displayName, pts: botStats[b].pts, tipped: botStats[b].tipped,
+                tendency: botStats[b].tendency, color: BOT_COLORS[b] || 'var(--text-3)', isUser: false
+            };
+        });
+        
         const allRows = [
-            { label: 'Du', pts: totalPoints, tipped: completedMatches, tendency: correctTendency, color: 'var(--gold-l)', isUser: true },
-            ...BOT_NAMES.map(b => ({
-                label: BOT_LABELS[b], pts: botStats[b].pts, tipped: botStats[b].tipped,
-                tendency: botStats[b].tendency, color: BOT_COLORS[b], isUser: false
-            }))
+            { label: '★ Du (User)', pts: totalPoints, tipped: completedMatches, tendency: correctTendency, color: 'var(--gold-l)', isUser: true },
+            ...botRows
         ].sort((a, b) => b.pts - a.pts);
 
         const rowsHtml = allRows.map((r, i) => {

@@ -94,5 +94,101 @@
             "match_id": "c12986f447a515fbe641addd786dbb24",
             "elo": 1766.9136084192817
         }
+    ],
+    "Qatar": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1679.0247300519984
+        },
+        {
+            "timestamp": 1781460293.245748,
+            "match_id": "26634922d3f78c146440816023e40de8",
+            "elo": 1679.0247300519984
+        }
+    ],
+    "Switzerland": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1900.9752699480016
+        },
+        {
+            "timestamp": 1781460293.245972,
+            "match_id": "26634922d3f78c146440816023e40de8",
+            "elo": 1900.9752699480016
+        }
+    ],
+    "Brazil": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 2020.0316345250126
+        },
+        {
+            "timestamp": 1781460293.247554,
+            "match_id": "f6c8748a16516e0998f95de14235432a",
+            "elo": 2020.0316345250126
+        }
+    ],
+    "Morocco": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1919.9683654749874
+        },
+        {
+            "timestamp": 1781460293.247726,
+            "match_id": "f6c8748a16516e0998f95de14235432a",
+            "elo": 1919.9683654749874
+        }
+    ],
+    "Haiti": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1490.9412265673207
+        },
+        {
+            "timestamp": 1781460293.249067,
+            "match_id": "5ae41a06735c926eeb7f74006933adce",
+            "elo": 1490.9412265673207
+        }
+    ],
+    "Scotland": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1809.0587734326793
+        },
+        {
+            "timestamp": 1781460293.2492192,
+            "match_id": "5ae41a06735c926eeb7f74006933adce",
+            "elo": 1809.0587734326793
+        }
+    ],
+    "Australia": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1807.6058499822598
+        },
+        {
+            "timestamp": 1781460293.250408,
+            "match_id": "564084f52cc9f1abcc18187c168a7cdc",
+            "elo": 1807.6058499822598
+        }
+    ],
+    "T\u00fcrkiye": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1792.3941500177402
+        },
+        {
+            "timestamp": 1781460293.250543,
+            "match_id": "564084f52cc9f1abcc18187c168a7cdc",
+            "elo": 1792.3941500177402
+        }
     ]
 }

@@ -285,6 +285,7 @@ def get_matches(force: bool = False):
                 if event_id and top_tip != "N/A":
                     _bot_inputs[event_id] = {
                         "score_matrix": sm,
+                        "base_xp_df": df_xp,
                         "true_probs": true_probs,
                         "prob_over25": prob_over25,
                     }
@@ -360,14 +361,13 @@ def get_matches(force: bool = False):
                 try:
                     bots = math_engine.compute_bot_tips(
                         score_matrix=bot_in["score_matrix"],
+                        base_xp_df=bot_in["base_xp_df"],
                         true_probs=bot_in["true_probs"],
                         prob_over25=bot_in["prob_over25"],
                         home_team=r["home_team"],
                         away_team=r["away_team"],
                         match_id=r["id"],
-                        is_ko_phase=False,
-                        chalk_tip=r["top_tip"],
-                        chalk_xp=float(r["max_xp"]),
+                        is_ko_phase=False
                     )
                 except Exception as e:
                     print(f"Bot tips failed for {r['id']}: {e}")
