@@ -13,6 +13,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # Engine switch: set USE_API_FOOTBALL=true in .env when the Odds-API quota is
 # exhausted. The API-Football engine normalizes responses to the legacy
 # Odds-API shape, so the rest of api.py needs no changes.
@@ -69,6 +72,7 @@ if not os.path.exists(elo_csv_path):
     }).to_csv(elo_csv_path, index=False)
 
 math_engine = MathEngine(elo_csv_path, TEAM_MAPPING)
+global_odds_engine = OddsApiEngine()
 
 def extract_odds(match):
     """
@@ -195,16 +199,16 @@ def _enrich_edge(matches: list) -> list:
         m["away_form"] = math_engine.team_forms.get(away_norm, {"form": [], "on_fire": False})
         
         # Inject API-Football H2H and Lineup Diffs
-        if hasattr(odds_engine, "get_h2h"):
+        if hasattr(global_odds_engine, "get_h2h"):
             home_id = m.get("home_team_id")
             away_id = m.get("away_team_id")
             if home_id and away_id:
-                m["h2h"] = odds_engine.get_h2h(home_id, away_id)
+                m["h2h"] = global_odds_engine.get_h2h(home_id, away_id)
             
             fixture_id = m.get("id")
             commence = m.get("commence_time") or m.get("raw_match", {}).get("commence_time")
             if fixture_id and commence:
-                m["lineup_diff"] = odds_engine.get_lineup(fixture_id, commence)
+                m["lineup_diff"] = global_odds_engine.get_lineup(fixture_id, commence)
         
         if m.get("edge_home") is not None:
             continue
