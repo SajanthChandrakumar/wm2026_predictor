@@ -512,3 +512,16 @@ input:checked + .toggle-track::after { background: #fff; transform: translateX(1
 .form-d { background: var(--amber); }
 .form-l { background: var(--red); }
 .fire-badge { font-size: 0.9rem; margin-left: 6px; cursor: help; }
+
+.lineup-alert {
+    width: 100%;
+    background: rgba(255, 69, 58, 0.1);
+    border: 1px solid rgba(255, 69, 58, 0.3);
+    color: var(--danger);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    text-align: center;
+    box-sizing: border-box;
+}

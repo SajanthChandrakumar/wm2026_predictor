@@ -300,13 +300,37 @@ function renderDetail(matchInfo, calc) {
         isKo ? '<span class="meta-chip ko">🏆 K.O. Phase</span>' : '<span class="meta-chip">Group Stage</span>',
         `<span class="meta-chip">xG ${calc.xg_home.toFixed(2)} – ${calc.xg_away.toFixed(2)}</span>`,
     ];
+
+    if (matchInfo.h2h && matchInfo.home_team_id && matchInfo.away_team_id) {
+        const h2h = matchInfo.h2h;
+        const w1 = h2h[matchInfo.home_team_id] || 0;
+        const w2 = h2h[matchInfo.away_team_id] || 0;
+        const d = h2h.draws || 0;
+        if (w1 > 0 || w2 > 0 || d > 0) {
+            metaChips.push(`<span class="meta-chip">⚔️ H2H: ${w1}W - ${d}D - ${w2}L</span>`);
+        }
+    }
+
     document.getElementById('match-meta').innerHTML = metaChips.join('');
 
     // xG row
     const homeFire = matchInfo.home_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
     const awayFire = matchInfo.away_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
 
+    const lineupDiffs = matchInfo.lineup_diff || {};
+    let lineupAlertHtml = '';
+    const homeDiff = lineupDiffs[matchInfo.home_team]?.missing || [];
+    const awayDiff = lineupDiffs[matchInfo.away_team]?.missing || [];
+    
+    if (homeDiff.length > 0 || awayDiff.length > 0) {
+        let msg = [];
+        if (homeDiff.length > 0) msg.push(`<strong>${matchInfo.home_disp}</strong> missing: ${homeDiff.join(', ')}`);
+        if (awayDiff.length > 0) msg.push(`<strong>${matchInfo.away_disp}</strong> missing: ${awayDiff.join(', ')}`);
+        lineupAlertHtml = `<div class="lineup-alert">⚠️ <strong>Lineup Alert:</strong> ${msg.join(' | ')}</div>`;
+    }
+
     document.getElementById('xg-row').innerHTML = `
+        ${lineupAlertHtml}
         <div class="xg-team home">
             <span class="xg-team-name">${matchInfo.home_disp}${homeFire}</span>
             ${renderFormBlocks(matchInfo.home_form?.form)}

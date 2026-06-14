@@ -81,8 +81,116 @@ class OddsApiEngine:
                 continue
             normalized = self._normalize_odds_entry(fixture, odd)
             if normalized:
+                # Attach team IDs so we can use them for H2H later
+                normalized["home_team_id"] = fixture.get("teams", {}).get("home", {}).get("id")
+                normalized["away_team_id"] = fixture.get("teams", {}).get("away", {}).get("id")
                 out.append(normalized)
         return out
+
+    def get_lineup(self, fixture_id: str, commence_time: str) -> dict:
+        """
+        Fetches lineups if commence_time is within 60 mins. Caches the result.
+        Compares starting XI to the last known starting XI to find missing players.
+        """
+        cache_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'lineups_cache.json')
+        try:
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                cache = json.load(f)
+        except Exception:
+            cache = {}
+            
+        if str(fixture_id) in cache:
+            return cache[str(fixture_id)]
+            
+        # Check if within 60 mins of kickoff
+        try:
+            kickoff = datetime.strptime(commence_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+            now = datetime.now(timezone.utc)
+            # Fetch if within 65 minutes
+            if (kickoff - now).total_seconds() > 3900:
+                return {} # Too early
+        except Exception:
+            return {}
+            
+        resp = self._request("/fixtures/lineups", {"fixture": fixture_id})
+        lineups = resp.get("response", [])
+        if not lineups:
+            return {}
+            
+        result = {}
+        for team_lineup in lineups:
+            team_name = team_lineup.get("team", {}).get("name")
+            starters = {str(p["player"]["id"]): p["player"]["name"] for p in team_lineup.get("startXI", [])}
+            
+            # Find last lineup for this team in cache
+            last_starters = {}
+            # Sort keys so we find the most recently cached fixture (assumes ordered dict behavior)
+            for cached_fid, cached_data in cache.items():
+                if team_name in cached_data:
+                    last_starters = cached_data[team_name].get("starters", {})
+                    
+            missing = []
+            if last_starters:
+                for pid, pname in last_starters.items():
+                    if str(pid) not in starters:
+                        missing.append(pname)
+                        
+            result[team_name] = {
+                "starters": starters,
+                "missing": missing
+            }
+            
+        cache[str(fixture_id)] = result
+        with open(cache_path, 'w', encoding='utf-8') as f:
+            json.dump(cache, f, indent=4)
+            
+        return result
+
+    def get_h2h(self, team1_id: int, team2_id: int) -> dict:
+        """
+        Fetches deep H2H history. Caches permanently to save quota.
+        """
+        if not team1_id or not team2_id:
+            return {}
+        cache_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'h2h_cache.json')
+        try:
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                cache = json.load(f)
+        except Exception:
+            cache = {}
+            
+        key = f"{min(team1_id, team2_id)}-{max(team1_id, team2_id)}"
+        if key in cache:
+            return cache[key]
+            
+        resp = self._request("/fixtures/headtohead", {"h2h": key})
+        fixtures = resp.get("response", [])
+        
+        w1 = w2 = d = 0
+        for fix in fixtures:
+            teams = fix.get("teams", {})
+            goals = fix.get("goals", {})
+            h_id = teams.get("home", {}).get("id")
+            a_id = teams.get("away", {}).get("id")
+            hg = goals.get("home")
+            ag = goals.get("away")
+            if hg is None or ag is None: continue
+            
+            if hg > ag:
+                if h_id == team1_id: w1 += 1
+                elif h_id == team2_id: w2 += 1
+            elif ag > hg:
+                if a_id == team1_id: w1 += 1
+                elif a_id == team2_id: w2 += 1
+            else:
+                d += 1
+                
+        res = {str(team1_id): w1, str(team2_id): w2, "draws": d}
+        cache[key] = res
+        with open(cache_path, 'w', encoding='utf-8') as f:
+            json.dump(cache, f, indent=4)
+            
+        return res
 
     def get_event_odds(self, event_id: str, market: str = "totals") -> dict:
         """

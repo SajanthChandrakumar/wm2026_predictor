@@ -194,6 +194,18 @@ def _enrich_edge(matches: list) -> list:
         m["home_form"] = math_engine.team_forms.get(home_norm, {"form": [], "on_fire": False})
         m["away_form"] = math_engine.team_forms.get(away_norm, {"form": [], "on_fire": False})
         
+        # Inject API-Football H2H and Lineup Diffs
+        if hasattr(odds_engine, "get_h2h"):
+            home_id = m.get("home_team_id")
+            away_id = m.get("away_team_id")
+            if home_id and away_id:
+                m["h2h"] = odds_engine.get_h2h(home_id, away_id)
+            
+            fixture_id = m.get("id")
+            commence = m.get("commence_time") or m.get("raw_match", {}).get("commence_time")
+            if fixture_id and commence:
+                m["lineup_diff"] = odds_engine.get_lineup(fixture_id, commence)
+        
         if m.get("edge_home") is not None:
             continue
         odds = m.get("odds", {})
@@ -210,6 +222,16 @@ def _enrich_edge(matches: list) -> list:
         except Exception:
             pass
     return matches
+
+
+@app.get("/api/quota")
+def get_quota():
+    quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota.json')
+    try:
+        with open(quota_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {"remaining": "Unknown", "used": "Unknown", "limit": "Unknown"}
 
 
 @app.get("/api/matches")
