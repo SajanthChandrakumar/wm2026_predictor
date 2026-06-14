@@ -454,21 +454,30 @@ function renderHeatmap(matchInfo, calc) {
 // ── Elo History ───────────────────────────────────────────────
 async function loadEloHistoryView() {
     try {
-        const history = await (await fetch('/api/elo_history')).json();
-        const teams = Object.keys(history).sort();
+        const payload = await (await fetch('/api/elo_history')).json();
+        const teams = Object.keys(payload).sort();
         const sel = document.getElementById('history-team-selector');
         sel.innerHTML = teams.map(t => `<option value="${t}">${t}</option>`).join('');
-        sel.onchange = () => renderEloChart(history, sel.value);
-        if (teams.length) renderEloChart(history, teams[0]);
+        sel.onchange = () => renderEloChart(payload, sel.value);
+        if (teams.length) renderEloChart(payload, teams[0]);
     } catch (e) {
         document.getElementById('elo-history-view').innerHTML += `<p style="color:var(--danger)">Error: ${e.message}</p>`;
     }
 }
 
-function renderEloChart(history, team) {
-    const entries = history[team] || [];
-    const labels = entries.map(e => e.match_id === 'baseline' ? 'Start' : `Match ${e.match_id}`);
+function renderEloChart(payload, team) {
+    const dataObj = payload[team] || { history: [], form: [], on_fire: false };
+    const entries = dataObj.history || [];
+    const labels = entries.map(e => e.label || (e.match_id === 'baseline' ? 'Start' : `Match ${e.match_id}`));
     const data   = entries.map(e => e.elo);
+
+    // Inject Team Form UI
+    const formUiContainer = document.getElementById('history-team-form-ui');
+    if (formUiContainer) {
+        const fireHtml = dataObj.on_fire ? '<span class="fire-badge" style="font-size:1.1rem;" title="Team is on fire! 🔥">🔥 On Fire</span>' : '';
+        const blocksHtml = renderFormBlocks(dataObj.form);
+        formUiContainer.innerHTML = `${blocksHtml} ${fireHtml}`;
+    }
 
     if (eloChartInstance) eloChartInstance.destroy();
     eloChartInstance = new Chart(document.getElementById('eloChart'), {
