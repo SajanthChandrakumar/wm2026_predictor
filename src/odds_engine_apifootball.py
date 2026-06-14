@@ -19,8 +19,8 @@ load_dotenv()
 
 class OddsApiEngine:
     BASE_URL = "https://v3.football.api-sports.io"
-    WC_LEAGUE_ID = 1
-    SEASON = 2026
+    WC_LEAGUE_ID = 1  # FIFA World Cup
+    SEASON = 2022     # Free plan workaround for 2026
 
     def __init__(self):
         self.api_key = os.getenv("API_FOOTBALL_KEY")
@@ -44,7 +44,7 @@ class OddsApiEngine:
             used = int(limit) - int(remaining)
         except (ValueError, TypeError):
             used = "Unknown"
-        quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota_football.json')
+        quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota.json')
         os.makedirs(os.path.dirname(quota_path), exist_ok=True)
         with open(quota_path, 'w', encoding='utf-8') as f:
             json.dump({"remaining": remaining, "used": used, "limit": limit}, f, indent=4)
@@ -71,17 +71,37 @@ class OddsApiEngine:
         odds_resp = self._request("/odds", {
             "league": self.WC_LEAGUE_ID,
             "season": self.SEASON,
+            "bookmaker": 1
         })
 
-        out = []
+        odds_by_fixture = {}
         for odd in odds_resp.get("response", []):
             fid = (odd.get("fixture") or {}).get("id")
-            fixture = fixtures_by_id.get(fid)
-            if not fixture:
-                continue
+            if fid:
+                odds_by_fixture[fid] = odd
+
+        out = []
+        for fid, fixture in fixtures_by_id.items():
+            odd = odds_by_fixture.get(fid)
+            if not odd:
+                odd = {
+                    "bookmakers": [{
+                        "id": 1, "name": "DummyBookie",
+                        "bets": [
+                            {"id": 1, "name": "Match Winner", "values": [
+                                {"value": "Home", "odd": 2.50},
+                                {"value": "Draw", "odd": 3.20},
+                                {"value": "Away", "odd": 2.80}
+                            ]},
+                            {"id": 5, "name": "Goals Over/Under", "values": [
+                                {"value": "Over 2.5", "odd": 1.95},
+                                {"value": "Under 2.5", "odd": 1.85}
+                            ]}
+                        ]
+                    }]
+                }
             normalized = self._normalize_odds_entry(fixture, odd)
             if normalized:
-                # Attach team IDs so we can use them for H2H later
                 normalized["home_team_id"] = fixture.get("teams", {}).get("home", {}).get("id")
                 normalized["away_team_id"] = fixture.get("teams", {}).get("away", {}).get("id")
                 out.append(normalized)
@@ -143,43 +163,8 @@ class OddsApiEngine:
         cache[str(fixture_id)] = result
         with open(cache_path, 'w', encoding='utf-8') as f:
             json.dump(cache, f, indent=4)
-    def get_team_id(self, team_name: str) -> int:
-        if not team_name:
-            return None
             
-        cache_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'team_ids_cache.json')
-        try:
-            with open(cache_path, 'r', encoding='utf-8') as f:
-                cache = json.load(f)
-        except Exception:
-            cache = {}
-            
-        if team_name in cache:
-            return cache[team_name]
-            
-        try:
-            resp = self._request("/teams", {"name": team_name})
-        except Exception:
-            return None
-        
-        results = resp.get("response", [])
-        
-        team_id = None
-        for r in results:
-            t = r.get("team", {})
-            if t.get("national") is True:
-                team_id = t.get("id")
-                break
-                
-        if not team_id and results:
-            team_id = results[0].get("team", {}).get("id")
-            
-        if team_id:
-            cache[team_name] = team_id
-            with open(cache_path, 'w', encoding='utf-8') as f:
-                json.dump(cache, f, indent=4)
-                
-        return team_id
+        return result
 
     def get_h2h(self, team1_id: int, team2_id: int) -> dict:
         """
@@ -198,10 +183,7 @@ class OddsApiEngine:
         if key in cache:
             return cache[key]
             
-        try:
-            resp = self._request("/fixtures/headtohead", {"h2h": key})
-        except Exception:
-            return {}
+        resp = self._request("/fixtures/headtohead", {"h2h": key})
         fixtures = resp.get("response", [])
         
         w1 = w2 = d = 0

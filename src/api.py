@@ -16,14 +16,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from dotenv import load_dotenv
 load_dotenv()
 
-# Hybrid API Setup
-# Primary: The Odds API (for odds, edges, simulated matches)
-from src.odds_engine import OddsApiEngine
-print("Odds engine: The Odds API")
-
-# Secondary: API-Football (for H2H and Lineups)
-from src.odds_engine_apifootball import OddsApiEngine as FootballApiEngine
-print("Secondary engine: API-Football (api-sports.io)")
+# Engine switch: set USE_API_FOOTBALL=true in .env when the Odds-API quota is
+# exhausted. The API-Football engine normalizes responses to the legacy
+# Odds-API shape, so the rest of api.py needs no changes.
+if os.getenv("USE_API_FOOTBALL", "").lower() in ("1", "true", "yes"):
+    from src.odds_engine_apifootball import OddsApiEngine
+    print("Odds engine: API-Football (api-sports.io)")
+else:
+    from src.odds_engine import OddsApiEngine
+    print("Odds engine: The Odds API")
 
 from src.math_engine import MathEngine
 
@@ -72,7 +73,6 @@ if not os.path.exists(elo_csv_path):
 
 math_engine = MathEngine(elo_csv_path, TEAM_MAPPING)
 global_odds_engine = OddsApiEngine()
-global_football_engine = FootballApiEngine()
 
 def extract_odds(match):
     """
@@ -199,22 +199,16 @@ def _enrich_edge(matches: list) -> list:
         m["away_form"] = math_engine.team_forms.get(away_norm, {"form": [], "on_fire": False})
         
         # Inject API-Football H2H and Lineup Diffs
-        home_norm = TEAM_MAPPING.get(m.get("home_team", ""), m.get("home_team", ""))
-        away_norm = TEAM_MAPPING.get(m.get("away_team", ""), m.get("away_team", ""))
-        
-        home_id = global_football_engine.get_team_id(home_norm)
-        away_id = global_football_engine.get_team_id(away_norm)
-        
-        if home_id and away_id:
-            m["h2h"] = global_football_engine.get_h2h(home_id, away_id)
-        
-        # Mocking lineup alert for Germany since API-Football free tier
-        # does not support 2026 season for real lineup queries.
-        if home_norm == "Germany" or away_norm == "Germany":
-            target = m.get("home_disp") if home_norm == "Germany" else m.get("away_disp")
-            m["lineup_diff"] = {
-                target: {"missing": ["Toni Kroos"]}
-            }
+        if hasattr(global_odds_engine, "get_h2h"):
+            home_id = m.get("home_team_id")
+            away_id = m.get("away_team_id")
+            if home_id and away_id:
+                m["h2h"] = global_odds_engine.get_h2h(home_id, away_id)
+            
+            fixture_id = m.get("id")
+            commence = m.get("commence_time") or m.get("raw_match", {}).get("commence_time")
+            if fixture_id and commence:
+                m["lineup_diff"] = global_odds_engine.get_lineup(fixture_id, commence)
         
         if m.get("edge_home") is not None:
             continue
@@ -236,20 +230,12 @@ def _enrich_edge(matches: list) -> list:
 
 @app.get("/api/quota")
 def get_quota():
-    quota_odds_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota_odds.json')
-    quota_football_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota_football.json')
-    
-    res = {"odds": {"remaining": "--", "used": "--"}, "football": {"remaining": "--", "used": "--"}}
+    quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota.json')
     try:
-        if os.path.exists(quota_odds_path):
-            with open(quota_odds_path, 'r', encoding='utf-8') as f:
-                res["odds"] = json.load(f)
-        if os.path.exists(quota_football_path):
-            with open(quota_football_path, 'r', encoding='utf-8') as f:
-                res["football"] = json.load(f)
+        with open(quota_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
     except Exception:
-        pass
-    return res
+        return {"remaining": "Unknown", "used": "Unknown", "limit": "Unknown"}
 
 
 @app.get("/api/matches")
@@ -631,7 +617,7 @@ def get_elo_history():
 
 def perform_elo_sync() -> dict:
     print("Automated Elo sync triggered...")
-    odds_engine = global_odds_engine
+    odds_engine = OddsApiEngine()
     processed_json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'processed_matches.json')
     try:
         # Scores cache: avoid burning quota when sync is triggered multiple times within 30 min
@@ -761,8 +747,8 @@ def perform_elo_sync() -> dict:
                 )
                 if not bots:
                     continue
-                tip = bots["professor"]["tip"]
-                max_xp = bots["professor"].get("xp", 0)
+                tip = bots["chalk"]["tip"]
+                max_xp = bots["chalk"]["xp"]
                 if not tip:
                     continue
 
