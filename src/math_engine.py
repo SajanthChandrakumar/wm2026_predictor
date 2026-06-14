@@ -392,10 +392,20 @@ class MathEngine:
             bots["professor"] = {"tip": xp_e.iloc[0]["Tipp"] if not xp_e.empty else fallback_tip}
         except: bots["professor"] = {"tip": fallback_tip}
 
-        # 3. The Rebel (Aggressive Pool Strategy)
+        # 3. The Rebel (Der Underdog)
         try:
-            pool_df = self.calculate_pool_optimal_tips(score_matrix, is_ko_phase, aggressiveness=1.0)
-            bots["rebel"] = {"tip": pool_df.iloc[0]["Tipp"] if not pool_df.empty else fallback_tip}
+            full_xp_df = self.calculate_expected_points(score_matrix, is_ko_phase, top_n=36)
+            if true_probs["home"] > true_probs["away"]:
+                # Away is underdog. Find best Away win tip.
+                rebel_df = full_xp_df[full_xp_df["Tipp"].apply(lambda x: int(x.split(":")[0]) < int(x.split(":")[1]))]
+            else:
+                # Home is underdog. Find best Home win tip.
+                rebel_df = full_xp_df[full_xp_df["Tipp"].apply(lambda x: int(x.split(":")[0]) > int(x.split(":")[1]))]
+                
+            if not rebel_df.empty:
+                bots["rebel"] = {"tip": rebel_df.iloc[0]["Tipp"]}
+            else:
+                bots["rebel"] = {"tip": fallback_tip}
         except: bots["rebel"] = {"tip": fallback_tip}
 
         # 4. The X-Sniper (Always highest xP draw)
