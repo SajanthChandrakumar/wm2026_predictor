@@ -2,7 +2,6 @@ let currentMatches = [];
 let selectedMatchId = null;
 let lastCalcData = null;
 let eloChartInstance = null;
-let aggressivenessDebounce = null;
 
 // ── Boot ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -50,16 +49,6 @@ function initSidebar() {
         selectedMatchId = null;
         showView('dashboard');
     });
-
-    // Aggressiveness slider
-    const slider = document.getElementById('aggressiveness-slider');
-    slider.addEventListener('input', () => {
-        updateStrategyUI(parseFloat(slider.value));
-        if (!selectedMatchId) return;
-        clearTimeout(aggressivenessDebounce);
-        aggressivenessDebounce = setTimeout(() => updatePrediction(), 400);
-    });
-    updateStrategyUI(0);
 }
 
 // ── Views ─────────────────────────────────────────────────────
@@ -81,31 +70,6 @@ function showView(view) {
     const [viewId, navId] = map[view] || ['matches-view', 'nav-dashboard'];
     document.getElementById(viewId).style.display = '';
     if (navId) document.getElementById(navId).classList.add('active');
-}
-
-// ── Strategy UI ───────────────────────────────────────────────
-function updateStrategyUI(val) {
-    document.getElementById('aggressiveness-label').textContent = val.toFixed(1);
-    const badge  = document.getElementById('strategy-badge');
-    const hint   = document.getElementById('strategy-hint');
-
-    if (val === 0) {
-        badge.className = 'strategy-mode-badge';
-        badge.textContent = 'Safe';
-        hint.textContent = 'Tipping the most likely score. Best when leading or in a small pool.';
-    } else if (val <= 0.3) {
-        badge.className = 'strategy-mode-badge';
-        badge.textContent = 'Soft';
-        hint.textContent = 'Same tendency as the field, different exact score. Low cost, good differentiation.';
-    } else if (val <= 0.7) {
-        badge.className = 'strategy-mode-badge aggressive';
-        badge.textContent = 'Contrarian';
-        hint.textContent = 'Accepting lower average points to build a ceiling over the field. Good when chasing.';
-    } else {
-        badge.className = 'strategy-mode-badge max-aggro';
-        badge.textContent = 'High Risk';
-        hint.textContent = 'Maximum variance — betting the field gets the result completely wrong. KO phase / big deficit only.';
-    }
 }
 
 // ── API Calls ─────────────────────────────────────────────────
@@ -149,7 +113,6 @@ async function updatePrediction() {
     const matchData = currentMatches.find(m => m.id === selectedMatchId);
     if (!matchData) return;
 
-    const aggressiveness = parseFloat(document.getElementById('aggressiveness-slider').value);
     showView('loading');
 
     try {
@@ -161,7 +124,6 @@ async function updatePrediction() {
                 is_ko: document.getElementById('ko-toggle').checked,
                 home_resting: document.getElementById('home-resting-toggle').checked,
                 away_resting: document.getElementById('away-resting-toggle').checked,
-                aggressiveness,
             })
         });
         if (!res.ok) {
@@ -354,33 +316,21 @@ function renderDetail(matchInfo, calc) {
         </div>
     `;
 
-    // Safe tips
     renderSafeTips(calc.xp_tips);
-
-    // Pool tips
-    renderPoolTips(calc.pool_tips);
-
-    // Keep active tab
-    const activeTab = document.querySelector('.tab.active')?.id === 'tab-pool' ? 'pool' : 'safe';
-    switchTab(activeTab);
 
     document.getElementById('adopt-tip-status').textContent = '';
     updateAdoptButton();
 }
 
 function currentActiveTip() {
-    if (!lastCalcData) return null;
-    const isPool = document.querySelector('.tab.active')?.id === 'tab-pool';
-    const tips = isPool ? lastCalcData.pool_tips : lastCalcData.xp_tips;
-    return tips?.[0]?.Tipp ?? null;
+    return lastCalcData?.xp_tips?.[0]?.Tipp ?? null;
 }
 
 function updateAdoptButton() {
     const btn = document.getElementById('adopt-tip-btn');
     if (!btn) return;
     const tip = currentActiveTip();
-    const isPool = document.querySelector('.tab.active')?.id === 'tab-pool';
-    btn.textContent = tip ? `Tipp übernehmen: ${tip} (${isPool ? 'Pool' : 'Safe'})` : 'Tipp übernehmen';
+    btn.textContent = tip ? `Tipp übernehmen: ${tip}` : 'Tipp übernehmen';
     btn.disabled = !tip;
     btn.onclick = () => adoptCurrentTip();
 }
@@ -439,68 +389,6 @@ function renderSafeTips(tips) {
         `;
     }
     document.getElementById('xp-container').innerHTML = html;
-}
-
-function renderPoolTips(tips) {
-    if (!tips?.length) { document.getElementById('pool-container').innerHTML = '<p style="color:var(--text-muted)">No pool tips available.</p>'; return; }
-    const agg = parseFloat(document.getElementById('aggressiveness-slider').value);
-    const top = tips[0];
-
-    const edgeClass = top.edge_vs_field >= 0 ? 'positive' : 'negative';
-    const edgeStr = top.edge_vs_field >= 0
-        ? `+${top.edge_vs_field.toFixed(2)} pts vs field`
-        : `${top.edge_vs_field.toFixed(2)} pts vs field`;
-
-    let bannerText = '';
-    if (agg === 0) bannerText = 'Set aggressiveness > 0 to see contrarian picks that differentiate you from the field.';
-    else if (agg <= 0.3) bannerText = `Soft contrarian (λ=${agg}): same tendency as the field, different scoreline. Minimal xP cost, real differentiation.`;
-    else if (agg <= 0.7) bannerText = `Contrarian mode (λ=${agg}): accepting lower average to get a ceiling above the field. Best when chasing.`;
-    else bannerText = `High-risk mode (λ=${agg}): betting the field gets the result wrong. Use in KO phase when trailing badly.`;
-
-    let html = `
-        <div class="pool-mode-banner">${bannerText}</div>
-        <div class="pool-top">
-            <div class="pool-top-header">
-                <div>
-                    <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Pool Pick</div>
-                    <div class="pool-top-score">${top.Tipp}</div>
-                </div>
-                <div class="pool-top-xp">${top.xP.toFixed(2)} xP</div>
-            </div>
-            <div class="pool-stats">
-                <div class="pool-stat">
-                    <span class="pool-stat-label">Edge vs field</span>
-                    <span class="pool-stat-value ${edgeClass}">${edgeStr}</span>
-                </div>
-                <div class="pool-stat">
-                    <span class="pool-stat-label">Upside (σ)</span>
-                    <span class="pool-stat-value neutral">${top.upside.toFixed(2)}</span>
-                </div>
-            </div>
-        </div>
-    `;
-    for (let i = 1; i < Math.min(4, tips.length); i++) {
-        const t = tips[i];
-        const ec = t.edge_vs_field >= 0 ? 'pos' : 'neg';
-        const es = t.edge_vs_field >= 0 ? `+${t.edge_vs_field.toFixed(2)}` : t.edge_vs_field.toFixed(2);
-        html += `
-            <div class="pool-row">
-                <span class="pool-row-score">${t.Tipp}</span>
-                <span class="pool-row-xp">${t.xP.toFixed(2)} xP</span>
-                <span class="pool-row-edge ${ec}">${es} edge</span>
-            </div>
-        `;
-    }
-    document.getElementById('pool-container').innerHTML = html;
-}
-
-// ── Tab switching ─────────────────────────────────────────────
-function switchTab(tab) {
-    document.getElementById('tab-safe').classList.toggle('active', tab === 'safe');
-    document.getElementById('tab-pool').classList.toggle('active', tab === 'pool');
-    document.getElementById('panel-safe').style.display = tab === 'safe' ? '' : 'none';
-    document.getElementById('panel-pool').style.display = tab === 'pool' ? '' : 'none';
-    updateAdoptButton();
 }
 
 // ── Heatmap ───────────────────────────────────────────────────

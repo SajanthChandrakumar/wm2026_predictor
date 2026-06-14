@@ -1,10 +1,16 @@
 import os
 import json
 import time
+from datetime import datetime
 import pandas as pd
 import numpy as np
 import scipy.optimize as optimize
 import scipy.stats as stats
+
+HOST_NATIONS = {"United States", "Canada", "Mexico"}
+HOST_ELO_BONUS = 80
+DEFAULT_ELO = 1500.0
+
 
 class MathEngine:
     """
@@ -257,63 +263,6 @@ class MathEngine:
         df_xp = df_xp.sort_values(by="xP", ascending=False).head(5).reset_index(drop=True)
         return df_xp
 
-    def calculate_pool_optimal_tips(self, score_matrix: pd.DataFrame, is_ko_phase: bool = False, aggressiveness: float = 0.0) -> pd.DataFrame:
-        """
-        Pool-Strategie: nicht den Erwartungswert maximieren, sondern den Vorsprung
-        gegenüber dem Feld. In einem Tippspiel gewinnt das Maximum, nicht der Schnitt –
-        wer immer den Favoriten-Tipp (Chalk) abgibt, kann sich vom Feld nicht absetzen.
-
-        Modell: Das Feld tippt den xP-optimalen "Chalk"-Tipp. Für jeden Kandidaten-Tipp t
-        ist die Vorsprungs-Zufallsvariable A = Punkte(t) - Punkte(Chalk) über die
-        Resultatverteilung. Bewertet wird E[A] + λ·SD[A] mit λ = aggressiveness.
-          - aggressiveness = 0  → reiner Chalk-Tipp (max xP), ideal in Führung / kleinem Pool.
-          - aggressiveness > 0  → kontrarianische Tipps mit höherem Ceiling, ideal bei
-            Rückstand / grossem Pool / K.o.-Phase (Punkte verdoppelt).
-        Typische Werte: 0.3 (leicht offensiv) bis 1.0 (stark kontrarianisch).
-        """
-        max_tip_goals = 5
-
-        # 1. Chalk-Tipp des Feldes bestimmen (xP-Maximum)
-        chalk_home, chalk_away, best_xp = 0, 0, -1.0
-        for t_home in range(max_tip_goals + 1):
-            for t_away in range(max_tip_goals + 1):
-                xp, _ = self._points_distribution(t_home, t_away, score_matrix, is_ko_phase)
-                if xp > best_xp:
-                    best_xp, chalk_home, chalk_away = xp, t_home, t_away
-
-        # 2. Vorsprungsverteilung jedes Kandidaten gegen den Chalk-Tipp
-        results = []
-        for t_home in range(max_tip_goals + 1):
-            for t_away in range(max_tip_goals + 1):
-                mean_adv = 0.0
-                mean_adv_sq = 0.0
-                xp = 0.0
-                for a_home_str in score_matrix.index:
-                    for a_away_str in score_matrix.columns:
-                        prob = score_matrix.loc[a_home_str, a_away_str]
-                        if prob <= 0:
-                            continue
-                        a_home, a_away = int(a_home_str), int(a_away_str)
-                        pts = self._tip_points(t_home, t_away, a_home, a_away, is_ko_phase)
-                        chalk_pts = self._tip_points(chalk_home, chalk_away, a_home, a_away, is_ko_phase)
-                        adv = pts - chalk_pts
-                        mean_adv += adv * prob
-                        mean_adv_sq += (adv ** 2) * prob
-                        xp += pts * prob
-                sd_adv = max(0.0, mean_adv_sq - mean_adv ** 2) ** 0.5
-                score = mean_adv + aggressiveness * sd_adv
-                results.append({
-                    "Tipp": f"{t_home}:{t_away}",
-                    "xP": xp,
-                    "edge_vs_field": mean_adv,
-                    "upside": sd_adv,
-                    "score": score,
-                })
-
-        df = pd.DataFrame(results)
-        df = df.sort_values(by="score", ascending=False).head(5).reset_index(drop=True)
-        return df
-
     def _calculate_new_elo(self, rating_a: float, rating_b: float, actual_result_a: float, k_factor: int = 60, is_a_host: bool = False, is_b_host: bool = False, goal_diff: int = 0) -> tuple[float, float]:
         """
         Standard Elo update. K=60 entspricht dem World-Football-Elo-Standard
@@ -440,5 +389,93 @@ class MathEngine:
             os.makedirs(os.path.dirname(os.path.abspath(processed_matches_file)), exist_ok=True)
             with open(processed_matches_file, 'w', encoding='utf-8') as f:
                 json.dump(processed_ids, f, indent=4)
-                
+
         return updates_made
+
+    def _get_historical_elo(self, team_name: str, before_ts: float = None) -> float:
+        """
+        Liefert die Elo eines Teams VOR einem Zeitpunkt.
+        Quelle: elo_history.json im selben data/-Ordner wie elo_csv_path.
+        Fallback DEFAULT_ELO (1500), wenn das Team nicht in der History steht.
+        """
+        norm = self.name_mapping.get(team_name, team_name)
+        history_path = os.path.join(os.path.dirname(self.elo_csv_path), 'elo_history.json')
+        if not os.path.exists(history_path):
+            return DEFAULT_ELO
+        try:
+            with open(history_path, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return DEFAULT_ELO
+
+        team_history = history.get(norm, [])
+        if not team_history:
+            return DEFAULT_ELO
+
+        if before_ts is None:
+            return float(team_history[0]['elo'])
+
+        valid = [e for e in team_history if e.get('timestamp', 0) < before_ts]
+        if not valid:
+            return float(team_history[0]['elo'])
+        return float(valid[-1]['elo'])
+
+    def reconstruct_algo_tip(
+        self,
+        home_team: str,
+        away_team: str,
+        commence_time: str = None,
+        is_ko: bool = False,
+    ) -> tuple:
+        """
+        Rekonstruiert einen Algo-Tipp für ein Match ohne historische Quoten
+        (z. B. wenn das Match vor App-Start lief). Pipeline: historische
+        Pre-Match-Elo → H/D/A (heuristische Draw-Rate) → xG → Score-Matrix →
+        Top-xP-Tipp. commence_time im ISO-Format; None → Baseline-Elo.
+        Returns (tip_str, max_xp) oder (None, None) bei Fehler.
+        """
+        before_ts = None
+        if commence_time:
+            try:
+                before_ts = datetime.fromisoformat(
+                    commence_time.replace("Z", "+00:00")
+                ).timestamp()
+            except ValueError:
+                before_ts = None
+
+        elo_home = self._get_historical_elo(home_team, before_ts)
+        elo_away = self._get_historical_elo(away_team, before_ts)
+
+        home_norm = self.name_mapping.get(home_team, home_team)
+        away_norm = self.name_mapping.get(away_team, away_team)
+        if home_norm in HOST_NATIONS:
+            elo_home += HOST_ELO_BONUS
+        if away_norm in HOST_NATIONS:
+            elo_away += HOST_ELO_BONUS
+
+        # Elo → Win-Loss-Pool. Draw-Rate heuristisch:
+        # 0.28 bei gleicher Elo, sinkt linear mit |ΔElo|, Boden 0.18.
+        p_home_winloss = self.get_elo_probability(elo_home, elo_away)
+        diff = abs(elo_home - elo_away)
+        p_draw = max(0.18, 0.28 - (diff / 1000) * 0.10)
+        p_home = p_home_winloss * (1.0 - p_draw)
+        p_away = (1.0 - p_home_winloss) * (1.0 - p_draw)
+
+        try:
+            xg_h, xg_a = self.derive_xg_from_odds(p_home, p_draw, p_away, prob_over25=None)
+        except Exception:
+            return None, None
+
+        if is_ko:
+            base_matrix = self.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
+            p_draw_90 = float(np.sum(np.diag(base_matrix.values)))
+            et_factor = 1 + p_draw_90 / 3
+            xg_h *= et_factor
+            xg_a *= et_factor
+
+        score_matrix = self.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
+        xp_df = self.calculate_expected_points(score_matrix, is_ko_phase=is_ko)
+
+        if xp_df.empty:
+            return None, None
+        return xp_df.iloc[0]['Tipp'], float(xp_df.iloc[0]['xP'])

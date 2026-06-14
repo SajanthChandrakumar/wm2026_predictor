@@ -70,24 +70,6 @@ def test_host_advantage_elo(math_engine):
     # Mathematically verify the +80 Elo boost: 1 / (10^(-80/400) + 1) ≈ 0.613
     assert round(prob_host, 3) == 0.613
 
-def test_pool_optimal_tips(math_engine):
-    # Clear-favorite match: home much stronger than away
-    matrix = MathEngine.generate_exact_score_matrix(1.9, 0.8, max_goals=10)
-
-    # aggressiveness=0 must reproduce the pure xP-optimal (chalk) tip
-    chalk = math_engine.calculate_pool_optimal_tips(matrix, is_ko_phase=False, aggressiveness=0.0)
-    xp_best = math_engine.calculate_expected_points(matrix, is_ko_phase=False)
-    assert chalk.iloc[0]["Tipp"] == xp_best.iloc[0]["Tipp"]
-    # The chalk tip has zero edge and zero upside against the field (it IS the field)
-    assert abs(chalk.iloc[0]["edge_vs_field"]) < 1e-9
-    assert abs(chalk.iloc[0]["upside"]) < 1e-9
-
-    # Higher aggressiveness must pick a tip with positive upside (differentiation)
-    aggressive = math_engine.calculate_pool_optimal_tips(matrix, is_ko_phase=False, aggressiveness=1.0)
-    assert aggressive.iloc[0]["upside"] > 0.0
-    # Contrarian tips trade expected points for upside -> edge vs field is non-positive
-    assert aggressive.iloc[0]["edge_vs_field"] <= 1e-9
-
 def test_dixon_coles_adjustment():
     # rho=0.0 -> pure independent Poisson (no adjustment)
     matrix_indep = MathEngine.generate_exact_score_matrix(1.2, 0.9, max_goals=3, rho=0.0)
