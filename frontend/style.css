@@ -56,6 +56,10 @@
 body {
     font-family: 'Inter', system-ui, sans-serif;
     background: var(--bg);
+    background-image: 
+        radial-gradient(circle at 15% 15%, color-mix(in srgb, var(--surface-3) 40%, transparent), transparent 30%),
+        radial-gradient(circle at 85% 85%, color-mix(in srgb, var(--surface-2) 40%, transparent), transparent 30%);
+    background-attachment: fixed;
     color: var(--text-1);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
@@ -69,7 +73,9 @@ body {
 .sidebar {
     width: var(--sidebar-w);
     min-height: 100vh;
-    background: var(--surface);
+    background: color-mix(in srgb, var(--surface) 65%, transparent);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -258,27 +264,28 @@ input:checked + .toggle-track::after { background: #fff; transform: translateX(1
     margin-bottom: 0;
 }
 
-.fixture-group-list { display: flex; flex-direction: column; }
+.fixture-group-list { display: flex; flex-direction: column; gap: 12px; }
 
 .fixture-row {
     display: flex; align-items: center; gap: 14px;
-    padding: 14px 18px;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    background: color-mix(in srgb, var(--surface) 75%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 12px !important;
     cursor: pointer;
-    transition: background 0.12s;
-    animation: slideIn 0.2s ease-out both;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s, background 0.15s, border-color 0.15s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.fixture-row:first-child {
-    border-top: 1px solid var(--border);
-    border-radius: var(--r) var(--r) 0 0;
+.fixture-row:hover { 
+    background: color-mix(in srgb, var(--surface-2) 85%, transparent); 
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+    border-color: var(--border-2);
 }
-.fixture-row:last-child { border-radius: 0 0 var(--r) var(--r); }
-.fixture-row:only-child { border-top: 1px solid var(--border); border-radius: var(--r); }
-.fixture-row:hover { background: var(--surface-2); }
-.fixture-row.is-past { opacity: 0.6; }
+.fixture-row.is-past { opacity: 0.6; filter: grayscale(0.5); }
 
 @keyframes slideIn {
     from { opacity: 0; transform: translateX(-6px); }
@@ -389,9 +396,16 @@ input:checked + .toggle-track::after { background: #fff; transform: translateX(1
 
 /* Cards */
 .glass-card {
-    background: var(--surface);
+    background: color-mix(in srgb, var(--surface) 60%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--border);
-    border-radius: var(--r);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.glass-card:hover {
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
 }
 .heatmap-card { padding: 20px; }
 .card-title {
