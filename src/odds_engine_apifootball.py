@@ -143,61 +143,43 @@ class OddsApiEngine:
         cache[str(fixture_id)] = result
         with open(cache_path, 'w', encoding='utf-8') as f:
             json.dump(cache, f, indent=4)
+    def get_team_id(self, team_name: str) -> int:
+        if not team_name:
+            return None
             
-        return result
-
-    def get_fixture_id(self, home_team: str, away_team: str) -> tuple[int, int, int]:
-        """
-        Fetches fixtures and finds the fixture_id, home_team_id, and away_team_id
-        for the given team names.
-        """
-        cache_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'fixtures_map_cache.json')
+        cache_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'team_ids_cache.json')
         try:
             with open(cache_path, 'r', encoding='utf-8') as f:
                 cache = json.load(f)
         except Exception:
             cache = {}
             
-        # Try finding in cache
-        for fix_id, meta in cache.items():
-            h_name = meta.get("home_name", "")
-            a_name = meta.get("away_name", "")
-            if (home_team.lower() in h_name.lower() or h_name.lower() in home_team.lower()) and \
-               (away_team.lower() in a_name.lower() or a_name.lower() in away_team.lower()):
-                return meta["fixture_id"], meta["home_id"], meta["away_id"]
-
-        # Fetch all fixtures
-        resp = self._request("/fixtures", {
-            "league": self.WC_LEAGUE_ID,
-            "season": self.SEASON,
-        })
+        if team_name in cache:
+            return cache[team_name]
+            
+        try:
+            resp = self._request("/teams", {"name": team_name})
+        except Exception:
+            return None
         
-        for f in resp.get("response", []):
-            fid = f["fixture"]["id"]
-            hid = f["teams"]["home"]["id"]
-            aid = f["teams"]["away"]["id"]
-            hname = f["teams"]["home"]["name"]
-            aname = f["teams"]["away"]["name"]
-            cache[str(fid)] = {
-                "fixture_id": fid,
-                "home_id": hid,
-                "away_id": aid,
-                "home_name": hname,
-                "away_name": aname
-            }
-            
-        with open(cache_path, 'w', encoding='utf-8') as f:
-            json.dump(cache, f, indent=4)
-            
-        # Try again
-        for fix_id, meta in cache.items():
-            h_name = meta.get("home_name", "")
-            a_name = meta.get("away_name", "")
-            if (home_team.lower() in h_name.lower() or h_name.lower() in home_team.lower()) and \
-               (away_team.lower() in a_name.lower() or a_name.lower() in away_team.lower()):
-                return meta["fixture_id"], meta["home_id"], meta["away_id"]
+        results = resp.get("response", [])
+        
+        team_id = None
+        for r in results:
+            t = r.get("team", {})
+            if t.get("national") is True:
+                team_id = t.get("id")
+                break
                 
-        return None, None, None
+        if not team_id and results:
+            team_id = results[0].get("team", {}).get("id")
+            
+        if team_id:
+            cache[team_name] = team_id
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(cache, f, indent=4)
+                
+        return team_id
 
     def get_h2h(self, team1_id: int, team2_id: int) -> dict:
         """
@@ -216,7 +198,10 @@ class OddsApiEngine:
         if key in cache:
             return cache[key]
             
-        resp = self._request("/fixtures/headtohead", {"h2h": key})
+        try:
+            resp = self._request("/fixtures/headtohead", {"h2h": key})
+        except Exception:
+            return {}
         fixtures = resp.get("response", [])
         
         w1 = w2 = d = 0

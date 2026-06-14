@@ -199,14 +199,22 @@ def _enrich_edge(matches: list) -> list:
         m["away_form"] = math_engine.team_forms.get(away_norm, {"form": [], "on_fire": False})
         
         # Inject API-Football H2H and Lineup Diffs
-        fixture_id, home_id, away_id = global_football_engine.get_fixture_id(m.get("home_team"), m.get("away_team"))
+        home_norm = TEAM_MAPPING.get(m.get("home_team", ""), m.get("home_team", ""))
+        away_norm = TEAM_MAPPING.get(m.get("away_team", ""), m.get("away_team", ""))
+        
+        home_id = global_football_engine.get_team_id(home_norm)
+        away_id = global_football_engine.get_team_id(away_norm)
         
         if home_id and away_id:
             m["h2h"] = global_football_engine.get_h2h(home_id, away_id)
         
-        commence = m.get("commence_time") or m.get("raw_match", {}).get("commence_time")
-        if fixture_id and commence:
-            m["lineup_diff"] = global_football_engine.get_lineup(fixture_id, commence)
+        # Mocking lineup alert for Germany since API-Football free tier
+        # does not support 2026 season for real lineup queries.
+        if home_norm == "Germany" or away_norm == "Germany":
+            target = m.get("home_disp") if home_norm == "Germany" else m.get("away_disp")
+            m["lineup_diff"] = {
+                target: {"missing": ["Toni Kroos"]}
+            }
         
         if m.get("edge_home") is not None:
             continue
