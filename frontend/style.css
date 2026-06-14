@@ -474,3 +474,16 @@ input:checked + .toggle-track::after { background: #fff; transform: translateX(1
     .fixture-teams { grid-template-columns: 1fr 80px 1fr; }
     .fixture-probs { grid-template-columns: 1fr 80px 1fr; }
 }
+
+/* ── Team Form UI ── */
+.form-container { display: flex; gap: 4px; align-items: center; margin-top: 4px; }
+.form-block {
+    width: 18px; height: 18px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem; font-weight: 800; color: white; cursor: help;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.form-w { background: var(--green); }
+.form-d { background: var(--amber); }
+.form-l { background: var(--red); }
+.fire-badge { font-size: 0.9rem; margin-left: 6px; cursor: help; }

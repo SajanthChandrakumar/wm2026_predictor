@@ -189,6 +189,11 @@ def _enrich_edge(matches: list) -> list:
     Werte werden ergänzt.
     """
     for m in matches:
+        home_norm = TEAM_MAPPING.get(m.get("home_team"), m.get("home_team"))
+        away_norm = TEAM_MAPPING.get(m.get("away_team"), m.get("away_team"))
+        m["home_form"] = math_engine.team_forms.get(home_norm, {"form": [], "on_fire": False})
+        m["away_form"] = math_engine.team_forms.get(away_norm, {"form": [], "on_fire": False})
+        
         if m.get("edge_home") is not None:
             continue
         odds = m.get("odds", {})

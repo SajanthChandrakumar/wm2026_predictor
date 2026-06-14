@@ -220,17 +220,20 @@ function buildFixtureRow(match, showXp = false) {
         ? `<div class="fixture-tip" style="color:var(--green);background:var(--green-dim);border-color:rgba(30,171,90,0.3)">${match.max_xp.toFixed(1)} xP</div>`
         : tipHtml;
 
+    const homeFire = match.home_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
+    const awayFire = match.away_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
+
     row.innerHTML = `
         <div class="fixture-time${isPast ? ' past' : ''}">${timeStr}</div>
         <div class="fixture-body">
             <div class="fixture-teams">
-                <span class="fixture-home">${match.home_disp}</span>
+                <span class="fixture-home">${match.home_disp}${homeFire}</span>
                 <div class="fix-bar">
                     <div class="bar-h" style="width:${hPct}%"></div>
                     <div class="bar-d" style="width:${dPct}%"></div>
                     <div class="bar-a" style="width:${aPct}%"></div>
                 </div>
-                <span class="fixture-away">${match.away_disp}</span>
+                <span class="fixture-away">${match.away_disp}${awayFire}</span>
             </div>
             <div class="fixture-probs">
                 <span class="fp-h">${pct(probs.home)}</span>
@@ -254,6 +257,16 @@ function openMatch(id) {
     updatePrediction();
 }
 
+function renderFormBlocks(formArray) {
+    if (!formArray || formArray.length === 0) return '';
+    const blocksHtml = formArray.map(f => {
+        const cls = f.result === 'W' ? 'form-w' : f.result === 'D' ? 'form-d' : 'form-l';
+        const title = `${f.result} vs ${f.opponent} (${f.score}) ${f.delta > 0 ? '+' : ''}${f.delta} Elo`;
+        return `<span class="form-block ${cls}" title="${title}">${f.result}</span>`;
+    }).join('');
+    return `<div class="form-container">${blocksHtml}</div>`;
+}
+
 // ── Render: Detail View ───────────────────────────────────────
 function renderDetail(matchInfo, calc) {
     const isKo = document.getElementById('ko-toggle').checked;
@@ -269,9 +282,13 @@ function renderDetail(matchInfo, calc) {
     document.getElementById('match-meta').innerHTML = metaChips.join('');
 
     // xG row
+    const homeFire = matchInfo.home_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
+    const awayFire = matchInfo.away_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
+
     document.getElementById('xg-row').innerHTML = `
         <div class="xg-team home">
-            <span class="xg-team-name">${matchInfo.home_disp}</span>
+            <span class="xg-team-name">${matchInfo.home_disp}${homeFire}</span>
+            ${renderFormBlocks(matchInfo.home_form?.form)}
             <span class="xg-value">${calc.xg_home.toFixed(2)}</span>
             <span class="xg-label">Expected Goals</span>
         </div>
@@ -280,7 +297,8 @@ function renderDetail(matchInfo, calc) {
             <small>xG</small>
         </div>
         <div class="xg-team away">
-            <span class="xg-team-name">${matchInfo.away_disp}</span>
+            <span class="xg-team-name">${matchInfo.away_disp}${awayFire}</span>
+            ${renderFormBlocks(matchInfo.away_form?.form)}
             <span class="xg-value">${calc.xg_away.toFixed(2)}</span>
             <span class="xg-label">Expected Goals</span>
         </div>

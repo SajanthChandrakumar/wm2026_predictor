@@ -23,6 +23,7 @@ class MathEngine:
         self.elo_df = pd.read_csv(elo_csv_path)
         self.elo_df['elo_rating'] = self.elo_df['elo_rating'].astype(float)
         self.name_mapping = name_mapping or {}
+        self.team_forms = {}
 
     @staticmethod
     def remove_margin(odds_home: float, odds_draw: float, odds_away: float) -> dict[str, float]:
@@ -63,6 +64,100 @@ class MathEngine:
         if os.path.exists(self.elo_csv_path):
             self.elo_df = pd.read_csv(self.elo_csv_path)
             self.elo_df['elo_rating'] = self.elo_df['elo_rating'].astype(float)
+        self._build_team_forms()
+
+    def _build_team_forms(self):
+        """
+        Reconstructs the W-D-L visual form chain for all teams based on elo_history.json
+        and prediction_archive.json.
+        """
+        import json
+        import os
+        history_path = os.path.join(os.path.dirname(self.elo_csv_path), 'elo_history.json')
+        archive_path = os.path.join(os.path.dirname(self.elo_csv_path), 'prediction_archive.json')
+        
+        if not os.path.exists(history_path) or not os.path.exists(archive_path):
+            self.team_forms = {}
+            return
+
+        try:
+            with open(history_path, 'r', encoding='utf-8') as f:
+                elo_hist = json.load(f)
+            with open(archive_path, 'r', encoding='utf-8') as f:
+                archive = json.load(f)
+        except Exception:
+            self.team_forms = {}
+            return
+
+        forms = {}
+        for team_name, entries in elo_hist.items():
+            team_form = []
+            prev_elo = entries[0]['elo'] if entries else 1500.0
+            for i in range(1, len(entries)):
+                entry = entries[i]
+                curr_elo = entry['elo']
+                match_id = entry['match_id']
+                if match_id == "baseline" or match_id not in archive:
+                    prev_elo = curr_elo
+                    continue
+                
+                match = archive[match_id]
+                res = match.get("post_match_result", {})
+                if res.get("status") != "completed":
+                    prev_elo = curr_elo
+                    continue
+                
+                actual_score = res.get("actual_score")
+                if not actual_score or actual_score == "N/A":
+                    prev_elo = curr_elo
+                    continue
+                
+                try:
+                    h_goals, a_goals = map(int, actual_score.split(":"))
+                except ValueError:
+                    prev_elo = curr_elo
+                    continue
+                
+                home_team = match.get("metadata", {}).get("home_team", "")
+                home_norm = self.name_mapping.get(home_team, home_team)
+                
+                if team_name == home_norm:
+                    opp = match.get("metadata", {}).get("away_disp", "Unknown")
+                    gf, ga = h_goals, a_goals
+                else:
+                    opp = match.get("metadata", {}).get("home_disp", "Unknown")
+                    gf, ga = a_goals, h_goals
+                
+                if gf > ga: outcome = "W"
+                elif gf < ga: outcome = "L"
+                else: outcome = "D"
+                
+                delta = curr_elo - prev_elo
+                
+                team_form.append({
+                    "result": outcome,
+                    "opponent": opp,
+                    "score": f"{gf}:{ga}",
+                    "delta": round(delta, 1)
+                })
+                prev_elo = curr_elo
+            
+            # Keep last 5
+            last_5 = team_form[-5:]
+            
+            # Determine "On Fire"
+            on_fire = False
+            if len(last_5) >= 3 and all(f["result"] == "W" for f in last_5[-3:]):
+                on_fire = True
+            elif len(last_5) >= 2 and sum(f["delta"] for f in last_5[-2:]) >= 40:
+                on_fire = True
+                
+            forms[team_name] = {
+                "form": last_5,
+                "on_fire": on_fire
+            }
+            
+        self.team_forms = forms
 
     def get_match_elo_probabilities(self, home_team: str, away_team: str, home_resting: bool = False, away_resting: bool = False) -> tuple[float, float]:
         home_norm = self.name_mapping.get(home_team, home_team)
