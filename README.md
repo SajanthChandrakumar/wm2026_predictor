@@ -31,6 +31,10 @@ By using this software you agree that the author cannot be held liable for any l
 | **Pool strategy** | Contrarian mode maximises E[advantage vs field] + λ·σ[advantage] instead of raw xP — designed to finish #1 in a pool, not just average well |
 | **K.O. phase** | Extra-time xG inflation is weighted by P(draw after 90 min), not a flat multiplier |
 | **Auto Elo sync** | Idempotent background job (APScheduler, 04:00 daily) updates ratings from completed match scores and strictly reloads global memory state |
+| **Performance Dashboard** | Tracks completed matches, total SRF points, and hit rate (tendency accuracy); retroactively populates entries for matches played before app startup |
+| **You vs Algo** | Head-to-head panel comparing your manual tips against the algorithm's predictions, with points and tendency accuracy side by side |
+| **Inline tip editor** | Enter or correct your SRF tip directly in the Performance view; points are recalculated immediately on save |
+| **Algo tip reconstruction** | For pre-app matches without live odds, algo tips are reconstructed from pre-match Elo baselines and flagged as `ALGO*` with a tooltip explanation |
 
 ---
 
@@ -38,10 +42,10 @@ By using this software you agree that the author cannot be held liable for any l
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.12, FastAPI, Uvicorn |
+| Backend | Python 3.12, FastAPI, Uvicorn, APScheduler |
 | Math | NumPy, SciPy (`optimize`, `stats`), Pandas |
-| Frontend | Vanilla HTML/CSS/JS — no framework |
-| Data | [The Odds API](https://the-odds-api.com) |
+| Frontend | Vanilla HTML/CSS/JS — no framework; dark navy + gold WC palette |
+| Data | [The Odds API](https://the-odds-api.com), API-Football (scores) |
 
 ---
 
@@ -92,7 +96,9 @@ wm2026_predictor/
 │   ├── style.css
 │   └── app.js
 ├── data/
-│   ├── elo_ratings.csv   # Live Elo ratings for all 48 teams
+│   ├── elo_ratings.csv          # Live Elo ratings for all 48 teams
+│   ├── elo_history.json         # Per-match Elo snapshots (for Team Form chart)
+│   ├── prediction_archive.json  # Completed match results + user/algo tips + points
 │   ├── matches_cache.json
 │   └── processed_matches.json
 ├── test_math_engine.py
@@ -100,6 +106,30 @@ wm2026_predictor/
 ├── ARCHITECTURE.md       # Full mathematical documentation
 └── README.md
 ```
+
+---
+
+## Views
+
+The dashboard has five views, accessible from the sidebar:
+
+| View | Description |
+|---|---|
+| **Dashboard** | All tournament fixtures grouped by day; click any match for the full prediction breakdown |
+| **Top Value Bets** | Fixtures ranked by Expected Points — highest xP tip first |
+| **Model Edge** | Where Elo diverges most from bookmaker consensus — potential field edge |
+| **Team Form** | Elo rating trajectory per team across the tournament |
+| **Performance** | Your SRF points, hit rate, match history with inline tip editor, and You vs Algo head-to-head |
+
+---
+
+## Architecture Notes
+
+- **`ensure_teams_exist(*teams)`** — the only place new Elo rows are created. Replaces the earlier `merge_odds_and_elo()` which had a hidden CSV side-effect and a discarded return value.
+- **Elo ratings column is always `float64`** — enforced on CSV load. Earlier pandas versions silently stored it as `int64`, causing `LossySetitemError` on every post-match update and silently killing all Elo progression.
+- **Host-bonus (+80) is applied only to post-match Elo updates**, not to pre-match win probabilities. Bookmaker odds already price home advantage; adding the bonus to the prediction path would double-count it.
+- **Prediction archive** stores `user_tip`, `top_tip` (algo), `points_earned` (from user tip), and `algo_points` separately. Entries for matches played before app startup are created retroactively during Elo sync.
+- **Dynamic TTL cache**: >24 h to kick-off → 12 h cache; 2–24 h → 1 h; <2 h → 15 min.
 
 ---
 
