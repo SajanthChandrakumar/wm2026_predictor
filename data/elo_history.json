@@ -214,5 +214,125 @@
             "match_id": "d79edbd6aaeb578d33e313446b18d333",
             "elo": 1541.5704571795075
         }
+    ],
+    "Netherlands": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 2013.2117907908114
+        },
+        {
+            "timestamp": 1781558108.656576,
+            "match_id": "32ec06abda2398ac41501c86eb9aa376",
+            "elo": 2013.2117907908114
+        }
+    ],
+    "Japan": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1946.7882092091886
+        },
+        {
+            "timestamp": 1781558108.6567569,
+            "match_id": "32ec06abda2398ac41501c86eb9aa376",
+            "elo": 1946.7882092091886
+        }
+    ],
+    "Ivory Coast": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1823.609804336604
+        },
+        {
+            "timestamp": 1781558108.6586182,
+            "match_id": "05752bb341e197001387b64f3a06b9b2",
+            "elo": 1823.609804336604
+        }
+    ],
+    "Ecuador": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1906.390195663396
+        },
+        {
+            "timestamp": 1781558108.658784,
+            "match_id": "05752bb341e197001387b64f3a06b9b2",
+            "elo": 1906.390195663396
+        }
+    ],
+    "Sweden": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1859.0130686878772
+        },
+        {
+            "timestamp": 1781558108.661421,
+            "match_id": "b55f9569de3f4d731bc5537ff5ff43e4",
+            "elo": 1859.0130686878772
+        }
+    ],
+    "Tunisia": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1670.9869313121228
+        },
+        {
+            "timestamp": 1781558108.661632,
+            "match_id": "b55f9569de3f4d731bc5537ff5ff43e4",
+            "elo": 1670.9869313121228
+        }
+    ],
+    "Spain": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 2063.758843487233
+        },
+        {
+            "timestamp": 1781558108.663293,
+            "match_id": "c54f00b11925751d2b62988775c6c239",
+            "elo": 2063.758843487233
+        }
+    ],
+    "Cape Verde": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1646.2411565127668
+        },
+        {
+            "timestamp": 1781558108.663446,
+            "match_id": "c54f00b11925751d2b62988775c6c239",
+            "elo": 1646.2411565127668
+        }
+    ],
+    "Belgium": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1963.1922237604106
+        },
+        {
+            "timestamp": 1781558108.666035,
+            "match_id": "fbfb95c62003fd6d828b309f96ee1f9b",
+            "elo": 1963.1922237604106
+        }
+    ],
+    "Egypt": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1776.8077762395894
+        },
+        {
+            "timestamp": 1781558108.666213,
+            "match_id": "fbfb95c62003fd6d828b309f96ee1f9b",
+            "elo": 1776.8077762395894
+        }
     ]
 }

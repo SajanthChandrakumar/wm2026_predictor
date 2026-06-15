@@ -896,6 +896,13 @@ async function loadPerformanceView() {
         botPanel.innerHTML = '';
     }
 
+    // ── Bot-Race (pure archive data, no API cost) ──
+    const completedSorted = Object.entries(archiveData)
+        .filter(([, m]) => m.post_match_result?.status === 'completed')
+        .sort((a, b) => new Date(a[1].pre_match_snapshot?.timestamp_recorded || 0)
+                      - new Date(b[1].pre_match_snapshot?.timestamp_recorded || 0));
+    renderBotRace(completedSorted, BOT_NAMES);
+
     if (completedMatches === 0) {
         grid.innerHTML = `<p style="color:var(--text-2);font-size:0.85rem;">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
     } else if (hasReconstructed) {
@@ -904,6 +911,67 @@ async function loadPerformanceView() {
         note.innerHTML = '<span style="color:var(--amber);">*</span> Algo-Tipp aus Elo-Ratings rekonstruiert (Spiel vor App-Start, keine historischen Quoten verfügbar) — angenähert, nicht das volle Quoten-Modell.';
         grid.appendChild(note);
     }
+}
+
+// ── Bot-Points-Race: cumulative points per bot over matchdays ──────
+const BOT_META = {
+    broker:    { name: '💼 Broker',    color: '#5b9bd5' },
+    professor: { name: '🎓 Professor', color: '#4caf82' },
+    rebel:     { name: '🔥 Rebell',    color: '#d9a441' },
+    sniper:    { name: '🎯 X-Sniper',  color: '#9b6dd1' },
+    gambler:   { name: '🎲 Zocker',    color: '#9a9a9a' },
+};
+let botRaceChart = null;
+function renderBotRace(completedSorted, botNames) {
+    const panel = document.getElementById('bot-race-panel');
+    if (!panel) return;
+    if (completedSorted.length < 2) { panel.innerHTML = ''; if (botRaceChart) { botRaceChart.destroy(); botRaceChart = null; } return; }
+
+    const activeBots = botNames.filter(b => BOT_META[b] &&
+        completedSorted.some(([, m]) => (m.post_match_result?.bot_points ?? {})[b] != null));
+
+    const labels = completedSorted.map(([, m], i) =>
+        `${(m.metadata.home_team || '').slice(0, 3).toUpperCase()}–${(m.metadata.away_team || '').slice(0, 3).toUpperCase()}`);
+
+    const running = {}; activeBots.forEach(b => running[b] = 0); let userRun = 0;
+    const series = {}; activeBots.forEach(b => series[b] = []); const userSeries = [];
+    completedSorted.forEach(([, m]) => {
+        const bp = m.post_match_result?.bot_points ?? {};
+        activeBots.forEach(b => { running[b] += (bp[b] || 0); series[b].push(running[b]); });
+        userRun += (m.post_match_result?.points_earned || 0); userSeries.push(userRun);
+    });
+
+    const datasets = activeBots.map(b => ({
+        label: BOT_META[b].name, data: series[b], borderColor: BOT_META[b].color,
+        backgroundColor: BOT_META[b].color, tension: 0.3, borderWidth: 2,
+        pointRadius: 2, pointHoverRadius: 5,
+    }));
+    datasets.unshift({
+        label: '★ Du', data: userSeries, borderColor: '#d4af37', backgroundColor: '#d4af37',
+        tension: 0.3, borderWidth: 3, borderDash: [6, 3], pointRadius: 2, pointHoverRadius: 5,
+    });
+
+    panel.innerHTML = `
+        <div class="glass-card" style="padding:20px 24px;">
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:14px;">🏁 Bot-Points-Race</div>
+            <div style="height:300px;"><canvas id="botRaceChart"></canvas></div>
+        </div>`;
+
+    const ctx = document.getElementById('botRaceChart').getContext('2d');
+    if (botRaceChart) botRaceChart.destroy();
+    const tick = getComputedStyle(document.documentElement).getPropertyValue('--text-3') || '#888';
+    botRaceChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { labels: { color: tick.trim(), boxWidth: 12, font: { size: 11 } } } },
+            scales: {
+                x: { ticks: { color: tick.trim(), maxRotation: 60, minRotation: 45, font: { size: 9 } }, grid: { display: false } },
+                y: { beginAtZero: true, ticks: { color: tick.trim() }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Kumulierte Punkte', color: tick.trim() } },
+            },
+        },
+    });
 }
 
 async function saveUserTip(event, matchId) {

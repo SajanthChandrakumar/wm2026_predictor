@@ -8,12 +8,10 @@ Activate via the `USE_API_FOOTBALL=true` env flag — see src/api.py for the swi
 World Cup league ID = 1 on API-Football. If that ID ever changes for a
 different season schema, override WC_LEAGUE_ID before constructing the engine.
 """
-import urllib.request
-import json
 import os
-from datetime import datetime, timezone, timedelta
-from src.core import config
+import json
 import requests
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -46,7 +44,7 @@ class OddsApiEngine:
             used = int(limit) - int(remaining)
         except (ValueError, TypeError):
             used = "Unknown"
-        quota_path = config.QUOTA_PATH
+        quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota.json')
         os.makedirs(os.path.dirname(quota_path), exist_ok=True)
         with open(quota_path, 'w', encoding='utf-8') as f:
             json.dump({"remaining": remaining, "used": used, "limit": limit}, f, indent=4)
@@ -94,7 +92,7 @@ class OddsApiEngine:
         Fetches lineups if commence_time is within 60 mins. Caches the result.
         Compares starting XI to the last known starting XI to find missing players.
         """
-        cache_path = config.LINEUPS_CACHE_PATH
+        cache_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'lineups_cache.json')
         try:
             with open(cache_path, 'r', encoding='utf-8') as f:
                 cache = json.load(f)
@@ -154,7 +152,7 @@ class OddsApiEngine:
         """
         if not team1_id or not team2_id:
             return {}
-        cache_path = config.H2H_CACHE_PATH
+        cache_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'h2h_cache.json')
         try:
             with open(cache_path, 'r', encoding='utf-8') as f:
                 cache = json.load(f)

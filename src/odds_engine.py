@@ -1,14 +1,16 @@
 import os
 import json
 import requests
-from src.core import config
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class OddsApiEngine:
     BASE_URL = "https://api.the-odds-api.com/v4/sports"
     SPORT = "soccer_fifa_world_cup"
 
     def __init__(self):
-        self.api_key = config.ODDS_API_KEY
+        self.api_key = os.getenv("ODDS_API_KEY")
         if not self.api_key or self.api_key == "your_key_here":
             raise ValueError("ODDS_API_KEY is missing or invalid in the environment variables. Please set it in the .env file.")
 
@@ -16,8 +18,7 @@ class OddsApiEngine:
         remaining = headers.get("x-requests-remaining", "Unknown")
         used = headers.get("x-requests-used", "Unknown")
         
-        quota_path = config.QUOTA_ODDS_PATH
-        import os
+        quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota_odds.json')
         os.makedirs(os.path.dirname(quota_path), exist_ok=True)
         
         with open(quota_path, 'w', encoding='utf-8') as f:
