@@ -1,14 +1,40 @@
 # WM 2026 Predictor
 
-A quantitative prediction engine and analytics dashboard built for the **SRF Tippspiel** during the FIFA World Cup 2026. It reverse-engineers bookmaker odds to derive Expected Goals, applies a Dixon-Coles–corrected Poisson model, and calculates the mathematically optimal tip to maximise points in a closed prediction pool.
+<div align="center">
 
-> **See [ARCHITECTURE.md](ARCHITECTURE.md) for a full explanation of the mathematics.**
+**A quantitative prediction engine and analytics dashboard for the FIFA World Cup 2026**
+
+[![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=flat&logo=python)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=flat)]()
+
+[Features](#features) • [Quick Start](#quick-start) • [Architecture](#architecture) • [Views](#views) • [Disclaimer](#disclaimer)
+
+</div>
 
 ---
 
-## ⚠️ Disclaimer
+## Overview
 
-This project is developed **strictly for scientific, educational, and research purposes** as a companion tool for the [SRF Tippspiel](https://wmtippspiel.srf.ch) — a free, non-monetary prediction game. It is not a gambling tool, betting advisory service, or financial product of any kind.
+**WM 2026 Predictor** is a sophisticated statistical prediction engine built for the [SRF Tippspiel](https://wmtippspiel.srf.ch) — a free, non-monetary prediction competition during the FIFA World Cup 2026.
+
+The system combines:
+- **Real-time bookmaker odds analysis** (consensus across all major sportsbooks)
+- **Dynamic Elo rating system** (updated daily from completed match results)
+- **Expected Goals (xG) solver** (reverse-engineered from odds using Dixon-Coles correction)
+- **Bivariate Poisson modeling** (full probability matrix for match outcomes)
+- **Strategic tip optimization** (contrarian pool strategy to maximize winning position)
+
+All predictions are calculated with full transparency and mathematical rigor. The interactive dashboard provides match predictions, performance tracking, and head-to-head comparison between your manual tips and the algorithm.
+
+> **See [ARCHITECTURE.md](ARCHITECTURE.md) for the complete mathematical documentation.**
+
+---
+
+## Disclaimer
+
+This project is developed **strictly for scientific, educational, and research purposes** as a companion tool for the [SRF Tippspiel](https://wmtippspiel.srf.ch) — a free, non-monetary prediction competition.
 
 - The author **accepts no responsibility or liability** for any decisions made by third parties based on the output of this software.
 - This tool does **not** constitute financial, investment, or betting advice.
@@ -21,35 +47,41 @@ By using this software you agree that the author cannot be held liable for any l
 
 ## Features
 
-| | |
-|---|---|
-| **Odds ingestion** | Live H2H + Over/Under 2.5 odds via The Odds API; margin-removed using proportional normalisation; consensus median across all bookmakers |
-| **Elo ratings** | Dynamic Elo system for all 48 nations; K=60 with margin-of-victory multiplier; host nation bonus (+80) for USA, Canada, Mexico applied exclusively to post-match updates |
-| **xG solver** | SciPy L-BFGS-B minimiser reverse-engineers Expected Goals from odds probabilities; Dixon-Coles corrected (ρ = −0.15) |
-| **Score matrix** | Full bivariate Poisson probability matrix (0–9 goals); Dixon-Coles low-score correction applied |
-| **xP calculator** | Simulates every possible tip against the score matrix using the exact SRF Tippspiel ruleset (5/1/1/3 pts, ×2 in K.O.) |
-| **Pool strategy** | Contrarian mode maximises E[advantage vs field] + λ·σ[advantage] instead of raw xP — designed to finish #1 in a pool, not just average well |
-| **K.O. phase** | Extra-time xG inflation is weighted by P(draw after 90 min), not a flat multiplier |
-| **Auto Elo sync** | Idempotent background job (APScheduler, 04:00 daily) updates ratings from completed match scores and strictly reloads global memory state |
-| **Performance Dashboard** | Tracks completed matches, total SRF points, and hit rate (tendency accuracy); retroactively populates entries for matches played before app startup |
-| **You vs Algo** | Head-to-head panel comparing your manual tips against the algorithm's predictions, with points and tendency accuracy side by side |
-| **Inline tip editor** | Enter or correct your SRF tip directly in the Performance view; points are recalculated immediately on save |
-| **Algo tip reconstruction** | For pre-app matches without live odds, algo tips are reconstructed from pre-match Elo baselines and flagged as `ALGO*` with a tooltip explanation |
+| Feature | Description |
+|---------|-------------|
+| **Live Odds Ingestion** | Real-time H2H + Over/Under 2.5 odds via The Odds API; margin-removed using proportional normalisation; consensus median across all bookmakers |
+| **Dynamic Elo Ratings** | Elo system for all 48 nations; K=60 with margin-of-victory multiplier; host nation bonus (+80) for USA, Canada, Mexico applied exclusively to post-match updates |
+| **xG Solver** | SciPy L-BFGS-B minimiser reverse-engineers Expected Goals from odds probabilities; Dixon-Coles corrected (ρ = −0.15) |
+| **Score Matrix** | Full bivariate Poisson probability matrix (0–9 goals); Dixon-Coles low-score correction applied |
+| **xP Calculator** | Simulates every possible tip against the score matrix using the exact SRF Tippspiel ruleset (5/1/1/3 pts, ×2 in K.O.) |
+| **Pool Strategy** | Contrarian mode maximises E[advantage vs field] + λ·σ[advantage] instead of raw xP — designed to finish #1 in a pool, not just average well |
+| **K.O. Phase Handling** | Extra-time xG inflation is weighted by P(draw after 90 min), not a flat multiplier |
+| **Auto Elo Sync** | Idempotent background job (APScheduler, 04:00 daily) updates ratings from completed match scores |
+| **Performance Dashboard** | Tracks completed matches, total SRF points, hit rate, and tendency accuracy; retroactively populates entries for matches played before app startup |
+| **You vs Algo** | Head-to-head comparison between your manual tips and the algorithm's predictions with points and accuracy side-by-side |
+| **Inline Tip Editor** | Enter or correct your SRF tip directly in the Performance view; points recalculated immediately on save |
+| **Algo Tip Reconstruction** | For pre-app matches without live odds, algo tips are reconstructed from pre-match Elo baselines and flagged as `ALGO*` |
 
 ---
 
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Backend | Python 3.12, FastAPI, Uvicorn, APScheduler |
-| Math | NumPy, SciPy (`optimize`, `stats`), Pandas |
-| Frontend | Vanilla HTML/CSS/JS — no framework; dark navy + gold WC palette |
-| Data | [The Odds API](https://the-odds-api.com), API-Football (scores) |
+|-------|-----------|
+| **Backend** | Python 3.12, FastAPI, Uvicorn, APScheduler |
+| **Mathematics** | NumPy, SciPy (`optimize`, `stats`), Pandas |
+| **Frontend** | Vanilla HTML/CSS/JavaScript — no framework; dark navy + gold WC palette |
+| **Data Sources** | [The Odds API](https://the-odds-api.com), API-Football (scores) |
 
 ---
 
 ## Quick Start
+
+### Prerequisites
+- Python 3.12+
+- An API key from [The Odds API](https://the-odds-api.com)
+
+### Installation
 
 ```bash
 # 1. Clone and enter the project
@@ -79,7 +111,7 @@ The system is designed to stay current throughout the tournament without manual 
 - **Automatic**: The Elo sync job runs daily at 04:00 and processes any completed matches from the last 72 hours.
 - **Manual**: Press **Sync Elo Ratings** in the dashboard at any time to trigger an immediate update.
 - **Idempotent**: `data/processed_matches.json` tracks processed match IDs — each result is applied exactly once regardless of how many times you sync.
-- **Cache**: Match odds are cached for 1 hour in `data/matches_cache.json`. Use **Refresh Data** to force a live fetch (costs one API call).
+- **Cache**: Match odds are cached with dynamic TTL in `data/matches_cache.json`. Use **Refresh Data** to force a live fetch (costs one API call).
 
 ---
 
@@ -88,48 +120,51 @@ The system is designed to stay current throughout the tournament without manual 
 ```
 wm2026_predictor/
 ├── src/
-│   ├── api.py            # FastAPI app, endpoints, orchestration
-│   ├── math_engine.py    # All prediction mathematics
-│   └── odds_engine.py    # The Odds API client
+│   ├── api.py                   # FastAPI app, endpoints, orchestration
+│   ├── math_engine.py           # All prediction mathematics
+│   └── odds_engine.py           # The Odds API client
 ├── frontend/
-│   ├── index.html
-│   ├── style.css
-│   └── app.js
+│   ├── index.html               # Main dashboard UI
+│   ├── style.css                # Professional styling (navy + gold theme)
+│   └── app.js                   # Client-side interactivity
 ├── data/
 │   ├── elo_ratings.csv          # Live Elo ratings for all 48 teams
-│   ├── elo_history.json         # Per-match Elo snapshots (for Team Form chart)
-│   ├── prediction_archive.json  # Completed match results + user/algo tips + points
-│   ├── matches_cache.json
-│   └── processed_matches.json
-├── test_math_engine.py
-├── test_api.py
-├── ARCHITECTURE.md       # Full mathematical documentation
-└── README.md
+│   ├── elo_history.json         # Per-match Elo snapshots
+│   ├── prediction_archive.json  # Match results + user/algo tips + points
+│   ├── matches_cache.json       # Cached odds with TTL
+│   └── processed_matches.json    # Idempotency tracker
+├── test_math_engine.py          # Unit tests for mathematics
+├── test_api.py                  # Integration tests
+├── ARCHITECTURE.md              # Full mathematical documentation
+├── README.md                    # This file
+└── requirements.txt             # Python dependencies
 ```
 
 ---
 
-## Views
+## Dashboard Views
 
-The dashboard has five views, accessible from the sidebar:
+The application provides five intuitive views accessible from the sidebar:
 
 | View | Description |
-|---|---|
-| **Dashboard** | All tournament fixtures grouped by day; click any match for the full prediction breakdown |
-| **Top Value Bets** | Fixtures ranked by Expected Points — highest xP tip first |
-| **Model Edge** | Where Elo diverges most from bookmaker consensus — potential field edge |
-| **Team Form** | Elo rating trajectory per team across the tournament |
-| **Performance** | Your SRF points, hit rate, match history with inline tip editor, and You vs Algo head-to-head |
+|------|-------------|
+| **Dashboard** | All tournament fixtures grouped by day; click any match for the full prediction breakdown including probability matrix, Elo comparison, and xP analysis |
+| **Top Value Bets** | Fixtures ranked by Expected Points — highest xP tip first; identify the best-scoring opportunities according to the algorithm |
+| **Model Edge** | Highlights where Elo ratings diverge most from bookmaker consensus — potential field advantages where the model finds value |
+| **Team Form** | Interactive Elo rating trajectory per team across the tournament; track how each nation's strength evolves with results |
+| **Performance** | Your SRF points total, hit rate (tendency accuracy), complete match history with inline tip editor, and You vs Algo head-to-head comparison |
 
 ---
 
-## Architecture Notes
+## Architecture Highlights
 
-- **`ensure_teams_exist(*teams)`** — the only place new Elo rows are created. Replaces the earlier `merge_odds_and_elo()` which had a hidden CSV side-effect and a discarded return value.
-- **Elo ratings column is always `float64`** — enforced on CSV load. Earlier pandas versions silently stored it as `int64`, causing `LossySetitemError` on every post-match update and silently killing all Elo progression.
-- **Host-bonus (+80) is applied only to post-match Elo updates**, not to pre-match win probabilities. Bookmaker odds already price home advantage; adding the bonus to the prediction path would double-count it.
-- **Prediction archive** stores `user_tip`, `top_tip` (algo), `points_earned` (from user tip), and `algo_points` separately. Entries for matches played before app startup are created retroactively during Elo sync.
-- **Dynamic TTL cache**: >24 h to kick-off → 12 h cache; 2–24 h → 1 h; <2 h → 15 min.
+- **`ensure_teams_exist(*teams)`** — the only place new Elo rows are created. Prevents hidden side-effects from CSV operations.
+- **Elo ratings column is always `float64`** — enforced on CSV load to prevent silent type conversion issues.
+- **Host-bonus (+80) applied only to post-match updates**, not to pre-match predictions (odds already price home advantage).
+- **Prediction archive** stores `user_tip`, `top_tip` (algo), `points_earned`, and `algo_points` separately for full transparency.
+- **Dynamic TTL cache**: >24h to kick-off → 12h cache; 2–24h → 1h; <2h → 15min.
+
+For comprehensive technical details, see **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
 ---
 
@@ -141,10 +176,30 @@ The dashboard has five views, accessible from the sidebar:
 
 ---
 
-## Haftungsausschluss (Disclaimer)
+## License
 
-Dieses Projekt ist ein reines Hobby- und Bildungsprojekt, das aus persönlichem Interesse an Data Science, Software-Architektur und Wahrscheinlichkeitsrechnung entwickelt wurde. 
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
-Die durch diese Software generierten Daten, Matrizen und Expected-Points-Berechnungen (xP) dienen ausschließlich zu Informations- und Analysezwecken. Sie stellen **ausdrücklich keine Anlage-, Finanz- oder Wettberatung** dar. 
+---
 
-Der Autor übernimmt absolut keine Verantwortung oder Haftung für die Richtigkeit der Vorhersagen oder für jegliche finanzielle Verluste, die durch die direkte oder indirekte Nutzung dieses Repositories, der Algorithmen oder des Dashboards entstehen. Sportwetten bergen ein erhebliches finanzielles Risiko. Die Nutzung der Software und das blinde Vertrauen auf die generierten "Value Bets" erfolgt vollständig auf eigene Gefahr.
+## Attribution
+
+Built as a hobby and educational project exploring data science, software architecture, and probabilistic modeling for the 2026 FIFA World Cup.
+
+---
+
+## Haftungsausschluss (German Disclaimer)
+
+Dieses Projekt ist ein reines Hobby- und Bildungsprojekt, das aus persönlichem Interesse an Data Science, Software-Architektur und Wahrscheinlichkeitsrechnung entwickelt wurde.
+
+Die durch diese Software generierten Daten, Matrizen und Expected-Points-Berechnungen (xP) dienen ausschließlich zu Informations- und Analysezwecken. Sie stellen **ausdrücklich keine Anlage-, Finanz- oder Wettberatung dar**.
+
+Der Autor übernimmt absolut keine Verantwortung oder Haftung für die Richtigkeit der Vorhersagen oder für jegliche finanzielle Verluste, die durch die direkte oder indirekte Nutzung dieses Repositories entstehen.
+
+---
+
+<div align="center">
+
+Built for the FIFA World Cup 2026
+
+</div>
