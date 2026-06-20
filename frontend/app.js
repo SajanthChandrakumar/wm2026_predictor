@@ -876,9 +876,90 @@ async function loadPerformanceView() {
             </tr>`;
         }).join('');
 
+        const stratHtml = `
+            <div id="bot-strategies" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--border);">
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding:12px 14px;background:var(--surface-2);border:1px solid var(--gold-b);border-radius:6px;">
+                        <div style="font-size:1.4rem;line-height:1;">⚙️</div>
+                        <div>
+                            <div style="font-size:0.82rem;font-weight:800;color:var(--gold-l);margin-bottom:3px;">Algo &mdash; Das Haus-Modell</div>
+                            <div style="font-size:0.74rem;color:var(--text-2);line-height:1.5;">
+                                <b>70 % Buchmacher-Quoten + 30 % Elo-Ratings</b>, dann xG &rarr; Tor-für-Tor-Wahrscheinlichkeitsmatrix &rarr; der Tipp mit den meisten erwarteten Punkten (xP) gewinnt. Standardmodell der App. <i style="color:var(--text-3);">Verwendet in &bdquo;Top Tipp&ldquo; auf dem Dashboard.</i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;">
+                        <div style="font-size:1.4rem;line-height:1;">💼</div>
+                        <div>
+                            <div style="font-size:0.82rem;font-weight:800;color:var(--blue);margin-bottom:3px;">Der Broker &mdash; Pure Buchmacher-Quoten</div>
+                            <div style="font-size:0.74rem;color:var(--text-2);line-height:1.5;">
+                                <b>100 % Markt, 0 % Elo.</b> Vertraut blind den Buchmachern: berechnet xG nur aus den entmarginalisierten Quoten und wählt den Tipp mit höchstem xP. <i style="color:var(--text-3);">Die &bdquo;Weisheit der Crowd&ldquo;-Strategie.</i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;">
+                        <div style="font-size:1.4rem;line-height:1;">🎓</div>
+                        <div>
+                            <div style="font-size:0.82rem;font-weight:800;color:var(--green);margin-bottom:3px;">Der Professor &mdash; Pure Elo-Ratings</div>
+                            <div style="font-size:0.74rem;color:var(--text-2);line-height:1.5;">
+                                <b>100 % Elo, 0 % Markt</b> (außer für Over/Under-Realismus). Ignoriert die Buchmacher komplett, leitet alles aus den Team-Stärken her. <i style="color:var(--text-3);">Schlägt den Markt, wenn die Quoten falsch liegen &mdash; verliert hart, wenn der Markt recht hat.</i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;">
+                        <div style="font-size:1.4rem;line-height:1;">🔥</div>
+                        <div>
+                            <div style="font-size:0.82rem;font-weight:800;color:var(--amber);margin-bottom:3px;">Der Rebell &mdash; Kontra-Feld</div>
+                            <div style="font-size:0.74rem;color:var(--text-2);line-height:1.5;">
+                                Setzt <b>immer auf den Underdog</b>. Identifiziert das Team mit den schlechteren Quoten und wählt den besten Sieg-Tipp für genau dieses Team. <i style="color:var(--text-3);">Lebt von Überraschungen &mdash; selten Treffer, aber dann oft volle Punktzahl.</i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;">
+                        <div style="font-size:1.4rem;line-height:1;">🎯</div>
+                        <div>
+                            <div style="font-size:0.82rem;font-weight:800;color:var(--purple,#9b6dd1);margin-bottom:3px;">Der X-Sniper &mdash; Draw-Spezialist</div>
+                            <div style="font-size:0.74rem;color:var(--text-2);line-height:1.5;">
+                                Tippt <b>immer ein Unentschieden</b>. Wählt aus den Unentschieden-Tipps (0:0, 1:1, 2:2 &hellip;) den mit dem höchsten xP. <i style="color:var(--text-3);">Hochrisiko-Strategie &mdash; trifft selten, aber wenn, dann oft volle 10 Punkte (exakter Score).</i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;">
+                        <div style="font-size:1.4rem;line-height:1;">🎲</div>
+                        <div>
+                            <div style="font-size:0.82rem;font-weight:800;color:var(--text-2);margin-bottom:3px;">Der Zocker &mdash; Gewichteter Zufall</div>
+                            <div style="font-size:0.74rem;color:var(--text-2);line-height:1.5;">
+                                Würfelt aus den <b>Top-10-Tipps</b> nach xP-Gewicht. Der wahrscheinlichste Tipp wird öfter gezogen als der zehntbeste. <i style="color:var(--text-3);">Match-ID als Seed &mdash; bei identischem Spiel kommt immer derselbe &bdquo;Zufall&ldquo; raus (reproduzierbar).</i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:6px;padding:10px 14px;background:var(--surface);border-radius:6px;border:1px dashed var(--border);">
+                        <div style="font-size:0.7rem;color:var(--text-3);line-height:1.6;">
+                            <b style="color:var(--text-2);">Punkte-System (SRF Tippspiel):</b> Exakter Score = <b>10 Pt</b> &middot; Korrekte Tordifferenz = <b>8 Pt</b> &middot; Richtige Tendenz (Sieg/Niederlage/X) = <b>5 Pt</b> &middot; Falsch = <b>0 Pt</b>. In der K.O.-Phase verdoppeln sich die Punkte (×2).
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
         botPanel.innerHTML = `
             <div class="glass-card" style="padding:20px 24px;">
-                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:14px;">Bot Scoreboard</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;">
+                    <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;">Bot Scoreboard</div>
+                    <button id="bot-strat-toggle"
+                        style="background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-2);
+                               padding:4px 10px;border-radius:4px;font-size:0.68rem;font-weight:600;cursor:pointer;
+                               display:flex;align-items:center;gap:5px;transition:all 0.15s;"
+                        onmouseover="this.style.background='var(--surface-3)';this.style.color='var(--text-1)'"
+                        onmouseout="this.style.background='var(--surface-2)';this.style.color='var(--text-2)'">
+                        <span>ⓘ</span> Wie funktionieren die Bots?
+                    </button>
+                </div>
                 <table style="width:100%;border-collapse:collapse;">
                     <thead>
                         <tr>
@@ -891,7 +972,22 @@ async function loadPerformanceView() {
                     </thead>
                     <tbody>${rowsHtml}</tbody>
                 </table>
+                ${stratHtml}
             </div>`;
+
+        // Toggle handler — pure DOM, no API call
+        const btn = document.getElementById('bot-strat-toggle');
+        const strat = document.getElementById('bot-strategies');
+        if (btn && strat) {
+            btn.addEventListener('click', () => {
+                const isOpen = strat.style.display !== 'none';
+                strat.style.display = isOpen ? 'none' : 'block';
+                btn.innerHTML = isOpen
+                    ? '<span>ⓘ</span> Wie funktionieren die Bots?'
+                    : '<span>✕</span> Schließen';
+                if (!isOpen) strat.scrollIntoView({behavior:'smooth', block:'nearest'});
+            });
+        }
     } else {
         botPanel.innerHTML = '';
     }
