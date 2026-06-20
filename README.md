@@ -1,6 +1,17 @@
 # WM 2026 Predictor
 
-A full-stack quantitative prediction engine built for the **FIFA World Cup 2026**, designed to maximise points in the [SRF Tippspiel](https://wmtippspiel.srf.ch) — a competitive closed prediction pool. The system reverse-engineers bookmaker odds into Expected Goals, applies a Dixon-Coles–corrected bivariate Poisson model, blends in a live Elo rating system, and computes the mathematically optimal tip for each match.
+<div align="center">
+
+**A quantitative prediction engine and analytics dashboard for the FIFA World Cup 2026**
+
+[![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=flat&logo=python)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=flat)]()
+
+</div>
+
+A full-stack quantitative prediction engine built for the [SRF Tippspiel](https://wmtippspiel.srf.ch) — a competitive closed prediction pool during the FIFA World Cup 2026. The system reverse-engineers bookmaker odds into Expected Goals, applies a Dixon-Coles–corrected bivariate Poisson model, blends in a live Elo rating system, and computes the mathematically optimal tip for each match.
 
 > See [ARCHITECTURE.md](ARCHITECTURE.md) for the full mathematical derivation.
 
@@ -16,7 +27,14 @@ This system implements that distinction: a chalk mode (maximise expected points)
 
 ## ⚠️ Disclaimer
 
-This project is developed strictly for **scientific, educational, and research purposes** as a companion tool for the SRF Tippspiel — a free, non-monetary prediction game. It is not a gambling tool, betting advisory service, or financial product of any kind. All probability estimates are model outputs subject to uncertainty and should not be treated as guaranteed outcomes. The author accepts no liability for decisions made based on this software.
+This project is developed **strictly for scientific, educational, and research purposes** as a companion tool for the [SRF Tippspiel](https://wmtippspiel.srf.ch) — a free, non-monetary prediction competition.
+
+- The author **accepts no responsibility or liability** for any decisions made by third parties based on the output of this software.
+- This tool does **not** constitute financial, investment, or betting advice.
+- Using this software to place real-money wagers is entirely at the user's own risk and is explicitly **not** the intended use case.
+- All probability estimates are model outputs subject to uncertainty and should never be treated as guaranteed outcomes.
+
+By using this software you agree that the author cannot be held liable for any losses, damages, or legal consequences arising from its use.
 
 ---
 
@@ -54,12 +72,10 @@ This project is developed strictly for **scientific, educational, and research p
 The Performance view tracks three parallel scoring streams in real time:
 
 - **You** — manual tips entered via the inline editor (or imported from the SRF site)
-- **Algo** — the system's top-pick tip at the time of prediction; retroactively reconstructed from pre-match Elo baselines for matches played before the app started (flagged as `ALGO*`)
+- **Algo** — the system's top-pick tip at prediction time; retroactively reconstructed from pre-match Elo baselines for matches played before the app started (flagged as `ALGO*`)
 - **Bots** — five autonomous agents, each with a fixed strategy; scored independently against every completed result
 
-The **You vs Algo** head-to-head panel shows total points, tendency hit rate, and a progress bar for each, with a live leader message.
-
-The **bot scoreboard** ranks all five bots by total points, average per match, and tendency accuracy. A cumulative points race chart (Chart.js) visualises how each strategy has performed over the tournament.
+The **You vs Algo** head-to-head panel shows total points, tendency hit rate, and a progress bar for each, with a live leader message. The **bot scoreboard** ranks all five bots by total points, average per match, and tendency accuracy. A cumulative points race chart visualises how each strategy has performed over the tournament.
 
 ---
 
@@ -86,7 +102,7 @@ The **bot scoreboard** ranks all five bots by total points, average per match, a
 | Frontend | Vanilla HTML/CSS/JS — zero framework, zero build step |
 | Charts | Chart.js (team Elo trajectory, bot cumulative points race) |
 | Data | The Odds API (live odds + match scores), API-Football (supplementary scores) |
-| Design | Dark navy + gold WC palette; CSS custom properties; Spring easing animations; fully responsive; `prefers-reduced-motion` support |
+| Design | Dark navy + gold WC palette; CSS custom properties; spring easing animations; fully responsive; `prefers-reduced-motion` support |
 
 ---
 
