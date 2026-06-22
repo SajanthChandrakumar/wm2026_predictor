@@ -1,7 +1,7 @@
 // Match detail view: xG row, score-probability heatmap, odds, tip ladder.
 
 import { state } from '../state.js';
-import { api } from '../api.js';
+import { api } from '../api.js?v=2';
 import { pct, computeImpliedProbs, probColor } from '../util.js';
 import { renderFormBlocks } from './dashboard.js';
 

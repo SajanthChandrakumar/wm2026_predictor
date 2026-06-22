@@ -3,7 +3,7 @@
 // with inline user-tip editing.
 
 import { charts } from '../state.js';
-import { api } from '../api.js';
+import { api } from '../api.js?v=2';
 
 // Canonical bot order. Includes legacy English names so old archive entries
 // (from before the German reskinning) still aggregate cleanly.

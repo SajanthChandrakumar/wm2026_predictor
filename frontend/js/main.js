@@ -2,7 +2,7 @@
 // Pulled in via <script type="module"> from index.html.
 
 import { state, charts } from './state.js';
-import { api } from './api.js';
+import { api } from './api.js?v=2';
 import { renderMatchGrid } from './views/dashboard.js';
 import { renderValueBets } from './views/value-bets.js';
 import { renderEdgeView } from './views/edge.js';
