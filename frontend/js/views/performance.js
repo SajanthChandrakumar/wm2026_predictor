@@ -1,9 +1,9 @@
 // Performance Dashboard — KPIs, You-vs-Algo, Bot Scoreboard,
-// Bot-Strategies info box, Bot-Points-Race chart, and match-history cards
+// Bot-Strategies info box, Bot-Points-Race chart, and match-history list
 // with inline user-tip editing.
 
 import { charts } from '../state.js';
-import { api } from '../api.js';
+import { api } from '../api.js?v=2';
 
 // Canonical bot order. Includes legacy English names so old archive entries
 // (from before the German reskinning) still aggregate cleanly.
@@ -62,6 +62,8 @@ export async function loadPerformanceView() {
     const botStats = {};
     BOT_NAMES.forEach(b => { botStats[b] = { pts: 0, tipped: 0, tendency: 0 }; });
 
+    const completedMatches = [];
+
     Object.entries(archive).forEach(([matchId, match]) => {
         if (match.post_match_result?.status !== 'completed') return;
 
@@ -87,7 +89,7 @@ export async function loadPerformanceView() {
         });
 
         if (match.prediction?.algo_reconstructed) totals.hasReconstructed = true;
-        grid.appendChild(buildMatchCard(matchId, match, pts));
+        completedMatches.push([matchId, match, pts]);
     });
 
     renderKpis(totals);
@@ -95,21 +97,106 @@ export async function loadPerformanceView() {
     renderBotScoreboard(totals, botStats);
 
     // Bot-race uses chronological order (oldest match first)
-    const completedSorted = Object.entries(archive)
-        .filter(([, m]) => m.post_match_result?.status === 'completed')
-        .sort((a, b) =>
-            new Date(a[1].pre_match_snapshot?.timestamp_recorded || 0) -
-            new Date(b[1].pre_match_snapshot?.timestamp_recorded || 0));
-    renderBotRace(completedSorted);
+    const chronological = [...completedMatches].sort((a, b) =>
+        new Date(a[1].pre_match_snapshot?.timestamp_recorded || 0) -
+        new Date(b[1].pre_match_snapshot?.timestamp_recorded || 0));
+    renderBotRace(chronological);
 
     if (totals.completedMatches === 0) {
         grid.innerHTML = `<p style="color:var(--text-2);font-size:0.85rem;">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
-    } else if (totals.hasReconstructed) {
-        const note = document.createElement('p');
-        note.style.cssText = 'grid-column:1/-1;font-size:0.7rem;color:var(--text-3);margin-top:6px;font-style:italic;';
-        note.innerHTML = '<span style="color:var(--amber);">*</span> Algo-Tipp aus Elo-Ratings rekonstruiert (Spiel vor App-Start, keine historischen Quoten verfügbar) — angenähert, nicht das volle Quoten-Modell.';
-        grid.appendChild(note);
+        return;
     }
+
+    // Sort match history newest first
+    completedMatches.sort((a, b) =>
+        new Date(b[1].pre_match_snapshot?.timestamp_recorded || 0) -
+        new Date(a[1].pre_match_snapshot?.timestamp_recorded || 0));
+
+    const listWrapper = document.createElement('div');
+    listWrapper.className = 'glass-card';
+    listWrapper.style.cssText = 'padding:20px 24px;grid-column:1/-1;';
+
+    // Header + filter row
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap;';
+    header.innerHTML = `
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;">
+            Spielverlauf <span style="font-weight:500;opacity:0.7;">(neueste zuerst)</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+            <button data-filter="all"
+                style="background:var(--surface-3);border:1px solid var(--border-2);color:var(--text-1);padding:3px 10px;border-radius:4px;font-size:0.68rem;font-weight:700;cursor:pointer;">
+                Alle
+            </button>
+            <button data-filter="hit"
+                style="background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-2);padding:3px 10px;border-radius:4px;font-size:0.68rem;font-weight:600;cursor:pointer;">
+                ✓ Treffer
+            </button>
+            <button data-filter="miss"
+                style="background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-2);padding:3px 10px;border-radius:4px;font-size:0.68rem;font-weight:600;cursor:pointer;">
+                ✗ Verpasst
+            </button>
+            <button data-filter="notipped"
+                style="background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-2);padding:3px 10px;border-radius:4px;font-size:0.68rem;font-weight:600;cursor:pointer;">
+                Kein Tipp
+            </button>
+        </div>`;
+    listWrapper.appendChild(header);
+
+    // Column header
+    const colHeader = document.createElement('div');
+    colHeader.style.cssText = 'display:grid;grid-template-columns:36px 1fr auto auto auto auto;gap:8px;padding:0 4px 8px 12px;border-bottom:2px solid var(--border);margin-bottom:2px;';
+    ['Datum', 'Spiel · Ergebnis', 'Mein Tipp', 'Pts', 'Algo', 'Pts'].forEach((label, i) => {
+        const th = document.createElement('div');
+        th.style.cssText = `font-size:0.58rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;text-align:${i >= 2 ? 'right' : 'left'};`;
+        th.textContent = label;
+        colHeader.appendChild(th);
+    });
+    listWrapper.appendChild(colHeader);
+
+    const matchList = document.createElement('div');
+    matchList.id = 'match-list';
+    matchList.style.cssText = 'display:flex;flex-direction:column;';
+
+    completedMatches.forEach(([matchId, match, pts]) => {
+        matchList.appendChild(buildMatchRow(matchId, match, pts));
+    });
+    listWrapper.appendChild(matchList);
+
+    if (totals.hasReconstructed) {
+        const note = document.createElement('p');
+        note.style.cssText = 'font-size:0.68rem;color:var(--text-3);margin-top:12px;font-style:italic;';
+        note.innerHTML = '<span style="color:var(--amber);">*</span> Algo-Tipp aus Elo-Ratings rekonstruiert — angenähert, nicht das volle Quoten-Modell.';
+        listWrapper.appendChild(note);
+    }
+
+    grid.appendChild(listWrapper);
+
+    // Wire filter buttons
+    listWrapper.querySelectorAll('[data-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            listWrapper.querySelectorAll('[data-filter]').forEach(b => {
+                b.style.background = 'var(--surface-2)';
+                b.style.color = 'var(--text-2)';
+                b.style.fontWeight = '600';
+            });
+            btn.style.background = 'var(--surface-3)';
+            btn.style.color = 'var(--text-1)';
+            btn.style.fontWeight = '700';
+
+            const filter = btn.dataset.filter;
+            document.querySelectorAll('.match-row').forEach(row => {
+                const rowPts  = parseInt(row.dataset.pts  ?? '0', 10);
+                const hasTip  = row.dataset.hastip === '1';
+                const show =
+                    filter === 'all'      ? true :
+                    filter === 'hit'      ? (hasTip && rowPts >= 5) :
+                    filter === 'miss'     ? (hasTip && rowPts === 0) :
+                    filter === 'notipped' ? !hasTip : true;
+                row.style.display = show ? 'grid' : 'none';
+            });
+        });
+    });
 }
 
 function setKpi(matches, points, hitrate) {
@@ -281,88 +368,96 @@ function wireStratToggle() {
     });
 }
 
-function buildMatchCard(matchId, match, pts) {
+// ── Compact match row ──
+function buildMatchRow(matchId, match, pts) {
     const userTip = match.prediction?.user_tip ?? null;
     const algoTip = match.prediction?.top_tip  ?? null;
     const algoPts = match.post_match_result?.algo_points ?? null;
-    const activeTip = userTip ?? algoTip;
-    const isReconstructed = match.prediction?.algo_reconstructed === true;
+    const isRecon = match.prediction?.algo_reconstructed === true;
+    const hasTip  = userTip !== null;
 
-    const colorByPts = p =>
-        p == null ? 'var(--text-3)' : p >= 8 ? 'var(--green)' : p >= 5 ? 'var(--amber)' : 'var(--red)';
+    const ptsBadge = p => {
+        if (p == null) return `<span style="color:var(--text-3);font-size:0.7rem;min-width:32px;display:inline-block;text-align:right;">–</span>`;
+        const [color, bg] =
+            p >= 10 ? ['#4caf82', 'rgba(76,175,130,0.18)'] :
+            p >= 8  ? ['#4caf82', 'rgba(76,175,130,0.12)'] :
+            p >= 5  ? ['#d9a441', 'rgba(217,164,65,0.18)'] :
+                      ['#e05555', 'rgba(220,80,80,0.14)'];
+        return `<span style="font-size:0.72rem;font-weight:800;color:${color};background:${bg};padding:1px 6px;border-radius:3px;white-space:nowrap;min-width:32px;display:inline-block;text-align:center;">+${p}</span>`;
+    };
 
-    const borderColor = activeTip == null ? 'var(--text-3)' : colorByPts(pts);
-    const algoColor   = colorByPts(algoPts);
+    const ts = match.pre_match_snapshot?.timestamp_recorded;
+    const dateStr = ts
+        ? new Date(ts).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })
+        : '—';
 
-    const myTipHtml = userTip
-        ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-               <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Mein Tipp</span>
-               <span style="font-size:1rem;font-weight:800;color:var(--text-1);">${userTip}</span>
-               <span style="margin-left:auto;font-size:0.78rem;font-weight:700;color:${borderColor};">+${pts} Pts</span>
-               <button onclick="window.editUserTip(this, '${matchId}')"
-                   style="background:none;border:1px solid var(--border-2);border-radius:3px;color:var(--text-3);font-size:0.65rem;padding:1px 6px;cursor:pointer;">✎</button>
-           </div>`
-        : tipInputHtml(matchId);
+    const borderColor = !hasTip ? 'var(--border)' :
+        pts >= 8 ? '#4caf82' : pts >= 5 ? '#d9a441' : '#e05555';
 
-    const algoLabel = isReconstructed
-        ? `<span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;" title="Aus Elo rekonstruiert">Algo<span style="color:var(--amber);">*</span></span>`
-        : `<span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Algo</span>`;
+    const row = document.createElement('div');
+    row.className = 'match-row';
+    row.dataset.pts    = pts;
+    row.dataset.hastip = hasTip ? '1' : '0';
+    row.style.cssText = `
+        display:grid;
+        grid-template-columns:36px 1fr auto auto auto auto;
+        align-items:center;
+        gap:8px;
+        padding:8px 4px 8px 10px;
+        border-bottom:1px solid var(--border);
+        border-left:3px solid ${borderColor};
+    `;
 
-    const algoTipHtml = algoTip
-        ? `<div style="display:flex;align-items:center;gap:8px;">
-               ${algoLabel}
-               <span style="font-size:1rem;font-weight:800;color:var(--text-2);">${algoTip}</span>
-               <span style="margin-left:auto;font-size:0.78rem;font-weight:700;color:${algoColor};">${algoPts != null ? '+' + algoPts + ' Pts' : '–'}</span>
-           </div>`
-        : `<div style="display:flex;align-items:center;gap:8px;">
-               <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Algo</span>
-               <span style="font-size:0.72rem;color:var(--text-3);font-style:italic;">Kein Algo-Tipp</span>
-           </div>`;
+    const dateEl = document.createElement('div');
+    dateEl.style.cssText = 'font-size:0.6rem;color:var(--text-3);white-space:nowrap;line-height:1.3;text-align:center;';
+    dateEl.textContent = dateStr;
 
-    const bots = match.prediction?.bots ?? {};
-    const botPts = match.post_match_result?.bot_points ?? {};
-    const botRowsHtml = Object.entries(bots).map(([bot, info]) => {
-        const tip = info?.tip;
-        if (!tip) return '';
-        const bp = botPts[bot];
-        const c = colorByPts(bp);
-        return `<div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:0.58rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:600;min-width:52px;">${BOT_SHORT[bot] ?? bot}</span>
-            <span style="font-size:0.9rem;font-weight:700;color:var(--text-3);">${tip}</span>
-            <span style="margin-left:auto;font-size:0.72rem;font-weight:700;color:${c};">${bp != null ? '+' + bp + ' Pts' : '–'}</span>
-        </div>`;
-    }).join('');
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = 'font-size:0.78rem;font-weight:600;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
+    nameEl.innerHTML = `${match.metadata.home_disp} <span style="color:var(--text-3);font-weight:400;">vs</span> ${match.metadata.away_disp}
+        <span style="color:var(--text-3);font-weight:500;font-size:0.72rem;"> · ${match.post_match_result.actual_score}</span>`;
 
-    const botsSection = botRowsHtml
-        ? `<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;display:flex;flex-direction:column;gap:2px;">${botRowsHtml}</div>`
-        : '';
+    const myTipEl = document.createElement('div');
+    myTipEl.id = `tip-cell-${matchId}`;
+    myTipEl.style.cssText = 'display:flex;align-items:center;gap:5px;justify-content:flex-end;';
+    myTipEl.innerHTML = myTipCellHtml(matchId, userTip, hasTip);
 
-    const card = document.createElement('div');
-    card.className = 'glass-card';
-    card.style.cssText = `border-left:4px solid ${borderColor};padding:14px 18px;`;
-    card.innerHTML = `
-        <div style="font-size:0.72rem;color:var(--text-2);margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            ${match.metadata.home_disp} vs ${match.metadata.away_disp}
-            <span style="float:right;color:var(--text-3);">Resultat: <strong style="color:var(--text-1);">${match.post_match_result.actual_score}</strong></span>
-        </div>
-        <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:4px;">
-            ${myTipHtml}
-            ${algoTipHtml}
-        </div>
-        ${botsSection}`;
-    return card;
+    const myPtsEl = document.createElement('div');
+    myPtsEl.style.cssText = 'text-align:right;min-width:38px;';
+    myPtsEl.innerHTML = hasTip ? ptsBadge(pts) : `<span style="color:var(--text-3);font-size:0.7rem;">–</span>`;
+
+    const algoEl = document.createElement('div');
+    algoEl.style.cssText = 'display:flex;align-items:center;gap:4px;justify-content:flex-end;';
+    algoEl.innerHTML = algoTip
+        ? `<span style="font-size:0.6rem;color:var(--text-3);font-weight:600;white-space:nowrap;">Algo</span>
+           <span style="font-size:0.78rem;font-weight:700;color:var(--text-2);">${algoTip}${isRecon ? '<sup style="color:#d9a441;font-size:0.55rem;">*</sup>' : ''}</span>`
+        : `<span style="font-size:0.65rem;color:var(--text-3);font-style:italic;">–</span>`;
+
+    const algoPtsEl = document.createElement('div');
+    algoPtsEl.style.cssText = 'text-align:right;min-width:38px;';
+    algoPtsEl.innerHTML = ptsBadge(algoPts);
+
+    row.appendChild(dateEl);
+    row.appendChild(nameEl);
+    row.appendChild(myTipEl);
+    row.appendChild(myPtsEl);
+    row.appendChild(algoEl);
+    row.appendChild(algoPtsEl);
+    return row;
 }
 
-function tipInputHtml(matchId) {
-    return `
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;" id="tip-input-${matchId}">
-            <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Mein Tipp</span>
-            <input id="tip-val-${matchId}" type="text" placeholder="2:1" maxlength="5"
-                style="width:52px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:4px;color:var(--text-1);font-size:0.9rem;font-weight:700;padding:3px 7px;text-align:center;outline:none;"
+function myTipCellHtml(matchId, userTip, hasTip) {
+    if (hasTip) {
+        return `<span style="font-size:0.82rem;font-weight:800;color:var(--text-1);">${userTip}</span>
+                <button onclick="window.editUserTip(this,'${matchId}')"
+                    title="Tipp bearbeiten"
+                    style="background:none;border:1px solid var(--border-2);border-radius:3px;color:var(--text-3);font-size:0.6rem;padding:1px 5px;cursor:pointer;line-height:1.4;flex-shrink:0;">✎</button>`;
+    }
+    return `<input id="tip-val-${matchId}" type="text" placeholder="2:1" maxlength="5"
+                style="width:46px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:4px;color:var(--text-1);font-size:0.82rem;font-weight:700;padding:2px 5px;text-align:center;outline:none;"
                 onclick="event.stopPropagation()">
             <button onclick="window.saveUserTip(event,'${matchId}')"
-                style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:4px;color:var(--gold-l);font-size:0.72rem;font-weight:700;padding:3px 10px;cursor:pointer;">Speichern</button>
-        </div>`;
+                style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:4px;color:var(--gold-l);font-size:0.66rem;font-weight:700;padding:2px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0;">OK</button>`;
 }
 
 // ── Bot-Points-Race: cumulative points per bot over the played matches ──
@@ -443,18 +538,20 @@ export async function saveUserTip(event, matchId) {
     } catch {
         btn.textContent = '✗';
         btn.style.color = 'var(--red)';
-        setTimeout(() => { btn.textContent = 'Speichern'; btn.disabled = false; }, 2000);
+        setTimeout(() => { btn.textContent = 'OK'; btn.disabled = false; }, 2000);
     }
 }
 
 export function editUserTip(btn, matchId) {
-    const row = btn.closest('div');
-    const currentTip = row.querySelector('span:nth-child(2)')?.textContent || '';
-    row.innerHTML = `
-        <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;min-width:52px;">Mein Tipp</span>
+    const cell = document.getElementById(`tip-cell-${matchId}`);
+    if (!cell) return;
+    // Get current tip text from the span next to the edit button
+    const currentTip = cell.querySelector('span')?.textContent?.trim() || '';
+    cell.innerHTML = `
         <input id="tip-val-${matchId}" type="text" value="${currentTip}" maxlength="5"
-            style="width:52px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:4px;color:var(--text-1);font-size:0.9rem;font-weight:700;padding:3px 7px;text-align:center;outline:none;"
+            style="width:46px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:4px;color:var(--text-1);font-size:0.82rem;font-weight:700;padding:2px 5px;text-align:center;outline:none;"
             onclick="event.stopPropagation()">
         <button onclick="window.saveUserTip(event,'${matchId}')"
-            style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:4px;color:var(--gold-l);font-size:0.72rem;font-weight:700;padding:3px 10px;cursor:pointer;">Speichern</button>`;
+            style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:4px;color:var(--gold-l);font-size:0.66rem;font-weight:700;padding:2px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0;">OK</button>`;
+    cell.querySelector('input')?.focus();
 }

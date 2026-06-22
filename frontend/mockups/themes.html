@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Theme Mockups — Performance View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@400;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #0e0e10; padding: 32px 20px; }
+  .wrap { max-width: 760px; margin: 0 auto 56px; }
+  .tag { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #888; font-weight: 700; margin-bottom: 4px; }
+  .tagsub { font-size: 13px; color: #666; margin-bottom: 16px; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* ============ A · REFINED LUXE ============ */
+  .luxe {
+    --bg:#1c130b; --card:#271a10; --card2:#33231599; --bd:#3d2c1c; --gold:#e8c45f; --goldd:#9a7a2e;
+    --t1:#f4ead7; --t2:#bfa382; --t3:#85694a; --grn:#5fb87f; --amb:#e0a23e; --red:#d96a6a; --blue:#6f9fc4;
+    background: radial-gradient(120% 100% at 50% 0%, #241710 0%, var(--bg) 60%);
+    border:1px solid var(--bd); border-radius:16px; padding:26px 28px; color:var(--t1);
+  }
+  .luxe h1 { font-size:1.5rem; font-weight:800; letter-spacing:-.5px; }
+  .luxe .sub { color:var(--t3); font-size:.8rem; margin-top:2px; }
+  .luxe .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:22px 0; }
+  .luxe .kpi { background:linear-gradient(150deg,var(--card),var(--card2)); border:1px solid var(--bd); border-radius:12px; padding:16px 18px; }
+  .luxe .kpi .l { font-size:.6rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--t3); font-weight:700; }
+  .luxe .kpi .v { font-size:2rem; font-weight:900; letter-spacing:-1px; margin-top:6px; line-height:1; }
+  .luxe .h2h { background:linear-gradient(150deg,var(--card),var(--card2)); border:1px solid var(--bd); border-radius:12px; padding:18px 20px; margin-bottom:22px; }
+  .luxe .h2h .row { display:flex; justify-content:space-between; align-items:flex-end; }
+  .luxe .vs { color:var(--blue); font-weight:800; font-size:.82rem; align-self:center; }
+  .luxe .big { font-size:2.3rem; font-weight:900; line-height:1; letter-spacing:-1px; }
+  .luxe .bar { height:7px; background:#3a2a1b; border-radius:4px; margin-top:6px; overflow:hidden; }
+  .luxe .bar > i { display:block; height:100%; border-radius:4px; }
+  .luxe .list .r { display:grid; grid-template-columns:40px 1fr auto auto; align-items:center; gap:10px; padding:11px 4px; border-bottom:1px solid var(--bd); border-left:3px solid transparent; padding-left:12px; }
+  .luxe .badge { font-size:.72rem; font-weight:800; padding:2px 8px; border-radius:5px; }
+  .luxe .date { font-size:.6rem; color:var(--t3); text-align:center; }
+  .luxe .mt { font-weight:800; font-size:.92rem; }
+
+  /* ============ B · EDITORIAL IVORY ============ */
+  .edi {
+    --bg:#f6f1e7; --card:#fffdf8; --bd:#e4dccb; --ink:#26201a; --t2:#7a7060; --t3:#a89c87;
+    --gold:#a9842f; --grn:#3e7d54; --amb:#b5862c; --red:#b1553f;
+    background:var(--bg); border:1px solid var(--bd); border-radius:16px; padding:30px 32px; color:var(--ink);
+  }
+  .edi .eyebrow { font-family:'Inter'; font-size:.65rem; letter-spacing:3px; text-transform:uppercase; color:var(--gold); font-weight:700; }
+  .edi h1 { font-family:'Fraunces',serif; font-weight:900; font-size:2.1rem; letter-spacing:-.5px; margin-top:4px; }
+  .edi .sub { color:var(--t2); font-size:.85rem; margin-top:6px; font-family:'Fraunces',serif; font-style:italic; }
+  .edi .rule { height:1px; background:linear-gradient(90deg,var(--gold),transparent); margin:22px 0; }
+  .edi .kpis { display:flex; gap:36px; margin-bottom:24px; }
+  .edi .kpi .v { font-family:'Fraunces',serif; font-size:2.4rem; font-weight:900; letter-spacing:-1px; line-height:1; }
+  .edi .kpi .l { font-size:.62rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--t3); font-weight:700; margin-top:6px; }
+  .edi .h2h { display:flex; align-items:center; justify-content:space-between; padding:18px 0; border-top:1px solid var(--bd); border-bottom:1px solid var(--bd); margin-bottom:8px; }
+  .edi .big { font-family:'Fraunces',serif; font-size:2.6rem; font-weight:900; line-height:.9; }
+  .edi .lbl { font-size:.62rem; letter-spacing:1.5px; text-transform:uppercase; font-weight:700; color:var(--t3); }
+  .edi .list .r { display:grid; grid-template-columns:1fr auto auto; gap:14px; align-items:center; padding:13px 2px; border-bottom:1px solid var(--bd); }
+  .edi .mt { font-family:'Fraunces',serif; font-weight:600; font-size:1.05rem; }
+  .edi .badge { font-size:.74rem; font-weight:700; }
+  .edi .team { font-size:.9rem; font-weight:600; }
+  .edi .team .res { color:var(--t3); font-weight:400; }
+
+  /* ============ C · MODERN SPORT ============ */
+  .sport {
+    --bg:#0d1117; --card:#161c25; --bd:#232c39; --acc:#34e0a1; --acc2:#2bb4ff; --t1:#eef2f7; --t2:#9aa6b5; --t3:#5e6b7d;
+    --grn:#34e0a1; --amb:#ffc24b; --red:#ff6b6b;
+    background:var(--bg); border:1px solid var(--bd); border-radius:16px; padding:24px 26px; color:var(--t1); font-family:'Sora','Inter',sans-serif;
+  }
+  .sport h1 { font-size:1.45rem; font-weight:800; letter-spacing:-.5px; }
+  .sport .sub { color:var(--t3); font-size:.8rem; margin-top:2px; }
+  .sport .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px 0; }
+  .sport .kpi { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:15px 16px; }
+  .sport .kpi .l { font-size:.58rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--t3); font-weight:700; }
+  .sport .kpi .v { font-size:1.95rem; font-weight:800; margin-top:6px; line-height:1; letter-spacing:-1px; }
+  .sport .h2h { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:16px 18px; margin-bottom:20px; }
+  .sport .pill { display:inline-block; font-size:.6rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
+  .sport .big { font-size:2.1rem; font-weight:800; line-height:1; letter-spacing:-1px; }
+  .sport .bar { height:6px; background:#222b38; border-radius:999px; margin-top:7px; overflow:hidden; }
+  .sport .bar > i { display:block; height:100%; border-radius:999px; }
+  .sport .list .r { display:grid; grid-template-columns:38px 1fr auto auto; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--bd); }
+  .sport .badge { font-size:.7rem; font-weight:800; padding:3px 9px; border-radius:999px; }
+  .sport .date { font-size:.58rem; color:var(--t3); text-align:center; font-weight:600; }
+  .sport .mt { font-weight:800; font-size:.9rem; }
+  .sport .team { font-size:.82rem; font-weight:600; }
+  .sport .team .res { color:var(--t3); font-weight:400; }
+</style>
+</head>
+<body>
+
+<!-- ════════ A · REFINED LUXE ════════ -->
+<div class="wrap">
+  <div class="tag" style="color:#e8c45f">Direction A — Refined Luxe</div>
+  <div class="tagsub">Your current DNA, elevated: deeper contrast, real type scale, tabular figures, restrained gold.</div>
+  <div class="luxe">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><h1>Algorithm Performance</h1><div class="sub">Prediction accuracy vs. actual results</div></div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="l">Matches</div><div class="v tnum">41</div></div>
+      <div class="kpi"><div class="l">Total SRF Points</div><div class="v tnum" style="color:var(--grn)">170</div></div>
+      <div class="kpi"><div class="l">Hit Rate</div><div class="v tnum" style="color:var(--gold)">56.1%</div></div>
+    </div>
+    <div class="h2h">
+      <div class="row">
+        <div><div class="l" style="font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);font-weight:700">Du</div><div class="big tnum" style="color:var(--gold)">170</div><div style="font-size:.7rem;color:var(--t2);margin-top:3px">56.1% Tendenz</div></div>
+        <div class="vs">Algo führt&nbsp;+13</div>
+        <div style="text-align:right"><div class="l" style="font-size:.62rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);font-weight:700">Algo</div><div class="big tnum" style="color:var(--blue)">183</div><div style="font-size:.7rem;color:var(--t2);margin-top:3px">61.0% Tendenz</div></div>
+      </div>
+      <div class="bar" style="margin-top:14px"><i style="width:93%;background:var(--gold)"></i></div>
+      <div class="bar"><i style="width:100%;background:var(--blue)"></i></div>
+    </div>
+    <div class="list">
+      <div class="r" style="border-left-color:var(--grn)"><div class="date tnum">13.06</div><div><span style="font-weight:600">Argentina <span style="color:var(--t3);font-weight:400">vs</span> Austria</span> <span class="tnum" style="color:var(--t3);font-size:.78rem"> · 2:0</span></div><div class="mt tnum">2:0</div><div class="badge tnum" style="color:var(--grn);background:rgba(95,184,127,.15)">+10</div></div>
+      <div class="r" style="border-left-color:var(--amb)"><div class="date tnum">13.06</div><div><span style="font-weight:600">Brazil <span style="color:var(--t3);font-weight:400">vs</span> Haiti</span> <span class="tnum" style="color:var(--t3);font-size:.78rem"> · 3:0</span></div><div class="mt tnum">3:1</div><div class="badge tnum" style="color:var(--amb);background:rgba(224,162,62,.15)">+5</div></div>
+      <div class="r" style="border-left-color:var(--red)"><div class="date tnum">13.06</div><div><span style="font-weight:600">Portugal <span style="color:var(--t3);font-weight:400">vs</span> DR Congo</span> <span class="tnum" style="color:var(--t3);font-size:.78rem"> · 1:1</span></div><div class="mt tnum">3:0</div><div class="badge tnum" style="color:var(--red);background:rgba(217,106,106,.15)">+0</div></div>
+      <div class="r" style="border-left-color:var(--grn)"><div class="date tnum">13.06</div><div><span style="font-weight:600">Ghana <span style="color:var(--t3);font-weight:400">vs</span> Panama</span> <span class="tnum" style="color:var(--t3);font-size:.78rem"> · 1:0</span></div><div class="mt tnum">2:1</div><div class="badge tnum" style="color:var(--grn);background:rgba(95,184,127,.15)">+8</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ B · EDITORIAL IVORY ════════ -->
+<div class="wrap">
+  <div class="tag" style="color:#caa44f">Direction B — Editorial Ivory</div>
+  <div class="tagsub">Magazine feel: warm ivory, serif display headlines, generous whitespace, thin gold rules. A premium light theme.</div>
+  <div class="edi">
+    <div class="eyebrow">Performance</div>
+    <h1>Algorithm Performance</h1>
+    <div class="sub">Prediction accuracy vs. actual results</div>
+    <div class="rule"></div>
+    <div class="kpis">
+      <div class="kpi"><div class="v tnum">41</div><div class="l">Matches</div></div>
+      <div class="kpi"><div class="v tnum" style="color:var(--grn)">170</div><div class="l">Total SRF Points</div></div>
+      <div class="kpi"><div class="v tnum" style="color:var(--gold)">56.1%</div><div class="l">Hit Rate</div></div>
+    </div>
+    <div class="h2h">
+      <div><div class="lbl" style="color:var(--gold)">Du</div><div class="big tnum">170</div></div>
+      <div style="text-align:center;color:var(--gold);font-family:'Fraunces',serif;font-style:italic;font-size:1rem">Algo leads by 13</div>
+      <div style="text-align:right"><div class="lbl">Algo</div><div class="big tnum" style="color:var(--t2)">183</div></div>
+    </div>
+    <div class="list">
+      <div class="r"><div class="team">Argentina <span style="color:var(--t3)">vs</span> Austria <span class="res tnum">· 2:0</span></div><div class="mt tnum">2:0</div><div class="badge tnum" style="color:var(--grn)">+10</div></div>
+      <div class="r"><div class="team">Brazil <span style="color:var(--t3)">vs</span> Haiti <span class="res tnum">· 3:0</span></div><div class="mt tnum">3:1</div><div class="badge tnum" style="color:var(--amb)">+5</div></div>
+      <div class="r"><div class="team">Portugal <span style="color:var(--t3)">vs</span> DR Congo <span class="res tnum">· 1:1</span></div><div class="mt tnum">3:0</div><div class="badge tnum" style="color:var(--red)">+0</div></div>
+      <div class="r"><div class="team">Ghana <span style="color:var(--t3)">vs</span> Panama <span class="res tnum">· 1:0</span></div><div class="mt tnum">2:1</div><div class="badge tnum" style="color:var(--grn)">+8</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ C · MODERN SPORT ════════ -->
+<div class="wrap">
+  <div class="tag" style="color:#34e0a1">Direction C — Modern Sport</div>
+  <div class="tagsub">FotMob / live-app energy: cool slate, electric accent, pill badges, condensed numerics. Punchy and contemporary.</div>
+  <div class="sport">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><h1>Performance</h1><div class="sub">Prediction accuracy vs. actual results</div></div>
+      <span class="pill" style="background:rgba(52,224,161,.14);color:var(--acc)">● Live</span>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="l">Matches</div><div class="v tnum">41</div></div>
+      <div class="kpi"><div class="l">SRF Points</div><div class="v tnum" style="color:var(--acc)">170</div></div>
+      <div class="kpi"><div class="l">Hit Rate</div><div class="v tnum" style="color:var(--acc2)">56.1%</div></div>
+    </div>
+    <div class="h2h">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end">
+        <div><span class="pill" style="background:rgba(52,224,161,.14);color:var(--acc)">Du</span><div class="big tnum" style="margin-top:8px">170</div></div>
+        <div style="text-align:center;color:var(--t2);font-size:.8rem;font-weight:600">Algo +13</div>
+        <div style="text-align:right"><span class="pill" style="background:rgba(43,180,255,.14);color:var(--acc2)">Algo</span><div class="big tnum" style="margin-top:8px;color:var(--acc2)">183</div></div>
+      </div>
+      <div class="bar" style="margin-top:14px"><i style="width:93%;background:var(--acc)"></i></div>
+      <div class="bar"><i style="width:100%;background:var(--acc2)"></i></div>
+    </div>
+    <div class="list">
+      <div class="r"><div class="date tnum">13.06</div><div class="team">Argentina <span style="color:var(--t3)">vs</span> Austria <span class="res tnum">· 2:0</span></div><div class="mt tnum">2:0</div><div class="badge tnum" style="color:#05140d;background:var(--grn)">+10</div></div>
+      <div class="r"><div class="date tnum">13.06</div><div class="team">Brazil <span style="color:var(--t3)">vs</span> Haiti <span class="res tnum">· 3:0</span></div><div class="mt tnum">3:1</div><div class="badge tnum" style="color:#1f1500;background:var(--amb)">+5</div></div>
+      <div class="r"><div class="date tnum">13.06</div><div class="team">Portugal <span style="color:var(--t3)">vs</span> DR Congo <span class="res tnum">· 1:1</span></div><div class="mt tnum">3:0</div><div class="badge tnum" style="color:#fff;background:var(--red)">+0</div></div>
+      <div class="r"><div class="date tnum">13.06</div><div class="team">Ghana <span style="color:var(--t3)">vs</span> Panama <span class="res tnum">· 1:0</span></div><div class="mt tnum">2:1</div><div class="badge tnum" style="color:#05140d;background:var(--grn)">+8</div></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
