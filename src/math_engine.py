@@ -59,32 +59,42 @@ class MathEngine:
         diff = rating_a - rating_b
         return 1 / (10 ** (-diff / 400) + 1)
 
-    def reload_elo_data(self):
+    def reload_elo_data(self, archive: dict = None):
         """ Reloads the latest Elo dataframe from the CSV file to ensure global state is up-to-date """
         if os.path.exists(self.elo_csv_path):
             self.elo_df = pd.read_csv(self.elo_csv_path)
             self.elo_df['elo_rating'] = self.elo_df['elo_rating'].astype(float)
-        self._build_team_forms()
+        self._build_team_forms(archive=archive)
 
-    def _build_team_forms(self):
+    def _build_team_forms(self, archive: dict = None):
         """
         Reconstructs the W-D-L visual form chain for all teams based on elo_history.json
-        and prediction_archive.json.
+        and prediction_archive.json (or an in-memory archive dict from MongoDB).
         """
         import json
         import os
         history_path = os.path.join(os.path.dirname(self.elo_csv_path), 'elo_history.json')
-        archive_path = os.path.join(os.path.dirname(self.elo_csv_path), 'prediction_archive.json')
-        
-        if not os.path.exists(history_path) or not os.path.exists(archive_path):
+
+        if archive is None:
+            # Fallback: read from file (local dev without MongoDB)
+            archive_path = os.path.join(os.path.dirname(self.elo_csv_path), 'prediction_archive.json')
+            if not os.path.exists(archive_path):
+                self.team_forms = {}
+                return
+            try:
+                with open(archive_path, 'r', encoding='utf-8') as f:
+                    archive = json.load(f)
+            except Exception:
+                self.team_forms = {}
+                return
+
+        if not os.path.exists(history_path):
             self.team_forms = {}
             return
 
         try:
             with open(history_path, 'r', encoding='utf-8') as f:
                 elo_hist = json.load(f)
-            with open(archive_path, 'r', encoding='utf-8') as f:
-                archive = json.load(f)
         except Exception:
             self.team_forms = {}
             return

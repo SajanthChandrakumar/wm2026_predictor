@@ -5,8 +5,8 @@ python-dotenv
 scipy
 numpy
 matplotlib
-apscheduler
 filelock
 fastapi
 uvicorn[standard]
 slowapi
+pymongo
