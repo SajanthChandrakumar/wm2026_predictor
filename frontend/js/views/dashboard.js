@@ -64,7 +64,7 @@ export function buildFixtureRow(match, showXp = false) {
         : `<div class="fixture-tip na">–</div>`;
 
     const xpBadge = showXp && match.max_xp > 0
-        ? `<div class="fixture-tip" style="color:var(--green);background:var(--green-dim);border-color:rgba(30,171,90,0.3)">${match.max_xp.toFixed(1)} xP</div>`
+        ? `<div class="fixture-tip" style="color:var(--green-l);background:var(--green-dim);border-color:rgba(30,171,90,0.3)">${match.max_xp.toFixed(1)} xP</div>`
         : tipHtml;
 
     const homeFire = match.home_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';

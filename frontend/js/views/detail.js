@@ -62,36 +62,35 @@ export function renderDetail(matchInfo, calc) {
 
     renderHeatmap(matchInfo, calc);
 
-    // Odds card
+    // Odds card with inline probability bars
     const probs = computeImpliedProbs(matchInfo.odds);
     document.getElementById('odds-card').innerHTML = `
         <div class="card-title">Bookmaker Odds</div>
-        <div class="odds-row">
-            <span class="odds-team">${matchInfo.home_disp}</span>
-            <div class="odds-right">
-                <span class="odds-pct">${pct(probs.home)}</span>
-                <span class="odds-price">${matchInfo.odds.home.toFixed(2)}</span>
-            </div>
-        </div>
-        <div class="odds-row">
-            <span class="odds-team" style="color:var(--text-secondary)">Draw</span>
-            <div class="odds-right">
-                <span class="odds-pct">${pct(probs.draw)}</span>
-                <span class="odds-price">${matchInfo.odds.draw.toFixed(2)}</span>
-            </div>
-        </div>
-        <div class="odds-row">
-            <span class="odds-team">${matchInfo.away_disp}</span>
-            <div class="odds-right">
-                <span class="odds-pct">${pct(probs.away)}</span>
-                <span class="odds-price">${matchInfo.odds.away.toFixed(2)}</span>
-            </div>
-        </div>
+        ${oddsRow(matchInfo.home_disp, probs.home, matchInfo.odds.home)}
+        ${oddsRow('Draw', probs.draw, matchInfo.odds.draw)}
+        ${oddsRow(matchInfo.away_disp, probs.away, matchInfo.odds.away)}
     `;
 
     renderTipLadder(calc.xp_tips);
     document.getElementById('adopt-tip-status').textContent = '';
     updateAdoptButton();
+}
+
+function oddsRow(label, prob, price) {
+    const barWidth = (prob * 100).toFixed(1);
+    const isDrawRow = label === 'Draw';
+    return `
+        <div class="odds-row">
+            <span class="odds-team" ${isDrawRow ? 'style="color:var(--text-2)"' : ''}>${label}</span>
+            <div class="odds-right">
+                <span class="odds-pct">${pct(prob)}</span>
+                <div class="odds-bar-wrap">
+                    <div class="odds-bar-fill" style="width:${barWidth}%"></div>
+                </div>
+                <span class="odds-price">${price.toFixed(2)}</span>
+            </div>
+        </div>
+    `;
 }
 
 function currentActiveTip() {
@@ -117,10 +116,10 @@ async function adoptCurrentTip() {
     btn.textContent = 'Speichere…';
     try {
         await api.saveUserTip(state.selectedMatchId, tip);
-        status.style.color = 'var(--green)';
+        status.style.color = 'var(--green-l)';
         status.textContent = `✓ ${tip} als dein Tipp gespeichert`;
     } catch (e) {
-        status.style.color = 'var(--red)';
+        status.style.color = 'var(--red-l)';
         status.textContent = `✗ ${e.message}`;
     }
     btn.textContent = prev;
@@ -130,14 +129,14 @@ async function adoptCurrentTip() {
 function renderTipLadder(tips) {
     const container = document.getElementById('xp-container');
     if (!tips?.length) {
-        container.innerHTML = '<p style="color:var(--text-muted)">No tips available.</p>';
+        container.innerHTML = '<p style="color:var(--text-3);font-size:var(--type-sm);">No tips available.</p>';
         return;
     }
     const top = tips[0];
     let html = `
         <div class="tip-top">
             <div>
-                <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Top Pick</div>
+                <div class="tip-top-label-overline">Top Pick</div>
                 <div class="tip-top-score">${top.Tipp}</div>
             </div>
             <div class="tip-top-right">
@@ -184,9 +183,9 @@ function renderHeatmap(matchInfo, calc) {
 
     container.innerHTML = `
         <div class="heatmap-wrap">
-            <div style="font-size:0.68rem;color:var(--text-muted);text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;font-weight:700;">${matchInfo.away_disp} Goals →</div>
+            <div style="font-size:var(--type-2xs);color:var(--text-3);text-align:center;margin-bottom:var(--sp-1);text-transform:uppercase;letter-spacing:1px;font-weight:700;">${matchInfo.away_disp} Goals →</div>
             <div class="heatmap-body">
-                <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;padding-right:8px;display:flex;align-items:center;justify-content:center;">
+                <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:var(--type-2xs);color:var(--text-3);text-transform:uppercase;letter-spacing:1px;font-weight:700;padding-right:var(--sp-2);display:flex;align-items:center;justify-content:center;">
                     ${matchInfo.home_disp} Goals
                 </div>
                 <div>

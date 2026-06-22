@@ -11,9 +11,9 @@ const BOT_NAMES = ['chalk', 'odds_pure', 'elo_pure', 'draw_hunter', 'random',
                    'broker', 'professor', 'rebel', 'sniper', 'gambler'];
 
 const BOT_COLORS = {
-    chalk: 'var(--gold-l)', odds_pure: 'var(--green)', elo_pure: 'var(--blue)',
-    draw_hunter: 'var(--amber)', random: 'var(--text-2)',
-    broker: 'var(--blue)', professor: 'var(--green)', rebel: 'var(--amber)',
+    chalk: 'var(--gold-l)', odds_pure: 'var(--green-l)', elo_pure: 'var(--blue-l)',
+    draw_hunter: 'var(--amber-l)', random: 'var(--text-2)',
+    broker: 'var(--blue-l)', professor: 'var(--green-l)', rebel: 'var(--amber-l)',
     sniper: 'var(--purple)', gambler: 'var(--text-2)',
 };
 
@@ -49,7 +49,7 @@ export async function loadPerformanceView() {
     try {
         archive = await api.archive();
     } catch (e) {
-        grid.innerHTML = `<p style="color:var(--red)">Failed to load archive: ${e.message}</p>`;
+        grid.innerHTML = `<p style="color:var(--red-l)">Failed to load archive: ${e.message}</p>`;
         return;
     }
 
@@ -103,7 +103,7 @@ export async function loadPerformanceView() {
     renderBotRace(chronological);
 
     if (totals.completedMatches === 0) {
-        grid.innerHTML = `<p style="color:var(--text-2);font-size:0.85rem;">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
+        grid.innerHTML = `<p style="color:var(--text-2);font-size:var(--type-body);">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
         return;
     }
 
@@ -113,42 +113,35 @@ export async function loadPerformanceView() {
         new Date(a[1].pre_match_snapshot?.timestamp_recorded || 0));
 
     const listWrapper = document.createElement('div');
-    listWrapper.className = 'glass-card';
-    listWrapper.style.cssText = 'padding:20px 24px;grid-column:1/-1;';
+    listWrapper.className = 'glass-card static';
+    listWrapper.style.cssText = 'padding:var(--sp-5);grid-column:1/-1;';
 
     // Header + filter row
     const header = document.createElement('div');
-    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap;';
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);gap:var(--sp-3);flex-wrap:wrap;';
     header.innerHTML = `
-        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;">
-            Spielverlauf <span style="font-weight:500;opacity:0.7;">(neueste zuerst)</span>
+        <div>
+            <div class="section-title">
+                Spielverlauf <span style="font-weight:500;opacity:0.7;">(neueste zuerst)</span>
+            </div>
         </div>
         <div style="display:flex;gap:6px;">
-            <button data-filter="all"
-                style="background:var(--surface-3);border:1px solid var(--border-2);color:var(--text-1);padding:3px 10px;border-radius:4px;font-size:0.68rem;font-weight:700;cursor:pointer;">
-                Alle
-            </button>
-            <button data-filter="hit"
-                style="background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-2);padding:3px 10px;border-radius:4px;font-size:0.68rem;font-weight:600;cursor:pointer;">
-                ✓ Treffer
-            </button>
-            <button data-filter="miss"
-                style="background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-2);padding:3px 10px;border-radius:4px;font-size:0.68rem;font-weight:600;cursor:pointer;">
-                ✗ Verpasst
-            </button>
-            <button data-filter="notipped"
-                style="background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-2);padding:3px 10px;border-radius:4px;font-size:0.68rem;font-weight:600;cursor:pointer;">
-                Kein Tipp
-            </button>
+            <button data-filter="all" class="filter-btn active">Alle</button>
+            <button data-filter="hit" class="filter-btn">✓ Treffer</button>
+            <button data-filter="miss" class="filter-btn">✗ Verpasst</button>
+            <button data-filter="notipped" class="filter-btn">Kein Tipp</button>
         </div>`;
     listWrapper.appendChild(header);
 
     // Column header
     const colHeader = document.createElement('div');
-    colHeader.style.cssText = 'display:grid;grid-template-columns:36px 1fr auto auto auto auto;gap:8px;padding:0 4px 8px 12px;border-bottom:2px solid var(--border);margin-bottom:2px;';
+    colHeader.className = 'match-row';
+    colHeader.style.cssText = 'border-bottom:2px solid var(--border);border-left-color:transparent;padding-bottom:var(--sp-2);margin-bottom:2px;';
     ['Datum', 'Spiel · Ergebnis', 'Mein Tipp', 'Pts', 'Algo', 'Pts'].forEach((label, i) => {
         const th = document.createElement('div');
-        th.style.cssText = `font-size:0.58rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;text-align:${i >= 2 ? 'right' : 'left'};`;
+        th.style.cssText = `font-size:var(--type-2xs);text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;text-align:${i >= 2 ? 'right' : 'left'};`;
+        if (i === 4) th.classList.add('algo-cell');
+        if (i === 5) th.classList.add('algo-pts-cell');
         th.textContent = label;
         colHeader.appendChild(th);
     });
@@ -165,8 +158,8 @@ export async function loadPerformanceView() {
 
     if (totals.hasReconstructed) {
         const note = document.createElement('p');
-        note.style.cssText = 'font-size:0.68rem;color:var(--text-3);margin-top:12px;font-style:italic;';
-        note.innerHTML = '<span style="color:var(--amber);">*</span> Algo-Tipp aus Elo-Ratings rekonstruiert — angenähert, nicht das volle Quoten-Modell.';
+        note.style.cssText = 'font-size:var(--type-2xs);color:var(--text-3);margin-top:var(--sp-3);font-style:italic;';
+        note.innerHTML = '<span style="color:var(--amber-l);">*</span> Algo-Tipp aus Elo-Ratings rekonstruiert — angenähert, nicht das volle Quoten-Modell.';
         listWrapper.appendChild(note);
     }
 
@@ -176,16 +169,12 @@ export async function loadPerformanceView() {
     listWrapper.querySelectorAll('[data-filter]').forEach(btn => {
         btn.addEventListener('click', () => {
             listWrapper.querySelectorAll('[data-filter]').forEach(b => {
-                b.style.background = 'var(--surface-2)';
-                b.style.color = 'var(--text-2)';
-                b.style.fontWeight = '600';
+                b.classList.remove('active');
             });
-            btn.style.background = 'var(--surface-3)';
-            btn.style.color = 'var(--text-1)';
-            btn.style.fontWeight = '700';
+            btn.classList.add('active');
 
             const filter = btn.dataset.filter;
-            document.querySelectorAll('.match-row').forEach(row => {
+            document.querySelectorAll('.match-row[data-pts]').forEach(row => {
                 const rowPts  = parseInt(row.dataset.pts  ?? '0', 10);
                 const hasTip  = row.dataset.hastip === '1';
                 const show =
@@ -226,40 +215,40 @@ function renderYouVsAlgo(t) {
     const diff = t.totalPoints - t.algoTotal;
     const diffLabel =
         diff > 0 ? `<span style="color:var(--gold-l);font-weight:800;">Du führst +${diff} Pts</span>` :
-        diff < 0 ? `<span style="color:var(--blue);font-weight:800;">Algo führt +${Math.abs(diff)} Pts</span>` :
+        diff < 0 ? `<span style="color:var(--blue-l);font-weight:800;">Algo führt +${Math.abs(diff)} Pts</span>` :
                    `<span style="color:var(--text-2);font-weight:700;">Gleichstand</span>`;
 
     panel.innerHTML = `
-        <div class="glass-card" style="padding:20px 24px;">
-            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:16px;">You vs Algo</div>
-            <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;margin-bottom:16px;">
-                <div>
-                    <div style="font-size:0.72rem;color:var(--gold-l);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Du</div>
-                    <div style="font-size:2.4rem;font-weight:900;color:var(--gold-l);line-height:1;letter-spacing:-1px;">${t.totalPoints}</div>
-                    <div style="font-size:0.72rem;color:var(--text-2);margin-top:3px;">${userHitRate}% Tendenz</div>
+        <div class="glass-card static" style="padding:var(--sp-5);">
+            <div class="section-title" style="margin-bottom:var(--sp-5);">You vs Algo</div>
+            <div class="h2h-grid">
+                <div class="h2h-stat">
+                    <div class="h2h-stat-label" style="color:var(--gold-l);">Du</div>
+                    <div class="h2h-stat-value" style="color:var(--gold-l);">${t.totalPoints}</div>
+                    <div class="h2h-stat-sub">${userHitRate}% Tendenz</div>
                 </div>
-                <div style="text-align:center;font-size:0.82rem;">${diffLabel}</div>
-                <div style="text-align:right;">
-                    <div style="font-size:0.72rem;color:var(--blue);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Algo</div>
-                    <div style="font-size:2.4rem;font-weight:900;color:var(--blue);line-height:1;letter-spacing:-1px;">${t.algoTotal}</div>
-                    <div style="font-size:0.72rem;color:var(--text-2);margin-top:3px;">${algoHitRate}% Tendenz</div>
+                <div class="h2h-center">${diffLabel}</div>
+                <div class="h2h-stat" style="text-align:right;">
+                    <div class="h2h-stat-label" style="color:var(--blue-l);">Algo</div>
+                    <div class="h2h-stat-value" style="color:var(--blue-l);">${t.algoTotal}</div>
+                    <div class="h2h-stat-sub">${algoHitRate}% Tendenz</div>
                 </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:6px;">
-                ${progressBar('Du', t.totalPoints, userBarPct, 'var(--gold-l)', 'var(--gold)')}
-                ${progressBar('Algo', t.algoTotal,  algoBarPct, 'var(--blue)',  'var(--blue)')}
+            <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
+                ${progressBar('Du', t.totalPoints, userBarPct, 'var(--gold-l)')}
+                ${progressBar('Algo', t.algoTotal,  algoBarPct, 'var(--blue-l)')}
             </div>
         </div>`;
 }
 
-function progressBar(label, pts, widthPct, textColor, fillColor) {
+function progressBar(label, pts, widthPct, color) {
     return `
-        <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:0.62rem;color:${textColor};font-weight:700;min-width:28px;text-align:right;">${label}</span>
-            <div style="flex:1;height:8px;background:var(--surface-3);border-radius:4px;overflow:hidden;">
-                <div style="width:${widthPct}%;height:100%;background:${fillColor};border-radius:4px;transition:width 0.6s ease;"></div>
+        <div style="display:flex;align-items:center;gap:var(--sp-2);">
+            <span style="font-size:var(--type-2xs);color:${color};font-weight:700;min-width:32px;text-align:right;">${label}</span>
+            <div class="progress-bar">
+                <div class="progress-bar-fill" style="width:${widthPct}%;background:${color};"></div>
             </div>
-            <span style="font-size:0.72rem;color:var(--text-2);font-weight:600;min-width:36px;">${pts} Pts</span>
+            <span style="font-size:var(--type-xs);color:var(--text-2);font-weight:600;min-width:44px;">${pts} Pts</span>
         </div>`;
 }
 
@@ -285,36 +274,36 @@ function renderBotScoreboard(t, botStats) {
         const avg = r.tipped > 0 ? (r.pts / r.tipped).toFixed(2) : '—';
         const tendPct = r.tipped > 0 ? ((r.tendency / r.tipped) * 100).toFixed(0) + '%' : '—';
         const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-        return `<tr style="border-top:1px solid var(--border);">
-            <td style="padding:9px 12px;font-size:0.8rem;font-weight:${r.isUser ? '800' : '600'};color:${r.color};">
+        const userHighlight = r.isUser ? 'background:var(--gold-dim);' : '';
+        return `<tr style="border-top:1px solid var(--border);${userHighlight}">
+            <td style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-sm);font-weight:${r.isUser ? '800' : '600'};color:${r.color};">
                 <span style="color:var(--text-3);margin-right:6px;">${rank}</span>${r.label}
             </td>
-            <td style="padding:9px 12px;text-align:right;font-size:0.9rem;font-weight:800;color:${r.color};">${r.pts}</td>
-            <td style="padding:9px 12px;text-align:right;font-size:0.8rem;color:var(--text-2);">${r.tipped}</td>
-            <td style="padding:9px 12px;text-align:right;font-size:0.8rem;color:var(--text-2);">${avg}</td>
-            <td style="padding:9px 12px;text-align:right;font-size:0.8rem;color:var(--text-3);">${tendPct}</td>
+            <td class="text-right" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-body);font-weight:800;color:${r.color};">${r.pts}</td>
+            <td class="text-right" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-sm);color:var(--text-2);">${r.tipped}</td>
+            <td class="text-right" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-sm);color:var(--text-2);">${avg}</td>
+            <td class="text-right" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-sm);color:var(--text-3);">${tendPct}</td>
         </tr>`;
     }).join('');
 
     panel.innerHTML = `
-        <div class="glass-card" style="padding:20px 24px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;">
-                <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;">Bot Scoreboard</div>
-                <button id="bot-strat-toggle"
-                    style="background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-2);
-                           padding:4px 10px;border-radius:4px;font-size:0.68rem;font-weight:600;cursor:pointer;
-                           display:flex;align-items:center;gap:5px;transition:all 0.15s;">
+        <div class="glass-card static" style="padding:var(--sp-5);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);gap:var(--sp-3);">
+                <div class="section-title">Bot Scoreboard</div>
+                <button id="bot-strat-toggle" class="filter-btn" style="display:flex;align-items:center;gap:5px;">
                     <span>ⓘ</span> Wie funktionieren die Bots?
                 </button>
             </div>
-            <table style="width:100%;border-collapse:collapse;">
-                <thead>
-                    <tr>${['Bot', 'Pts', 'Tipped', 'Avg/Match', 'Tendency'].map((h, i) =>
-                        `<th style="padding:6px 12px;text-align:${i === 0 ? 'left' : 'right'};font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">${h}</th>`
-                    ).join('')}</tr>
-                </thead>
-                <tbody>${rowsHtml}</tbody>
-            </table>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>${['Bot', 'Pts', 'Tipped', 'Avg/Match', 'Tendency'].map((h, i) =>
+                            `<th class="${i === 0 ? '' : 'text-right'}">${h}</th>`
+                        ).join('')}</tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
             ${botStrategiesHtml()}
         </div>`;
 
@@ -322,33 +311,33 @@ function renderBotScoreboard(t, botStats) {
 }
 
 function botStrategiesHtml() {
-    const card = (border, icon, color, title, body) => `
-        <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding:12px 14px;background:var(--surface-2);border:1px solid ${border};border-radius:6px;">
+    const card = (icon, color, title, body) => `
+        <div class="bot-strat-card">
             <div style="font-size:1.4rem;line-height:1;">${icon}</div>
             <div>
-                <div style="font-size:0.82rem;font-weight:800;color:${color};margin-bottom:3px;">${title}</div>
+                <div style="font-size:var(--type-sm);font-weight:800;color:${color};margin-bottom:3px;">${title}</div>
                 <div style="font-size:0.74rem;color:var(--text-2);line-height:1.5;">${body}</div>
             </div>
         </div>`;
 
     return `
-        <div id="bot-strategies" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--border);">
-            <div style="display:flex;flex-direction:column;gap:14px;">
-                ${card('var(--gold-b)', '⚙️', 'var(--gold-l)', 'Algo &mdash; Das Haus-Modell',
+        <div id="bot-strategies" style="display:none;margin-top:var(--sp-5);padding-top:var(--sp-5);border-top:1px solid var(--border);">
+            <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+                ${card('⚙️', 'var(--gold-l)', 'Algo &mdash; Das Haus-Modell',
                     '<b>70 % Buchmacher-Quoten + 30 % Elo-Ratings</b>, dann xG &rarr; Tor-für-Tor-Wahrscheinlichkeitsmatrix &rarr; der Tipp mit den meisten erwarteten Punkten (xP) gewinnt. Standardmodell der App. <i style="color:var(--text-3);">Verwendet in &bdquo;Top Tipp&ldquo; auf dem Dashboard.</i>')}
-                ${card('var(--border)', '💼', 'var(--blue)', 'Der Broker &mdash; Pure Buchmacher-Quoten',
+                ${card('💼', 'var(--blue-l)', 'Der Broker &mdash; Pure Buchmacher-Quoten',
                     '<b>100 % Markt, 0 % Elo.</b> Vertraut blind den Buchmachern: berechnet xG nur aus den entmarginalisierten Quoten und wählt den Tipp mit höchstem xP. <i style="color:var(--text-3);">Die &bdquo;Weisheit der Crowd&ldquo;-Strategie.</i>')}
-                ${card('var(--border)', '🎓', 'var(--green)', 'Der Professor &mdash; Pure Elo-Ratings',
+                ${card('🎓', 'var(--green-l)', 'Der Professor &mdash; Pure Elo-Ratings',
                     '<b>100 % Elo, 0 % Markt</b> (außer für Over/Under-Realismus). Ignoriert die Buchmacher komplett, leitet alles aus den Team-Stärken her. <i style="color:var(--text-3);">Schlägt den Markt, wenn die Quoten falsch liegen &mdash; verliert hart, wenn der Markt recht hat.</i>')}
-                ${card('var(--border)', '🔥', 'var(--amber)', 'Der Rebell &mdash; Kontra-Feld',
+                ${card('🔥', 'var(--amber-l)', 'Der Rebell &mdash; Kontra-Feld',
                     'Setzt <b>immer auf den Underdog</b>. Identifiziert das Team mit den schlechteren Quoten und wählt den besten Sieg-Tipp für genau dieses Team. <i style="color:var(--text-3);">Lebt von Überraschungen &mdash; selten Treffer, aber dann oft volle Punktzahl.</i>')}
-                ${card('var(--border)', '🎯', 'var(--purple,#9b6dd1)', 'Der X-Sniper &mdash; Draw-Spezialist',
+                ${card('🎯', 'var(--purple)', 'Der X-Sniper &mdash; Draw-Spezialist',
                     'Tippt <b>immer ein Unentschieden</b>. Wählt aus den Unentschieden-Tipps (0:0, 1:1, 2:2 &hellip;) den mit dem höchsten xP. <i style="color:var(--text-3);">Hochrisiko-Strategie &mdash; trifft selten, aber wenn, dann oft volle 10 Punkte (exakter Score).</i>')}
-                ${card('var(--border)', '🎲', 'var(--text-2)', 'Der Zocker &mdash; Gewichteter Zufall',
+                ${card('🎲', 'var(--text-2)', 'Der Zocker &mdash; Gewichteter Zufall',
                     'Würfelt aus den <b>Top-10-Tipps</b> nach xP-Gewicht. Der wahrscheinlichste Tipp wird öfter gezogen als der zehntbeste. <i style="color:var(--text-3);">Match-ID als Seed &mdash; bei identischem Spiel kommt immer derselbe &bdquo;Zufall&ldquo; raus (reproduzierbar).</i>')}
 
-                <div style="margin-top:6px;padding:10px 14px;background:var(--surface);border-radius:6px;border:1px dashed var(--border);">
-                    <div style="font-size:0.7rem;color:var(--text-3);line-height:1.6;">
+                <div style="margin-top:var(--sp-2);padding:var(--sp-3);background:var(--surface);border-radius:var(--r);border:1px dashed var(--border);">
+                    <div style="font-size:var(--type-xs);color:var(--text-3);line-height:1.6;">
                         <b style="color:var(--text-2);">Punkte-System (SRF Tippspiel):</b> Exakter Score = <b>10 Pt</b> &middot; Korrekte Tordifferenz = <b>8 Pt</b> &middot; Richtige Tendenz (Sieg/Niederlage/X) = <b>5 Pt</b> &middot; Falsch = <b>0 Pt</b>. In der K.O.-Phase verdoppeln sich die Punkte (×2).
                     </div>
                 </div>
@@ -364,7 +353,9 @@ function wireStratToggle() {
         const isOpen = strat.style.display !== 'none';
         strat.style.display = isOpen ? 'none' : 'block';
         btn.innerHTML = isOpen ? '<span>ⓘ</span> Wie funktionieren die Bots?' : '<span>✕</span> Schließen';
-        if (!isOpen) strat.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (!isOpen) {
+            strat.closest('.glass-card')?.scrollTo?.({ top: strat.offsetTop - 80, behavior: 'smooth' });
+        }
     });
 }
 
@@ -377,13 +368,13 @@ function buildMatchRow(matchId, match, pts) {
     const hasTip  = userTip !== null;
 
     const ptsBadge = p => {
-        if (p == null) return `<span style="color:var(--text-3);font-size:0.7rem;min-width:32px;display:inline-block;text-align:right;">–</span>`;
-        const [color, bg] =
-            p >= 10 ? ['#4caf82', 'rgba(76,175,130,0.18)'] :
-            p >= 8  ? ['#4caf82', 'rgba(76,175,130,0.12)'] :
-            p >= 5  ? ['#d9a441', 'rgba(217,164,65,0.18)'] :
-                      ['#e05555', 'rgba(220,80,80,0.14)'];
-        return `<span style="font-size:0.72rem;font-weight:800;color:${color};background:${bg};padding:1px 6px;border-radius:3px;white-space:nowrap;min-width:32px;display:inline-block;text-align:center;">+${p}</span>`;
+        if (p == null) return `<span class="points-badge pts-na">–</span>`;
+        const cls =
+            p >= 10 ? 'pts-10' :
+            p >= 8  ? 'pts-8'  :
+            p >= 5  ? 'pts-5'  :
+                      'pts-0';
+        return `<span class="points-badge ${cls}">+${p}</span>`;
     };
 
     const ts = match.pre_match_snapshot?.timestamp_recorded;
@@ -391,31 +382,22 @@ function buildMatchRow(matchId, match, pts) {
         ? new Date(ts).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })
         : '—';
 
-    const borderColor = !hasTip ? 'var(--border)' :
-        pts >= 8 ? '#4caf82' : pts >= 5 ? '#d9a441' : '#e05555';
+    const resultClass = !hasTip ? '' :
+        pts >= 8 ? 'result-excellent' : pts >= 5 ? 'result-ok' : 'result-miss';
 
     const row = document.createElement('div');
-    row.className = 'match-row';
+    row.className = `match-row ${resultClass}`;
     row.dataset.pts    = pts;
     row.dataset.hastip = hasTip ? '1' : '0';
-    row.style.cssText = `
-        display:grid;
-        grid-template-columns:36px 1fr auto auto auto auto;
-        align-items:center;
-        gap:8px;
-        padding:8px 4px 8px 10px;
-        border-bottom:1px solid var(--border);
-        border-left:3px solid ${borderColor};
-    `;
 
     const dateEl = document.createElement('div');
-    dateEl.style.cssText = 'font-size:0.6rem;color:var(--text-3);white-space:nowrap;line-height:1.3;text-align:center;';
+    dateEl.style.cssText = 'font-size:var(--type-2xs);color:var(--text-3);white-space:nowrap;line-height:1.3;text-align:center;';
     dateEl.textContent = dateStr;
 
     const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'font-size:0.78rem;font-weight:600;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
+    nameEl.style.cssText = 'font-size:var(--type-sm);font-weight:600;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
     nameEl.innerHTML = `${match.metadata.home_disp} <span style="color:var(--text-3);font-weight:400;">vs</span> ${match.metadata.away_disp}
-        <span style="color:var(--text-3);font-weight:500;font-size:0.72rem;"> · ${match.post_match_result.actual_score}</span>`;
+        <span style="color:var(--text-3);font-weight:500;font-size:var(--type-xs);"> · ${match.post_match_result.actual_score}</span>`;
 
     const myTipEl = document.createElement('div');
     myTipEl.id = `tip-cell-${matchId}`;
@@ -424,16 +406,18 @@ function buildMatchRow(matchId, match, pts) {
 
     const myPtsEl = document.createElement('div');
     myPtsEl.style.cssText = 'text-align:right;min-width:38px;';
-    myPtsEl.innerHTML = hasTip ? ptsBadge(pts) : `<span style="color:var(--text-3);font-size:0.7rem;">–</span>`;
+    myPtsEl.innerHTML = hasTip ? ptsBadge(pts) : `<span class="points-badge pts-na">–</span>`;
 
     const algoEl = document.createElement('div');
+    algoEl.className = 'algo-cell';
     algoEl.style.cssText = 'display:flex;align-items:center;gap:4px;justify-content:flex-end;';
     algoEl.innerHTML = algoTip
-        ? `<span style="font-size:0.6rem;color:var(--text-3);font-weight:600;white-space:nowrap;">Algo</span>
-           <span style="font-size:0.78rem;font-weight:700;color:var(--text-2);">${algoTip}${isRecon ? '<sup style="color:#d9a441;font-size:0.55rem;">*</sup>' : ''}</span>`
-        : `<span style="font-size:0.65rem;color:var(--text-3);font-style:italic;">–</span>`;
+        ? `<span style="font-size:var(--type-2xs);color:var(--text-3);font-weight:600;white-space:nowrap;">Algo</span>
+           <span style="font-size:var(--type-sm);font-weight:700;color:var(--text-2);">${algoTip}${isRecon ? '<sup style="color:var(--amber-l);font-size:0.55rem;">*</sup>' : ''}</span>`
+        : `<span style="font-size:var(--type-2xs);color:var(--text-3);font-style:italic;">–</span>`;
 
     const algoPtsEl = document.createElement('div');
+    algoPtsEl.className = 'algo-pts-cell';
     algoPtsEl.style.cssText = 'text-align:right;min-width:38px;';
     algoPtsEl.innerHTML = ptsBadge(algoPts);
 
@@ -448,16 +432,17 @@ function buildMatchRow(matchId, match, pts) {
 
 function myTipCellHtml(matchId, userTip, hasTip) {
     if (hasTip) {
-        return `<span style="font-size:0.82rem;font-weight:800;color:var(--text-1);">${userTip}</span>
+        return `<span style="font-size:var(--type-sm);font-weight:800;color:var(--text-1);">${userTip}</span>
                 <button onclick="window.editUserTip(this,'${matchId}')"
                     title="Tipp bearbeiten"
-                    style="background:none;border:1px solid var(--border-2);border-radius:3px;color:var(--text-3);font-size:0.6rem;padding:1px 5px;cursor:pointer;line-height:1.4;flex-shrink:0;">✎</button>`;
+                    style="background:none;border:1px solid var(--border-2);border-radius:var(--r-sm);color:var(--text-3);font-size:var(--type-2xs);padding:1px 5px;cursor:pointer;line-height:1.4;flex-shrink:0;">✎</button>`;
     }
     return `<input id="tip-val-${matchId}" type="text" placeholder="2:1" maxlength="5"
-                style="width:46px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:4px;color:var(--text-1);font-size:0.82rem;font-weight:700;padding:2px 5px;text-align:center;outline:none;"
+                class="select-field"
+                style="width:46px;font-size:var(--type-sm);font-weight:700;padding:2px 5px;text-align:center;"
                 onclick="event.stopPropagation()">
             <button onclick="window.saveUserTip(event,'${matchId}')"
-                style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:4px;color:var(--gold-l);font-size:0.66rem;font-weight:700;padding:2px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0;">OK</button>`;
+                style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:var(--r-sm);color:var(--gold-l);font-size:var(--type-2xs);font-weight:700;padding:2px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0;">OK</button>`;
 }
 
 // ── Bot-Points-Race: cumulative points per bot over the played matches ──
@@ -496,8 +481,8 @@ function renderBotRace(completedSorted) {
     });
 
     panel.innerHTML = `
-        <div class="glass-card" style="padding:20px 24px;">
-            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:14px;">🏁 Bot-Points-Race</div>
+        <div class="glass-card static" style="padding:var(--sp-5);">
+            <div class="section-title" style="margin-bottom:var(--sp-4);">🏁 Bot-Points-Race</div>
             <div style="height:300px;"><canvas id="botRaceChart"></canvas></div>
         </div>`;
 
@@ -537,7 +522,7 @@ export async function saveUserTip(event, matchId) {
         loadPerformanceView();  // reload to reflect new tip + points
     } catch {
         btn.textContent = '✗';
-        btn.style.color = 'var(--red)';
+        btn.style.color = 'var(--red-l)';
         setTimeout(() => { btn.textContent = 'OK'; btn.disabled = false; }, 2000);
     }
 }
@@ -549,9 +534,10 @@ export function editUserTip(btn, matchId) {
     const currentTip = cell.querySelector('span')?.textContent?.trim() || '';
     cell.innerHTML = `
         <input id="tip-val-${matchId}" type="text" value="${currentTip}" maxlength="5"
-            style="width:46px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:4px;color:var(--text-1);font-size:0.82rem;font-weight:700;padding:2px 5px;text-align:center;outline:none;"
+            class="select-field"
+            style="width:46px;font-size:var(--type-sm);font-weight:700;padding:2px 5px;text-align:center;"
             onclick="event.stopPropagation()">
         <button onclick="window.saveUserTip(event,'${matchId}')"
-            style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:4px;color:var(--gold-l);font-size:0.66rem;font-weight:700;padding:2px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0;">OK</button>`;
+            style="background:var(--gold-dim);border:1px solid var(--gold-b);border-radius:var(--r-sm);color:var(--gold-l);font-size:var(--type-2xs);font-weight:700;padding:2px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0;">OK</button>`;
     cell.querySelector('input')?.focus();
 }

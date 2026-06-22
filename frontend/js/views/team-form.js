@@ -57,7 +57,7 @@ export async function loadTeamFormView() {
         renderCompareChart();
     } catch (e) {
         document.getElementById('elo-history-view').insertAdjacentHTML('beforeend',
-            `<p style="color:var(--red);font-size:0.85rem;">Fehler: ${e.message}</p>`);
+            `<p style="color:var(--red-l);font-size:var(--type-body);">Fehler: ${e.message}</p>`);
     }
 }
 
@@ -81,50 +81,51 @@ function renderPowerRankings() {
     const rows = computeRankings();
 
     const rowsHtml = rows.map((r, i) => {
-        const dColor = r.delta > 0 ? 'var(--green)' : r.delta < 0 ? 'var(--red)' : 'var(--text-3)';
+        const dColor = r.delta > 0 ? 'var(--green-l)' : r.delta < 0 ? 'var(--red-l)' : 'var(--text-3)';
         const dSign  = r.delta > 0 ? '▲' : r.delta < 0 ? '▼' : '·';
         const formHtml = r.form.length
             ? r.form.map(x => {
-                const c = x === 'W' ? 'var(--green)' : x === 'D' ? 'var(--amber)' : 'var(--red)';
-                return `<span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:${c};color:#fff;font-size:0.55rem;font-weight:800;text-align:center;line-height:16px;">${x}</span>`;
+                const cls = x === 'W' ? 'w' : x === 'D' ? 'd' : 'l';
+                return `<span class="form-badge-sm ${cls}">${x}</span>`;
             }).join(' ')
-            : `<span style="font-size:0.68rem;color:var(--text-3);font-style:italic;">noch nicht gespielt</span>`;
+            : `<span style="font-size:var(--type-2xs);color:var(--text-3);font-style:italic;">noch nicht gespielt</span>`;
         const isSelected = teamForm.selected.has(r.team);
-        const rankColor = i === 0 ? '#ffd166' : i === 1 ? '#d9d9d9' : i === 2 ? '#cd7f32' : 'var(--text-3)';
+        const rankDisplay = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+        const rankColor = i < 3 ? 'var(--text-1)' : 'var(--text-3)';
         const bg = isSelected ? 'var(--gold-dim)' : 'transparent';
 
         return `<tr data-team="${r.team}"
-                    style="border-top:1px solid var(--border);cursor:pointer;background:${bg};transition:background 0.15s;"
+                    style="cursor:pointer;background:${bg};transition:background 0.15s;"
                     onclick="window.toggleTeamSelect('${escapeJs(r.team)}')"
                     onmouseover="this.style.background='var(--surface-2)'"
                     onmouseout="this.style.background='${bg}'">
-            <td style="padding:8px 14px;font-size:0.78rem;font-weight:800;color:${rankColor};text-align:center;">${i + 1}</td>
-            <td style="padding:8px 6px;font-size:0.88rem;font-weight:700;color:var(--text-1);white-space:nowrap;">
+            <td class="text-center" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-sm);font-weight:800;color:${rankColor};">${rankDisplay}</td>
+            <td style="padding:var(--sp-2) var(--sp-2);font-size:var(--type-body);font-weight:700;color:var(--text-1);white-space:nowrap;">
                 <span style="margin-right:6px;">${flag(r.team)}</span>${r.team}
             </td>
-            <td style="padding:8px 12px;text-align:right;font-size:0.85rem;font-weight:800;color:var(--text-1);font-variant-numeric:tabular-nums;">${r.elo.toFixed(0)}</td>
-            <td style="padding:8px 12px;text-align:right;font-size:0.78rem;font-weight:700;color:${dColor};font-variant-numeric:tabular-nums;">${dSign} ${Math.abs(r.delta).toFixed(0)}</td>
-            <td style="padding:8px 12px;text-align:center;font-size:0.74rem;color:var(--text-2);font-variant-numeric:tabular-nums;">
-                <span style="color:var(--green);">${r.w}</span>-<span style="color:var(--amber);">${r.d}</span>-<span style="color:var(--red);">${r.l}</span>
+            <td class="text-right" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-body);font-weight:800;color:var(--text-1);">${r.elo.toFixed(0)}</td>
+            <td class="text-right" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-sm);font-weight:700;color:${dColor};">${dSign} ${Math.abs(r.delta).toFixed(0)}</td>
+            <td class="text-center" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-xs);color:var(--text-2);">
+                <span style="color:var(--green-l);">${r.w}</span>-<span style="color:var(--amber-l);">${r.d}</span>-<span style="color:var(--red-l);">${r.l}</span>
             </td>
-            <td style="padding:8px 12px;font-size:0.7rem;">${formHtml}</td>
+            <td style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-xs);display:flex;gap:3px;align-items:center;">${formHtml}</td>
         </tr>`;
     }).join('');
 
     panel.innerHTML = `
-        <div class="glass-card" style="padding:20px 24px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;">
+        <div class="glass-card static" style="padding:var(--sp-5);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);gap:var(--sp-3);">
                 <div>
-                    <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:3px;">🏆 Power Rankings</div>
-                    <div style="font-size:0.72rem;color:var(--text-3);">Sortiert nach aktuellem Elo · Klick = im Chart vergleichen</div>
+                    <div class="section-title" style="margin-bottom:2px;">🏆 Power Rankings</div>
+                    <div class="section-subtitle">Sortiert nach aktuellem Elo · Klick = im Chart vergleichen</div>
                 </div>
-                <div style="font-size:0.7rem;color:var(--text-3);">${rows.length} Teams</div>
+                <div style="font-size:var(--type-xs);color:var(--text-3);">${rows.length} Teams</div>
             </div>
-            <div style="max-height:520px;overflow-y:auto;border-radius:4px;">
-                <table style="width:100%;border-collapse:collapse;">
-                    <thead style="position:sticky;top:0;background:var(--surface);z-index:1;">
+            <div style="max-height:520px;overflow-y:auto;border-radius:var(--r-sm);">
+                <table class="data-table">
+                    <thead>
                         <tr>${['#', 'Team', 'Elo', 'Δ Start', 'W-D-L', 'Form'].map((h, i) =>
-                            `<th style="padding:8px ${i === 1 ? '6' : '12'}px;text-align:${[0, 4].includes(i) ? 'center' : [2, 3].includes(i) ? 'right' : 'left'};font-size:0.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;">${h}</th>`
+                            `<th class="${[0, 4].includes(i) ? 'text-center' : [2, 3].includes(i) ? 'text-right' : ''}">${h}</th>`
                         ).join('')}</tr>
                     </thead>
                     <tbody>${rowsHtml}</tbody>
@@ -156,14 +157,11 @@ function renderTeamSelector() {
 
     grid.innerHTML = visible.map(t => {
         const selected = teamForm.selected.has(t);
-        const fg = selected ? 'var(--gold-l)' : 'var(--text-2)';
-        const bg = selected ? 'var(--gold-dim)' : 'var(--surface-2)';
-        const bd = selected ? 'var(--gold-b)' : 'var(--border-2)';
         return `<button onclick="window.toggleTeamSelect('${escapeJs(t)}')"
-            style="background:${bg};border:1px solid ${bd};color:${fg};padding:5px 10px;border-radius:4px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s;">
+            class="team-chip ${selected ? 'selected' : ''}">
             ${flag(t)} ${t}
         </button>`;
-    }).join('') || `<span style="font-size:0.72rem;color:var(--text-3);font-style:italic;padding:8px;">Keine Treffer</span>`;
+    }).join('') || `<span style="font-size:var(--type-xs);color:var(--text-3);font-style:italic;padding:var(--sp-2);">Keine Treffer</span>`;
 
     // One-time wire-up for the search input.
     const searchEl = document.getElementById('team-compare-search');

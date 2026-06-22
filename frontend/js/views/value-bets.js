@@ -12,8 +12,18 @@ export function renderValueBets(matches, openMatch) {
 
     const list = document.createElement('div');
     list.className = 'fixture-group-list';
-    sorted.forEach(match => {
+    sorted.forEach((match, i) => {
         const row = buildFixtureRow(match, /* showXp */ true);
+
+        // Prepend rank badge
+        const rank = document.createElement('div');
+        rank.className = 'rank-badge';
+        if (i === 0) rank.classList.add('gold');
+        else if (i === 1) rank.classList.add('silver');
+        else if (i === 2) rank.classList.add('bronze');
+        rank.textContent = i + 1;
+        row.insertBefore(rank, row.firstChild);
+
         row.addEventListener('click', () => openMatch(match.id));
         list.appendChild(row);
     });

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WM 2026 Predictor</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
     <div class="app-container">
@@ -161,24 +161,24 @@
                     <h1>Algorithm Performance</h1>
                     <p class="page-subtitle">Prediction accuracy vs actual results</p>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;">
-                    <div class="glass-card" style="padding:20px;text-align:center;">
-                        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:10px;">Completed Matches</div>
-                        <div id="kpi-matches" style="font-size:2.4rem;font-weight:900;color:var(--text-1);line-height:1;">0</div>
+                <div class="kpi-grid">
+                    <div class="glass-card kpi-card static">
+                        <div class="kpi-label">Completed Matches</div>
+                        <div class="kpi-value" id="kpi-matches" style="color:var(--text-1)">0</div>
                     </div>
-                    <div class="glass-card" style="padding:20px;text-align:center;">
-                        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:10px;">Total SRF Points</div>
-                        <div id="kpi-points" style="font-size:2.4rem;font-weight:900;color:var(--green);line-height:1;">0</div>
+                    <div class="glass-card kpi-card static">
+                        <div class="kpi-label">Total SRF Points</div>
+                        <div class="kpi-value" id="kpi-points" style="color:var(--green-l)">0</div>
                     </div>
-                    <div class="glass-card" style="padding:20px;text-align:center;">
-                        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:10px;">Hit Rate (Tendency)</div>
-                        <div id="kpi-hitrate" style="font-size:2.4rem;font-weight:900;color:var(--amber);line-height:1;">0.0%</div>
+                    <div class="glass-card kpi-card static">
+                        <div class="kpi-label">Hit Rate (Tendency)</div>
+                        <div class="kpi-value" id="kpi-hitrate" style="color:var(--amber-l)">0.0%</div>
                     </div>
                 </div>
-                <div id="h2h-panel" style="margin-bottom:24px;"></div>
-                <div id="bot-scoreboard" style="margin-bottom:24px;"></div>
-                <div id="bot-race-panel" style="margin-bottom:24px;"></div>
-                <div id="performance-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;"></div>
+                <div id="h2h-panel" style="margin-bottom:var(--sp-5);"></div>
+                <div id="bot-scoreboard" style="margin-bottom:var(--sp-5);"></div>
+                <div id="bot-race-panel" style="margin-bottom:var(--sp-5);"></div>
+                <div id="performance-grid" style="display:grid;grid-template-columns:1fr;gap:var(--sp-3);"></div>
             </div>
 
             <!-- Elo History View -->
@@ -187,18 +187,17 @@
                     <h1>Team Form</h1>
                     <p class="page-subtitle">Power Rankings · momentum · head-to-head comparison</p>
                 </div>
-                <div id="power-rankings-panel" style="margin-bottom:20px;"></div>
-                <div id="compare-panel" class="glass-card" style="padding:20px 24px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap;">
+                <div id="power-rankings-panel" style="margin-bottom:var(--sp-5);"></div>
+                <div id="compare-panel" class="glass-card static" style="padding:var(--sp-5);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);gap:var(--sp-3);flex-wrap:wrap;">
                         <div>
-                            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);font-weight:700;margin-bottom:3px;">Compare Teams</div>
-                            <div style="font-size:0.72rem;color:var(--text-3);">Bis zu 4 Teams gleichzeitig — klicke zum Aktivieren</div>
+                            <div class="section-title" style="margin-bottom:2px;">Compare Teams</div>
+                            <div class="section-subtitle">Bis zu 4 Teams gleichzeitig — klicke zum Aktivieren</div>
                         </div>
-                        <input type="search" id="team-compare-search" placeholder="🔍 Team suchen…"
-                            style="background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-1);
-                                   padding:6px 10px;border-radius:4px;font-size:0.78rem;outline:none;width:180px;">
+                        <input type="search" id="team-compare-search" placeholder="Team suchen…"
+                            class="select-field" style="width:180px;padding:6px 10px;font-size:var(--type-sm);">
                     </div>
-                    <div id="team-compare-grid" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;max-height:128px;overflow-y:auto;padding:4px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);"></div>
+                    <div id="team-compare-grid" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:var(--sp-5);max-height:128px;overflow-y:auto;padding:var(--sp-1);border-top:1px solid var(--border);border-bottom:1px solid var(--border);"></div>
                     <div style="height:380px;"><canvas id="eloChart"></canvas></div>
                 </div>
             </div>
@@ -243,6 +242,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="js/main.js?v=6"></script>
+    <script type="module" src="js/main.js?v=7"></script>
 </body>
 </html>
