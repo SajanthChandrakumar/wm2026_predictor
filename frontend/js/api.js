@@ -26,6 +26,6 @@ export const api = {
     eloRatings:   ()       => getJson('/api/elo_ratings'),
 
     predict:      (payload)             => postJson('/api/predict', payload),
-    syncElo:      ()                    => postJson('/api/sync_elo', {}),
+    syncElo:      ()                    => getJson('/api/sync_elo'),
     saveUserTip:  (match_id, user_tip)  => postJson('/api/archive/user_tip', { match_id, user_tip }),
 };
