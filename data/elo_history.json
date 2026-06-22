@@ -673,6 +673,11 @@
             "timestamp": 1781986435.2206862,
             "match_id": "f31b2ee9e1cc6f7e641467f8237eaa21",
             "elo": 2151.1536585812946
+        },
+        {
+            "timestamp": 1782162357.483949,
+            "match_id": "be6c63f416c67bca1300a98f5b89c3af",
+            "elo": 2166.7546987895744
         }
     ],
     "Algeria": [
@@ -697,6 +702,11 @@
             "timestamp": 1781986435.221567,
             "match_id": "25161cf6cf0cd9be17ae2e7e224a1f45",
             "elo": 1879.7883356406157
+        },
+        {
+            "timestamp": 1782162357.483952,
+            "match_id": "be6c63f416c67bca1300a98f5b89c3af",
+            "elo": 1864.1872954323358
         }
     ],
     "Jordan": [
