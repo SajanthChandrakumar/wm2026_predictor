@@ -7,3 +7,6 @@ numpy
 matplotlib
 apscheduler
 filelock
+fastapi
+uvicorn[standard]
+slowapi

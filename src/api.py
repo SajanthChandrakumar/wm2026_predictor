@@ -3,13 +3,16 @@ import sys
 import json
 import time
 import statistics
+import logging
 from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -30,13 +33,30 @@ from src.math_engine import MathEngine
 
 app = FastAPI(title="WM 2026 Predictor API")
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5000", "http://localhost:3000", "http://127.0.0.1:5000", "http://127.0.0.1:3000"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' cdn.jsdelivr.net fonts.googleapis.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data:"
+    return response
 
 TEAM_MAPPING = {
     "United States": "United States", "USA": "United States",
@@ -480,7 +500,8 @@ def get_matches(force: bool = False):
     return results
 
 @app.post("/api/predict")
-def predict_match(payload: dict):
+@limiter.limit("20/minute")
+def predict_match(request: Request, payload: dict):
     math_engine.reload_elo_data()
     match_data = payload.get("match")
     is_ko = payload.get("is_ko", False)
@@ -558,10 +579,12 @@ def predict_match(payload: dict):
             "xp_tips": xp_df.to_dict(orient="records")
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred processing your request")
 
 @app.post("/api/archive/user_tip")
-def set_user_tip(payload: dict):
+@limiter.limit("30/minute")
+def set_user_tip(request: Request, payload: dict):
     match_id  = payload.get("match_id")
     user_tip  = payload.get("user_tip", "").strip()
 
@@ -825,11 +848,13 @@ def perform_elo_sync() -> dict:
         raise e
 
 @app.post("/api/sync_elo")
-def sync_elo():
+@limiter.limit("5/hour")
+def sync_elo(request: Request):
     try:
         return perform_elo_sync()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred processing your request")
 
 @app.on_event("startup")
 def startup_event():

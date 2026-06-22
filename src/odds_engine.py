@@ -59,7 +59,7 @@ class OddsApiEngine:
             "apiKey": self.api_key,
             "daysFrom": days_from
         }
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         self._update_quota(response.headers)
         return response.json()
