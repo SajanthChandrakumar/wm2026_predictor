@@ -172,8 +172,22 @@ async function updatePrediction() {
         renderDetail(matchData, state.lastCalcData);
         showView('detail');
     } catch (e) {
-        document.getElementById('loading-spinner').innerHTML =
-            `<div style="text-align:center"><p style="color:var(--danger);font-weight:600">${e.message}</p>
-             <button onclick="window.showView('dashboard')" class="sidebar-btn" style="width:auto;margin-top:16px;">← Back</button></div>`;
+        const spinner = document.getElementById('loading-spinner');
+        const errorDiv = document.createElement('div');
+        errorDiv.style.textAlign = 'center';
+        const errorP = document.createElement('p');
+        errorP.style.color = 'var(--danger)';
+        errorP.style.fontWeight = '600';
+        errorP.textContent = e.message;
+        const backBtn = document.createElement('button');
+        backBtn.textContent = '← Back';
+        backBtn.className = 'sidebar-btn';
+        backBtn.style.width = 'auto';
+        backBtn.style.marginTop = '16px';
+        backBtn.onclick = () => showView('dashboard');
+        errorDiv.appendChild(errorP);
+        errorDiv.appendChild(backBtn);
+        spinner.innerHTML = '';
+        spinner.appendChild(errorDiv);
     }
 }

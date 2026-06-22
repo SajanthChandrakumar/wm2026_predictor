@@ -33,7 +33,7 @@ class OddsApiEngine:
             "markets": market,
             "oddsFormat": "decimal"
         }
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         self._update_quota(response.headers)
         return response.json()
@@ -47,7 +47,7 @@ class OddsApiEngine:
             "markets": market,
             "oddsFormat": "decimal"
         }
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         self._update_quota(response.headers)
         return response.json()

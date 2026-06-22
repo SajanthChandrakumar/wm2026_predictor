@@ -32,7 +32,7 @@ class OddsApiEngine:
         self._headers = {"x-apisports-key": self.api_key}
 
     def _request(self, path: str, params: dict | None = None) -> dict:
-        response = requests.get(f"{self.BASE_URL}{path}", headers=self._headers, params=params or {})
+        response = requests.get(f"{self.BASE_URL}{path}", headers=self._headers, params=params or {}, timeout=10)
         response.raise_for_status()
         self._update_quota(response.headers)
         return response.json()
