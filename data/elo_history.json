@@ -9,6 +9,11 @@
             "timestamp": 1781343081.124934,
             "match_id": "80d82d1113934bfbea4ce8daf37a2433",
             "elo": 1912.9373145911663
+        },
+        {
+            "timestamp": 1781983760.790501,
+            "match_id": "0f2aeae6ac8e77223848d23a4ca86b0d",
+            "elo": 1920.8069699668679
         }
     ],
     "South Africa": [
@@ -21,6 +26,11 @@
             "timestamp": 1781343081.12501,
             "match_id": "80d82d1113934bfbea4ce8daf37a2433",
             "elo": 1657.0626854088337
+        },
+        {
+            "timestamp": 1781983760.786119,
+            "match_id": "66ebb9e3f949caded535d97ce686ca09",
+            "elo": 1675.9638078025555
         }
     ],
     "South Korea": [
@@ -33,6 +43,11 @@
             "timestamp": 1781343081.1257641,
             "match_id": "384cbb5d76b535896a24fe65f93cfac8",
             "elo": 1889.2709848123145
+        },
+        {
+            "timestamp": 1781983760.790501,
+            "match_id": "0f2aeae6ac8e77223848d23a4ca86b0d",
+            "elo": 1849.1930300331321
         }
     ],
     "Czech Republic": [
@@ -45,6 +60,11 @@
             "timestamp": 1781343081.125855,
             "match_id": "384cbb5d76b535896a24fe65f93cfac8",
             "elo": 1720.7290151876855
+        },
+        {
+            "timestamp": 1781983760.7861178,
+            "match_id": "66ebb9e3f949caded535d97ce686ca09",
+            "elo": 1734.0361921974445
         }
     ],
     "Canada": [
@@ -57,6 +77,11 @@
             "timestamp": 1781343081.126466,
             "match_id": "d1f4f946c70a0b4e81f5d43e9d32361c",
             "elo": 1794.4151844011226
+        },
+        {
+            "timestamp": 1781983760.789026,
+            "match_id": "fa9502285b257b03e62968d50d9229fc",
+            "elo": 1839.1861354129178
         }
     ],
     "Bosnia and Herzegovina": [
@@ -69,6 +94,11 @@
             "timestamp": 1781343081.126548,
             "match_id": "d1f4f946c70a0b4e81f5d43e9d32361c",
             "elo": 1705.5848155988774
+        },
+        {
+            "timestamp": 1781983760.7875662,
+            "match_id": "289bc2e9f5adad8ae4d9a75a7c5461ad",
+            "elo": 1665.9643590717146
         }
     ],
     "United States": [
@@ -81,6 +111,11 @@
             "timestamp": 1781343081.127094,
             "match_id": "c12986f447a515fbe641addd786dbb24",
             "elo": 1953.0863915807183
+        },
+        {
+            "timestamp": 1781983760.7919,
+            "match_id": "065b3573e875f8d23803357f73e5b99e",
+            "elo": 1951.397181994149
         }
     ],
     "Paraguay": [
@@ -93,6 +128,11 @@
             "timestamp": 1781343081.12716,
             "match_id": "c12986f447a515fbe641addd786dbb24",
             "elo": 1766.9136084192817
+        },
+        {
+            "timestamp": 1781983760.797632,
+            "match_id": "f955d4b3395ce6e3b5ac1031ca52ca4e",
+            "elo": 1820.2067242582239
         }
     ],
     "Qatar": [
@@ -105,6 +145,11 @@
             "timestamp": 1781460293.245748,
             "match_id": "26634922d3f78c146440816023e40de8",
             "elo": 1679.0247300519984
+        },
+        {
+            "timestamp": 1781983760.789027,
+            "match_id": "fa9502285b257b03e62968d50d9229fc",
+            "elo": 1649.8385946390806
         }
     ],
     "Switzerland": [
@@ -117,6 +162,11 @@
             "timestamp": 1781460293.245972,
             "match_id": "26634922d3f78c146440816023e40de8",
             "elo": 1900.9752699480016
+        },
+        {
+            "timestamp": 1781983760.787565,
+            "match_id": "289bc2e9f5adad8ae4d9a75a7c5461ad",
+            "elo": 1925.010910876287
         }
     ],
     "Brazil": [
@@ -129,6 +179,11 @@
             "timestamp": 1781460293.247554,
             "match_id": "f6c8748a16516e0998f95de14235432a",
             "elo": 2020.0316345250126
+        },
+        {
+            "timestamp": 1781983760.796018,
+            "match_id": "ef0f74a991d3e35798ae5af77667bce1",
+            "elo": 2024.7990490270436
         }
     ],
     "Morocco": [
@@ -141,6 +196,11 @@
             "timestamp": 1781460293.247726,
             "match_id": "f6c8748a16516e0998f95de14235432a",
             "elo": 1919.9683654749874
+        },
+        {
+            "timestamp": 1781983760.793953,
+            "match_id": "4cd769aa7bae0ad9762bd69b80ef2903",
+            "elo": 1940.7042272696854
         }
     ],
     "Haiti": [
@@ -153,6 +213,11 @@
             "timestamp": 1781460293.249067,
             "match_id": "5ae41a06735c926eeb7f74006933adce",
             "elo": 1490.9412265673207
+        },
+        {
+            "timestamp": 1781983760.796018,
+            "match_id": "ef0f74a991d3e35798ae5af77667bce1",
+            "elo": 1486.1738120652901
         }
     ],
     "Scotland": [
@@ -165,6 +230,11 @@
             "timestamp": 1781460293.2492192,
             "match_id": "5ae41a06735c926eeb7f74006933adce",
             "elo": 1809.0587734326793
+        },
+        {
+            "timestamp": 1781983760.793951,
+            "match_id": "4cd769aa7bae0ad9762bd69b80ef2903",
+            "elo": 1788.322911637981
         }
     ],
     "Australia": [
@@ -177,6 +247,11 @@
             "timestamp": 1781460293.250408,
             "match_id": "564084f52cc9f1abcc18187c168a7cdc",
             "elo": 1807.6058499822598
+        },
+        {
+            "timestamp": 1781983760.7919009,
+            "match_id": "065b3573e875f8d23803357f73e5b99e",
+            "elo": 1786.208667988111
         }
     ],
     "T\u00fcrkiye": [
@@ -189,6 +264,11 @@
             "timestamp": 1781460293.250543,
             "match_id": "564084f52cc9f1abcc18187c168a7cdc",
             "elo": 1792.3941500177402
+        },
+        {
+            "timestamp": 1781983760.797631,
+            "match_id": "f955d4b3395ce6e3b5ac1031ca52ca4e",
+            "elo": 1762.1874257595164
         }
     ],
     "Germany": [
@@ -225,6 +305,11 @@
             "timestamp": 1781558108.656576,
             "match_id": "32ec06abda2398ac41501c86eb9aa376",
             "elo": 2013.2117907908114
+        },
+        {
+            "timestamp": 1781983760.799171,
+            "match_id": "4f0c518545b0096c68326daf25bffc1e",
+            "elo": 2046.0164819118077
         }
     ],
     "Japan": [
@@ -273,6 +358,11 @@
             "timestamp": 1781558108.661421,
             "match_id": "b55f9569de3f4d731bc5537ff5ff43e4",
             "elo": 1859.0130686878772
+        },
+        {
+            "timestamp": 1781983760.799171,
+            "match_id": "4f0c518545b0096c68326daf25bffc1e",
+            "elo": 1826.2083775668807
         }
     ],
     "Tunisia": [
@@ -333,6 +423,246 @@
             "timestamp": 1781558108.666213,
             "match_id": "fbfb95c62003fd6d828b309f96ee1f9b",
             "elo": 1776.8077762395894
+        }
+    ],
+    "England": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 2088.5683194332455
+        },
+        {
+            "timestamp": 1781983760.780229,
+            "match_id": "689096c8cd7e2753b9fec95321943c5d",
+            "elo": 2088.5683194332455
+        }
+    ],
+    "Croatia": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1961.4316805667543
+        },
+        {
+            "timestamp": 1781983760.780425,
+            "match_id": "689096c8cd7e2753b9fec95321943c5d",
+            "elo": 1961.4316805667543
+        }
+    ],
+    "Ghana": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1757.4160104786672
+        },
+        {
+            "timestamp": 1781983760.782602,
+            "match_id": "87afdb85c977b451e1c00f5e3e632601",
+            "elo": 1757.4160104786672
+        }
+    ],
+    "Panama": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1672.5839895213328
+        },
+        {
+            "timestamp": 1781983760.782783,
+            "match_id": "87afdb85c977b451e1c00f5e3e632601",
+            "elo": 1672.5839895213328
+        }
+    ],
+    "Uzbekistan": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1670.920563447895
+        },
+        {
+            "timestamp": 1781983760.784492,
+            "match_id": "22083e7a8e5362c711bc05c1e1319a1f",
+            "elo": 1670.920563447895
+        }
+    ],
+    "Colombia": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 2069.079436552105
+        },
+        {
+            "timestamp": 1781983760.784653,
+            "match_id": "22083e7a8e5362c711bc05c1e1319a1f",
+            "elo": 2069.079436552105
+        }
+    ],
+    "Saudi Arabia": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1739.531559241671
+        },
+        {
+            "timestamp": 1781986435.217016,
+            "match_id": "64b91c5f2db61c7358a4f05459e83c52",
+            "elo": 1739.531559241671
+        }
+    ],
+    "Uruguay": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1970.468440758329
+        },
+        {
+            "timestamp": 1781986435.2170932,
+            "match_id": "64b91c5f2db61c7358a4f05459e83c52",
+            "elo": 1970.468440758329
+        }
+    ],
+    "Iran": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1822.045600534786
+        },
+        {
+            "timestamp": 1781986435.2180219,
+            "match_id": "ec51b9c44ad5e34552f3ab53f7262813",
+            "elo": 1822.045600534786
+        }
+    ],
+    "New Zealand": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1617.954399465214
+        },
+        {
+            "timestamp": 1781986435.218091,
+            "match_id": "ec51b9c44ad5e34552f3ab53f7262813",
+            "elo": 1617.954399465214
+        }
+    ],
+    "France": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 2128.9140238217683
+        },
+        {
+            "timestamp": 1781986435.218924,
+            "match_id": "73a4fcd14cc9766b9b9bfd50b8ca153a",
+            "elo": 2128.9140238217683
+        }
+    ],
+    "Senegal": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1861.0859761782317
+        },
+        {
+            "timestamp": 1781986435.2189922,
+            "match_id": "73a4fcd14cc9766b9b9bfd50b8ca153a",
+            "elo": 1861.0859761782317
+        }
+    ],
+    "Iraq": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1622.5014484167439
+        },
+        {
+            "timestamp": 1781986435.219796,
+            "match_id": "4d4f2b9b78182b557d4fbf8dcf4f4af2",
+            "elo": 1622.5014484167439
+        }
+    ],
+    "Norway": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1857.4985515832561
+        },
+        {
+            "timestamp": 1781986435.219867,
+            "match_id": "4d4f2b9b78182b557d4fbf8dcf4f4af2",
+            "elo": 1857.4985515832561
+        }
+    ],
+    "Argentina": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 2151.1536585812946
+        },
+        {
+            "timestamp": 1781986435.2206862,
+            "match_id": "f31b2ee9e1cc6f7e641467f8237eaa21",
+            "elo": 2151.1536585812946
+        }
+    ],
+    "Algeria": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1758.8463414187054
+        },
+        {
+            "timestamp": 1781986435.2207549,
+            "match_id": "f31b2ee9e1cc6f7e641467f8237eaa21",
+            "elo": 1758.8463414187054
+        }
+    ],
+    "Austria": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1879.7883356406157
+        },
+        {
+            "timestamp": 1781986435.221567,
+            "match_id": "25161cf6cf0cd9be17ae2e7e224a1f45",
+            "elo": 1879.7883356406157
+        }
+    ],
+    "Jordan": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1620.2116643593843
+        },
+        {
+            "timestamp": 1781986435.221637,
+            "match_id": "25161cf6cf0cd9be17ae2e7e224a1f45",
+            "elo": 1620.2116643593843
+        }
+    ],
+    "Portugal": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 2015.17574355785
+        },
+        {
+            "timestamp": 1781986435.222427,
+            "match_id": "6cc871c121a1869b4612d3fb22fa9d55",
+            "elo": 2015.17574355785
+        }
+    ],
+    "DR Congo": [
+        {
+            "timestamp": 0,
+            "match_id": "baseline",
+            "elo": 1654.82425644215
+        },
+        {
+            "timestamp": 1781986435.222494,
+            "match_id": "6cc871c121a1869b4612d3fb22fa9d55",
+            "elo": 1654.82425644215
         }
     ]
 }

@@ -618,6 +618,26 @@ def get_elo_history():
             return {}
     return {}
 
+@app.get("/api/elo_ratings")
+def get_elo_ratings():
+    """Authoritative current Elo per team — includes teams with no match history yet."""
+    csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_ratings.csv')
+    out = {}
+    try:
+        import csv as _csv
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            for row in _csv.DictReader(f):
+                try:
+                    out[row['team_name']] = {
+                        'team_code': row.get('team_code', ''),
+                        'elo': float(row['elo_rating']),
+                    }
+                except (ValueError, KeyError):
+                    continue
+    except FileNotFoundError:
+        pass
+    return out
+
 def perform_elo_sync() -> dict:
     print("Automated Elo sync triggered...")
     odds_engine = OddsApiEngine()
