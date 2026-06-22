@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pymongo import MongoClient
+import certifi
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -40,7 +41,7 @@ logger = logging.getLogger(__name__)
 MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
     raise ValueError("MONGO_URI environment variable is required. Set it in your .env file.")
-_mongo_client = MongoClient(MONGO_URI)
+_mongo_client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 _db = _mongo_client["wm2026_db"]
 archive_collection = _db["archive"]
 cache_collection = _db["cache"]
