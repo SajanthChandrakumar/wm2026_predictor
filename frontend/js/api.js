@@ -28,4 +28,8 @@ export const api = {
     predict:      (payload)             => postJson('/api/predict', payload),
     syncElo:      ()                    => getJson('/api/sync_elo'),
     saveUserTip:  (match_id, user_tip)  => postJson('/api/archive/user_tip', { match_id, user_tip }),
+
+    customBot:        ()        => getJson('/api/custom_bot'),
+    simulateCustomBot:(params)  => postJson('/api/custom_bot/simulate', { params }),
+    saveCustomBot:    (cfg)     => postJson('/api/custom_bot', cfg),
 };

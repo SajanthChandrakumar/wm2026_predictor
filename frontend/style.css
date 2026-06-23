@@ -841,6 +841,18 @@ input:checked + .toggle-track::after { background: #fff; transform: translateX(1
     padding: 2px 8px;
 }
 
+/* Build-a-Bot card */
+.bob-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--sp-4) var(--sp-5);
+}
+.bob-slider { display: flex; flex-direction: column; gap: 6px; }
+.bob-slider input[type=range] { cursor: pointer; }
+@media (max-width: 560px) {
+    .bob-grid { grid-template-columns: 1fr; }
+}
+
 /* Team chips */
 .team-chip {
     background: var(--surface-2); border: 1px solid var(--border-2);

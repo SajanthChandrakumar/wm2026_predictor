@@ -445,6 +445,84 @@ class MathEngine:
 
         return bots
 
+    def compute_custom_bot_tip(
+        self,
+        odds: dict,
+        elo_home: float,
+        elo_away: float,
+        params: dict,
+        is_ko: bool = False,
+    ) -> str:
+        """
+        Tip of a user-designed ("build-a-bot") strategy, parametrised by four knobs:
+
+          market_weight (0..1): blend between market and Elo within the win/loss pool.
+                                 1.0 = pure bookmaker odds (like the Broker),
+                                 0.0 = pure Elo ratings (like the Professor).
+                                 The house Algo uses 0.7.
+          risk (-1..1):         weight on the standard deviation of a tip's point
+                                 distribution. < 0 favours safe tendency tips,
+                                 > 0 gambles on exact high scores.
+          draw_bias (>= 0):     xP bonus added to every draw tip (like the X-Sniper).
+          underdog_bias (>= 0): xP bonus added to tips where the market underdog
+                                 wins (like the Rebel).
+
+        Reconstructs everything from the stored pre-match odds + Elo ratings, so it
+        can be evaluated retroactively on any archived match. Returns "H:A".
+        """
+        true_probs = self.remove_margin(odds["home"], odds["draw"], odds["away"])
+
+        # Elo win/loss shares from the stored ratings. No host bonus here — the
+        # blend below mirrors /api/predict, where the market already prices it in.
+        p_home_winloss = self.get_elo_probability(float(elo_home), float(elo_away))
+        elo_home_share, elo_away_share = p_home_winloss, 1.0 - p_home_winloss
+
+        # market_weight is the share of the *market*; the Elo share is its complement.
+        w_elo = max(0.0, min(1.0, 1.0 - float(params.get("market_weight", 0.7))))
+        pool = true_probs["home"] + true_probs["away"]
+        if pool <= 0:
+            pool = 1e-9
+        prob_home = (true_probs["home"] / pool * (1 - w_elo) + elo_home_share * w_elo) * pool
+        prob_away = (true_probs["away"] / pool * (1 - w_elo) + elo_away_share * w_elo) * pool
+        prob_draw = true_probs["draw"]
+
+        prob_over25 = None
+        if odds.get("over25") and odds.get("under25"):
+            raw_over = 1.0 / odds["over25"]
+            raw_under = 1.0 / odds["under25"]
+            prob_over25 = raw_over / (raw_over + raw_under)
+
+        xg_h, xg_a = self.derive_xg_from_odds(prob_home, prob_draw, prob_away, prob_over25)
+
+        if is_ko:
+            base = self.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
+            p_draw_90 = float(np.sum(np.diag(base.values)))
+            et_factor = 1 + p_draw_90 / 3
+            xg_h *= et_factor
+            xg_a *= et_factor
+
+        score_matrix = self.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
+
+        risk          = float(params.get("risk", 0.0))
+        draw_bias     = float(params.get("draw_bias", 0.0))
+        underdog_bias = float(params.get("underdog_bias", 0.0))
+        home_is_underdog = true_probs["home"] < true_probs["away"]
+
+        best_tip, best_score = "1:0", float("-inf")
+        for t_home in range(6):
+            for t_away in range(6):
+                ev, std = self._points_distribution(t_home, t_away, score_matrix, is_ko)
+                score = ev + risk * std
+                if t_home == t_away:
+                    score += draw_bias
+                underdog_wins = (t_home > t_away) if home_is_underdog else (t_away > t_home)
+                if underdog_wins:
+                    score += underdog_bias
+                if score > best_score:
+                    best_score = score
+                    best_tip = f"{t_home}:{t_away}"
+        return best_tip
+
     def _calculate_new_elo(self, rating_a: float, rating_b: float, actual_result_a: float, k_factor: int = 60, is_a_host: bool = False, is_b_host: bool = False, goal_diff: int = 0) -> tuple[float, float]:
         """
         Standard Elo update. K=60 entspricht dem World-Football-Elo-Standard
