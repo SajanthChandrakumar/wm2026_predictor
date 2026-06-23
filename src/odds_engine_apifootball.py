@@ -218,6 +218,14 @@ class OddsApiEngine:
         normalized = self._normalize_odds_entry(fixtures[0], odd)
         return normalized or {"bookmakers": []}
 
+    def get_standings(self) -> list[dict]:
+        """Fetch WC group standings. Returns the raw API-Football response array."""
+        resp = self._request("/standings", {
+            "league": self.WC_LEAGUE_ID,
+            "season": self.SEASON,
+        })
+        return resp.get("response", [])
+
     def get_completed_scores(self, days_from: int = 3) -> list[dict]:
         """
         Finished WC fixtures within the last `days_from` days, normalized into

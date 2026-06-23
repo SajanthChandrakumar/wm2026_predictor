@@ -67,8 +67,8 @@ export function buildFixtureRow(match, showXp = false) {
         ? `<div class="fixture-tip" style="color:var(--green-l);background:var(--green-dim);border-color:rgba(30,171,90,0.3)">${match.max_xp.toFixed(1)} xP</div>`
         : tipHtml;
 
-    const homeFire = match.home_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
-    const awayFire = match.away_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
+    const homeFire = match.home_form?.on_fire ? '<span class="fire-badge" title="In top form"></span>' : '';
+    const awayFire = match.away_form?.on_fire ? '<span class="fire-badge" title="In top form"></span>' : '';
 
     row.innerHTML = `
         <div class="fixture-time${isPast ? ' past' : ''}">${timeStr}</div>

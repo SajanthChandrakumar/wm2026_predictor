@@ -13,7 +13,7 @@ export function renderDetail(matchInfo, calc) {
         `${matchInfo.home_disp} vs ${matchInfo.away_disp}`;
 
     const metaChips = [
-        isKo ? '<span class="meta-chip ko">🏆 K.O. Phase</span>' : '<span class="meta-chip">Group Stage</span>',
+        isKo ? '<span class="meta-chip ko">K.O. Phase</span>' : '<span class="meta-chip">Group Stage</span>',
         `<span class="meta-chip">xG ${calc.xg_home.toFixed(2)} – ${calc.xg_away.toFixed(2)}</span>`,
     ];
     if (matchInfo.h2h && matchInfo.home_team_id && matchInfo.away_team_id) {
@@ -21,13 +21,13 @@ export function renderDetail(matchInfo, calc) {
         const w1 = h2h[matchInfo.home_team_id] || 0;
         const w2 = h2h[matchInfo.away_team_id] || 0;
         const d  = h2h.draws || 0;
-        if (w1 || w2 || d) metaChips.push(`<span class="meta-chip">⚔️ H2H: ${w1}W - ${d}D - ${w2}L</span>`);
+        if (w1 || w2 || d) metaChips.push(`<span class="meta-chip">H2H ${w1}W – ${d}D – ${w2}L</span>`);
     }
     document.getElementById('match-meta').innerHTML = metaChips.join('');
 
     // xG row + lineup alert (if API-Football engine returned diffs)
-    const homeFire = matchInfo.home_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
-    const awayFire = matchInfo.away_form?.on_fire ? '<span class="fire-badge" title="Team is on fire! 🔥">🔥</span>' : '';
+    const homeFire = matchInfo.home_form?.on_fire ? '<span class="fire-badge" title="In top form"></span>' : '';
+    const awayFire = matchInfo.away_form?.on_fire ? '<span class="fire-badge" title="In top form"></span>' : '';
 
     const diffs = matchInfo.lineup_diff || {};
     const homeDiff = diffs[matchInfo.home_team]?.missing || [];
@@ -159,11 +159,11 @@ function renderTipLadder(tips) {
 }
 
 const BOT_META = {
-    broker:    { label: '💼 Broker',    color: 'var(--blue)'   },
-    professor: { label: '🎓 Professor', color: 'var(--green)'  },
-    rebel:     { label: '🔥 Rebell',    color: 'var(--amber)'  },
-    sniper:    { label: '🎯 X-Sniper',  color: 'var(--purple)' },
-    gambler:   { label: '🎲 Zocker',    color: 'var(--text-2)' },
+    broker:    { label: 'Broker',    color: 'var(--blue)'   },
+    professor: { label: 'Professor', color: 'var(--green)'  },
+    rebel:     { label: 'Rebell',    color: 'var(--amber)'  },
+    sniper:    { label: 'X-Sniper',  color: 'var(--purple)' },
+    gambler:   { label: 'Zocker',    color: 'var(--text-2)' },
 };
 
 function renderBotTips(bots) {

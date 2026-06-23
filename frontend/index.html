@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WM 2026 Predictor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=14">
+    <link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
     <div class="app-container">
@@ -46,6 +48,9 @@
                     </li>
                     <li id="nav-elo-history">
                         <span class="nav-icon">∿</span> Team Form
+                    </li>
+                    <li id="nav-groups">
+                        <span class="nav-icon">▤</span> Groups
                     </li>
                     <li id="nav-performance">
                         <span class="nav-icon">◈</span> Performance
@@ -125,7 +130,7 @@
             <div id="edge-view" style="display:none;">
                 <div class="page-header">
                     <h1>Model Edge</h1>
-                    <p class="page-subtitle">Wo die Elo dem Buchmacher am stärksten widerspricht — potenzieller Vorsprung gegenüber dem Feld</p>
+                    <p class="page-subtitle">Where Elo disagrees with the bookmaker most — potential edge over the field</p>
                 </div>
                 <div id="edge-grid"></div>
             </div>
@@ -168,7 +173,7 @@
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);gap:var(--sp-3);flex-wrap:wrap;">
                         <div>
                             <div class="section-title" style="margin-bottom:2px;">Compare Teams</div>
-                            <div class="section-subtitle">Bis zu 4 Teams gleichzeitig — klicke zum Aktivieren</div>
+                            <div class="section-subtitle">Up to 4 teams at once — click to toggle</div>
                         </div>
                         <input type="search" id="team-compare-search" placeholder="Team suchen…"
                             class="select-field" style="width:180px;padding:6px 10px;font-size:var(--type-sm);">
@@ -176,6 +181,15 @@
                     <div id="team-compare-grid" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:var(--sp-5);max-height:128px;overflow-y:auto;padding:var(--sp-1);border-top:1px solid var(--border);border-bottom:1px solid var(--border);"></div>
                     <div style="height:380px;"><canvas id="eloChart"></canvas></div>
                 </div>
+            </div>
+
+            <!-- Groups View -->
+            <div id="groups-view" style="display:none;">
+                <div class="page-header">
+                    <h1>Group Standings</h1>
+                    <p class="page-subtitle">All 12 groups — standings computed from completed results</p>
+                </div>
+                <div id="groups-grid"></div>
             </div>
 
             <!-- Detail View -->
@@ -220,6 +234,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="js/main.js?v=7"></script>
+    <script type="module" src="js/main.js?v=8"></script>
 </body>
 </html>

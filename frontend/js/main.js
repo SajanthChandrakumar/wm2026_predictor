@@ -9,6 +9,7 @@ import { renderEdgeView } from './views/edge.js';
 import { renderDetail } from './views/detail.js?v=2';
 import { loadPerformanceView, saveUserTip, editUserTip } from './views/performance.js';
 import { loadTeamFormView, toggleTeamSelect } from './views/team-form.js';
+import { loadGroupsView } from './views/groups.js';
 
 // Inline `onclick="..."` handlers in dynamically-injected HTML can't see
 // ES-module scope. Expose the handful that need it on window.
@@ -29,6 +30,7 @@ const VIEW_MAP = {
     'value-bets':  ['value-bets-view',  'nav-value-bets'],
     'edge':        ['edge-view',        'nav-edge'],
     'elo-history': ['elo-history-view', 'nav-elo-history'],
+    'groups':      ['groups-view',      'nav-groups'],
     'performance': ['performance-view', 'nav-performance'],
     'detail':      ['detail-view',      null],
     'loading':     ['loading-spinner',  null],
@@ -59,6 +61,10 @@ function initSidebar() {
     document.getElementById('nav-elo-history').addEventListener('click', () => {
         showView('elo-history');
         loadTeamFormView();
+    });
+    document.getElementById('nav-groups').addEventListener('click', () => {
+        showView('groups');
+        loadGroupsView();
     });
     document.getElementById('nav-performance').addEventListener('click', () => {
         showView('performance');
@@ -124,8 +130,12 @@ async function fetchMatches(force = false) {
         showView('dashboard');
         fetchQuota();
     } catch (e) {
-        document.getElementById('loading-spinner').innerHTML =
-            `<p style="color:var(--danger)">Error: ${e.message}</p>`;
+        const p = document.createElement('p');
+        p.style.color = 'var(--danger)';
+        p.textContent = `Error: ${e.message}`;
+        const spinner = document.getElementById('loading-spinner');
+        spinner.innerHTML = '';
+        spinner.appendChild(p);
     }
 }
 
