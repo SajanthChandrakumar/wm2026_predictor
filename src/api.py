@@ -57,7 +57,13 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
-limiter = Limiter(key_func=get_remote_address)
+def _real_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return get_remote_address(request)
+
+limiter = Limiter(key_func=_real_ip)
 app.state.limiter = limiter
 
 @app.middleware("http")
