@@ -30,6 +30,10 @@ const BOT_SHORT = {
     broker: 'Quoten', professor: 'Elo', rebel: 'Rebell', sniper: 'Sniper', gambler: 'Zocker',
 };
 
+const ACTIVE_BOTS = ['broker', 'professor', 'rebel', 'sniper', 'gambler'];
+const BOT_EMOJI   = { broker: '💼', professor: '🎓', rebel: '🔥', sniper: '🎯', gambler: '🎲' };
+const BOT_LABEL   = { broker: 'Broker', professor: 'Prof.', rebel: 'Rebell', sniper: 'Sniper', gambler: 'Zocker' };
+
 // Race chart palette (separate from scoreboard colors — these are real hex
 // values because Chart.js can't resolve CSS vars).
 const BOT_RACE_META = {
@@ -174,15 +178,15 @@ export async function loadPerformanceView() {
             btn.classList.add('active');
 
             const filter = btn.dataset.filter;
-            document.querySelectorAll('.match-row[data-pts]').forEach(row => {
-                const rowPts  = parseInt(row.dataset.pts  ?? '0', 10);
-                const hasTip  = row.dataset.hastip === '1';
+            document.querySelectorAll('.match-entry[data-pts]').forEach(entry => {
+                const rowPts  = parseInt(entry.dataset.pts  ?? '0', 10);
+                const hasTip  = entry.dataset.hastip === '1';
                 const show =
                     filter === 'all'      ? true :
                     filter === 'hit'      ? (hasTip && rowPts >= 5) :
                     filter === 'miss'     ? (hasTip && rowPts === 0) :
                     filter === 'notipped' ? !hasTip : true;
-                row.style.display = show ? 'grid' : 'none';
+                entry.style.display = show ? '' : 'none';
             });
         });
     });
@@ -385,10 +389,14 @@ function buildMatchRow(matchId, match, pts) {
     const resultClass = !hasTip ? '' :
         pts >= 8 ? 'result-excellent' : pts >= 5 ? 'result-ok' : 'result-miss';
 
+    // Wrapper carries filter data-attributes; bot-tips-bar inherits border color via CSS sibling selector
+    const entry = document.createElement('div');
+    entry.className = 'match-entry';
+    entry.dataset.pts    = pts;
+    entry.dataset.hastip = hasTip ? '1' : '0';
+
     const row = document.createElement('div');
     row.className = `match-row ${resultClass}`;
-    row.dataset.pts    = pts;
-    row.dataset.hastip = hasTip ? '1' : '0';
 
     const dateEl = document.createElement('div');
     dateEl.style.cssText = 'font-size:var(--type-2xs);color:var(--text-3);white-space:nowrap;line-height:1.3;text-align:center;';
@@ -427,7 +435,35 @@ function buildMatchRow(matchId, match, pts) {
     row.appendChild(myPtsEl);
     row.appendChild(algoEl);
     row.appendChild(algoPtsEl);
-    return row;
+
+    entry.appendChild(row);
+    const botBar = buildBotTipsBar(match, ptsBadge);
+    if (botBar) entry.appendChild(botBar);
+    return entry;
+}
+
+function buildBotTipsBar(match, ptsBadge) {
+    const bots      = match.prediction?.bots ?? {};
+    const botPoints = match.post_match_result?.bot_points ?? {};
+    if (!ACTIVE_BOTS.some(b => bots[b]?.tip)) return null;
+
+    const bar = document.createElement('div');
+    bar.className = 'bot-tips-bar';
+
+    ACTIVE_BOTS.forEach(b => {
+        const tip = bots[b]?.tip;
+        if (!tip) return;
+        const pts   = botPoints[b] ?? null;
+        const color = BOT_COLORS[b] || 'var(--text-3)';
+        const cell  = document.createElement('div');
+        cell.className = 'bot-tip-cell';
+        cell.innerHTML = `
+            <span style="color:${color};font-weight:700;white-space:nowrap;font-size:var(--type-2xs);">${BOT_EMOJI[b]} ${BOT_LABEL[b]}</span>
+            <span style="font-size:var(--type-xs);font-weight:800;color:var(--text-1);font-variant-numeric:tabular-nums;">${tip}</span>
+            ${ptsBadge(pts)}`;
+        bar.appendChild(cell);
+    });
+    return bar;
 }
 
 function myTipCellHtml(matchId, userTip, hasTip) {
