@@ -6,7 +6,7 @@ import { api } from './api.js?v=2';
 import { renderMatchGrid } from './views/dashboard.js';
 import { renderValueBets } from './views/value-bets.js';
 import { renderEdgeView } from './views/edge.js';
-import { renderDetail } from './views/detail.js';
+import { renderDetail } from './views/detail.js?v=2';
 import { loadPerformanceView, saveUserTip, editUserTip } from './views/performance.js';
 import { loadTeamFormView, toggleTeamSelect } from './views/team-form.js';
 
@@ -71,11 +71,8 @@ function initSidebar() {
     });
     document.getElementById('sync-elo-btn').addEventListener('click', syncElo);
 
-    // Match-setting toggles re-predict the open match
-    ['ko-toggle', 'home-resting-toggle', 'away-resting-toggle'].forEach(id => {
-        document.getElementById(id).addEventListener('change', () => {
-            if (state.selectedMatchId) updatePrediction();
-        });
+    document.getElementById('ko-toggle').addEventListener('change', () => {
+        if (state.selectedMatchId) updatePrediction();
     });
 
     initThemeToggle();
@@ -149,10 +146,6 @@ async function syncElo() {
 function openMatch(id) {
     state.selectedMatchId = id;
     const match = state.currentMatches.find(m => m.id === id);
-    document.getElementById('home-resting-label').textContent = (match?.home_disp ?? 'Home') + ' rotates';
-    document.getElementById('away-resting-label').textContent = (match?.away_disp ?? 'Away') + ' rotates';
-    document.getElementById('home-resting-toggle').checked = false;
-    document.getElementById('away-resting-toggle').checked = false;
     updatePrediction();
 }
 
@@ -165,9 +158,7 @@ async function updatePrediction() {
     try {
         state.lastCalcData = await api.predict({
             match: matchData.raw_match,
-            is_ko:        document.getElementById('ko-toggle').checked,
-            home_resting: document.getElementById('home-resting-toggle').checked,
-            away_resting: document.getElementById('away-resting-toggle').checked,
+            is_ko: document.getElementById('ko-toggle').checked,
         });
         renderDetail(matchData, state.lastCalcData);
         showView('detail');

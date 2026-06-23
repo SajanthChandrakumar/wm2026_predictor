@@ -532,6 +532,11 @@ def get_matches(force: bool = False):
     except Exception as e:
         print(f"Archive logging failed: {e}")
 
+    # Inject bot tips from archive so the frontend can render them per match
+    for r in results:
+        arc = archive.get(r["id"], {})
+        r["bots"] = arc.get("prediction", {}).get("bots", {})
+
     return results
 
 @app.post("/api/predict")

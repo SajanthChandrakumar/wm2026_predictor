@@ -72,6 +72,7 @@ export function renderDetail(matchInfo, calc) {
     `;
 
     renderTipLadder(calc.xp_tips);
+    renderBotTips(matchInfo.bots);
     document.getElementById('adopt-tip-status').textContent = '';
     updateAdoptButton();
 }
@@ -155,6 +156,36 @@ function renderTipLadder(tips) {
             </div>`;
     }
     container.innerHTML = html;
+}
+
+const BOT_META = {
+    broker:    { label: '💼 Broker',    color: 'var(--blue)'   },
+    professor: { label: '🎓 Professor', color: 'var(--green)'  },
+    rebel:     { label: '🔥 Rebell',    color: 'var(--amber)'  },
+    sniper:    { label: '🎯 X-Sniper',  color: 'var(--purple)' },
+    gambler:   { label: '🎲 Zocker',    color: 'var(--text-2)' },
+};
+
+function renderBotTips(bots) {
+    const card = document.getElementById('bot-tips-card');
+    if (!card) return;
+    const entries = Object.entries(bots || {}).filter(([, v]) => v?.tip);
+    if (!entries.length) {
+        card.innerHTML = '';
+        return;
+    }
+    const rows = entries.map(([name, info]) => {
+        const meta = BOT_META[name] || { label: name, color: 'var(--text-2)' };
+        return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:0.78rem;color:var(--text-secondary)">${meta.label}</span>
+            <span style="font-size:0.9rem;font-weight:700;color:${meta.color};font-variant-numeric:tabular-nums">${info.tip}</span>
+        </div>`;
+    }).join('');
+    card.innerHTML = `
+        <div class="card-title" style="margin-bottom:10px;">Bot Tips</div>
+        ${rows}
+    `;
 }
 
 function renderHeatmap(matchInfo, calc) {
