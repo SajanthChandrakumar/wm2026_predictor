@@ -193,10 +193,12 @@ def _dynamic_ttl(matches: list) -> int:
     return 900            # < 2h → 15 min
 
 
-def _fetch_or_cache_totals(event_id: str, raw_match: dict) -> dict:
+def _fetch_or_cache_totals(event_id: str, raw_match: dict, fetch_if_missing: bool = True) -> dict:
     """
-    Return raw_match augmented with totals bookmakers, fetching from the
-    single-event endpoint (1 request) only if the per-match cache is stale.
+    Return raw_match augmented with totals bookmakers.
+    When fetch_if_missing=False (used by the match list), only serve from cache —
+    no extra API call is made, keeping /api/matches to a single h2h request.
+    When fetch_if_missing=True (used by /api/predict), fetch live if cache is stale.
     """
     cache_key = f"totals_{event_id}"
     entry = {}
@@ -209,10 +211,9 @@ def _fetch_or_cache_totals(event_id: str, raw_match: dict) -> dict:
 
     if entry and (time.time() - entry.get("timestamp", 0) < TOTALS_CACHE_TTL):
         totals_bookmakers = entry.get("bookmakers", [])
-    else:
+    elif fetch_if_missing:
         try:
-            engine = OddsApiEngine()
-            event_data = engine.get_event_odds(event_id, market="totals")
+            event_data = global_odds_engine.get_event_odds(event_id, market="totals")
             totals_bookmakers = event_data.get("bookmakers", [])
             cache_collection.update_one(
                 {"_id": cache_key},
@@ -222,6 +223,8 @@ def _fetch_or_cache_totals(event_id: str, raw_match: dict) -> dict:
         except Exception as e:
             print(f"Totals fetch failed for {event_id}: {e}")
             totals_bookmakers = []
+    else:
+        totals_bookmakers = []
 
     if not totals_bookmakers:
         return raw_match
@@ -330,8 +333,18 @@ def get_matches(force: bool = False):
             pass
 
     # 2. API Call — h2h only (1 request). Totals are fetched lazily per match on /api/predict.
-    engine = OddsApiEngine()
-    data = engine.get_world_cup_odds(market="h2h")
+    try:
+        data = global_odds_engine.get_world_cup_odds(market="h2h")
+    except Exception as e:
+        # Live fetch failed — fall back to stale cache rather than returning 500
+        try:
+            cached = cache_collection.find_one({"_id": "matches_cache"})
+            if cached and cached.get("data"):
+                print(f"Odds API unavailable, serving stale cache: {e}")
+                return _enrich_edge(cached["data"])
+        except Exception:
+            pass
+        raise HTTPException(status_code=503, detail=f"Odds API unavailable: {e}")
 
     results = []
     _bot_inputs = {}  # match_id -> {score_matrix, true_probs, prob_over25} — not saved to cache
@@ -340,9 +353,9 @@ def get_matches(force: bool = False):
         away_raw = m.get("away_team")
         try:
             event_id = m.get("id", "")
-            # Merge cached totals using the same code path as /api/predict so
-            # top_tip in the fixture list always matches the detail view.
-            m = _fetch_or_cache_totals(event_id, m)
+            # Totals are fetched lazily per match on /api/predict — only use what
+            # is already cached (no extra API calls during the list view).
+            m = _fetch_or_cache_totals(event_id, m, fetch_if_missing=False)
             odds = extract_odds(m)
 
             try:
