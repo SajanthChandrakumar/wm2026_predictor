@@ -3,7 +3,7 @@
 
 import { teamForm, charts } from '../state.js';
 import { api } from '../api.js?v=2';
-import { flag, normTeam } from '../util.js';
+import { normTeam } from '../util.js';
 
 // Chart line colors, rotated per selected team.
 const COMPARE_COLORS = ['#d4af37', '#5b9bd5', '#4caf82', '#d9a441', '#9b6dd1', '#d9645b', '#7ec8e3', '#c4b283'];
@@ -90,7 +90,7 @@ function renderPowerRankings() {
             }).join(' ')
             : `<span style="font-size:var(--type-2xs);color:var(--text-3);font-style:italic;">noch nicht gespielt</span>`;
         const isSelected = teamForm.selected.has(r.team);
-        const rankDisplay = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+        const rankDisplay = i + 1;
         const rankColor = i < 3 ? 'var(--text-1)' : 'var(--text-3)';
         const bg = isSelected ? 'var(--gold-dim)' : 'transparent';
 
@@ -101,7 +101,7 @@ function renderPowerRankings() {
                     onmouseout="this.style.background='${bg}'">
             <td class="text-center" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-sm);font-weight:800;color:${rankColor};">${rankDisplay}</td>
             <td style="padding:var(--sp-2) var(--sp-2);font-size:var(--type-body);font-weight:700;color:var(--text-1);white-space:nowrap;">
-                <span style="margin-right:6px;">${flag(r.team)}</span>${r.team}
+                ${r.team}
             </td>
             <td class="text-right" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-body);font-weight:800;color:var(--text-1);">${r.elo.toFixed(0)}</td>
             <td class="text-right" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-sm);font-weight:700;color:${dColor};">${dSign} ${Math.abs(r.delta).toFixed(0)}</td>
@@ -116,8 +116,8 @@ function renderPowerRankings() {
         <div class="glass-card static" style="padding:var(--sp-5);">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);gap:var(--sp-3);">
                 <div>
-                    <div class="section-title" style="margin-bottom:2px;">🏆 Power Rankings</div>
-                    <div class="section-subtitle">Sortiert nach aktuellem Elo · Klick = im Chart vergleichen</div>
+                    <div class="section-title" style="margin-bottom:2px;">Power Rankings</div>
+                    <div class="section-subtitle">Sorted by current Elo · Click a row to compare in chart</div>
                 </div>
                 <div style="font-size:var(--type-xs);color:var(--text-3);">${rows.length} Teams</div>
             </div>
@@ -130,6 +130,14 @@ function renderPowerRankings() {
                     </thead>
                     <tbody>${rowsHtml}</tbody>
                 </table>
+            </div>
+            <div style="margin-top:var(--sp-4);padding:var(--sp-3) var(--sp-4);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);display:flex;gap:var(--sp-3);align-items:flex-start;">
+                <span style="font-size:var(--type-xs);flex-shrink:0;margin-top:1px;color:var(--accent);font-weight:800;">+80</span>
+                <div style="font-size:var(--type-xs);color:var(--text-2);line-height:1.6;">
+                    <strong style="color:var(--text-1);">Host nation bonus:</strong>
+                    <span style="color:var(--gold-l);font-weight:700;">USA · Canada · Mexico</span>
+                    receive a <strong style="color:var(--gold-l);">+80 Elo boost</strong> applied after each match they play — reflecting the well-documented home-crowd advantage in international football. This bonus accumulates over the tournament and is baked into all probability calculations.
+                </div>
             </div>
         </div>`;
 }
@@ -159,7 +167,7 @@ function renderTeamSelector() {
         const selected = teamForm.selected.has(t);
         return `<button onclick="window.toggleTeamSelect('${escapeJs(t)}')"
             class="team-chip ${selected ? 'selected' : ''}">
-            ${flag(t)} ${t}
+            ${t}
         </button>`;
     }).join('') || `<span style="font-size:var(--type-xs);color:var(--text-3);font-style:italic;padding:var(--sp-2);">Keine Treffer</span>`;
 
@@ -206,7 +214,7 @@ function renderCompareChart() {
         });
 
         return {
-            label: `${flag(t)} ${t}`,
+            label: t,
             data,
             borderColor: color, backgroundColor: color + '15',
             borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 7,
@@ -240,7 +248,7 @@ function renderCompareChart() {
                             const info = ctx.dataset.opponentInfo?.[ctx.dataIndex];
                             const elo = ctx.parsed.y?.toFixed(0);
                             if (info) {
-                                const emoji = info.result === 'W' ? '✅' : info.result === 'L' ? '❌' : '🟰';
+                                const emoji = info.result === 'W' ? 'W' : info.result === 'L' ? 'L' : 'D';
                                 return `${ctx.dataset.label}: ${elo}  ${emoji} ${info.score} vs ${info.opponent}`;
                             }
                             return `${ctx.dataset.label}: ${elo}`;

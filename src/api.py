@@ -88,16 +88,11 @@ TEAM_MAPPING = {
 }
 
 DISPLAY_MAPPING = {
-    "United States": "🇺🇸 USA", "USA": "🇺🇸 USA",
-    "South Korea": "🇰🇷 South Korea", "Korea Republic": "🇰🇷 South Korea",
-    "Iran": "🇮🇷 Iran", "IR Iran": "🇮🇷 Iran",
-    "Czech Republic": "🇨🇿 Czech Republic", "Czechia": "🇨🇿 Czech Republic",
-    "Ivory Coast": "🇨🇮 Ivory Coast", "Côte d'Ivoire": "🇨🇮 Ivory Coast",
-    "Argentina": "🇦🇷 Argentina", "France": "🇫🇷 France",
-    "Germany": "🇩🇪 Germany", "Spain": "🇪🇸 Spain",
-    "England": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 England", "Brazil": "🇧🇷 Brazil",
-    "Portugal": "🇵🇹 Portugal", "Netherlands": "🇳🇱 Netherlands",
-    "Italy": "🇮🇹 Italy", "Belgium": "🇧🇪 Belgium",
+    "United States": "USA", "USA": "USA",
+    "South Korea": "South Korea", "Korea Republic": "South Korea",
+    "Iran": "Iran", "IR Iran": "Iran",
+    "Czech Republic": "Czech Republic", "Czechia": "Czech Republic",
+    "Ivory Coast": "Ivory Coast", "Côte d'Ivoire": "Ivory Coast",
 }
 
 elo_csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_ratings.csv')
@@ -780,6 +775,17 @@ def save_custom_bot(request: Request, payload: dict):
         upsert=True,
     )
     return {"ok": True, "name": name, "params": params}
+
+@app.get("/api/standings")
+def get_standings():
+    """Group standings — populated by Elo sync, served from cache."""
+    try:
+        doc = cache_collection.find_one({"_id": "standings_cache"})
+        if doc and doc.get("data"):
+            return doc["data"]
+    except Exception:
+        pass
+    return []
 
 @app.get("/api/elo_history")
 def get_elo_history():

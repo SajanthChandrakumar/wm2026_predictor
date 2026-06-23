@@ -18,11 +18,11 @@ const BOT_COLORS = {
 };
 
 const BOT_DISPLAY = {
-    broker:    "💼 Der Broker (Quoten)",
-    professor: "🎓 Der Professor (Elo)",
-    rebel:     "🔥 Der Rebell (Kontra-Feld)",
-    sniper:    "🎯 Der X-Sniper (Draws)",
-    gambler:   "🎲 Der Zocker (Zufall)",
+    broker:    "Broker",
+    professor: "Professor",
+    rebel:     "Rebell",
+    sniper:    "X-Sniper",
+    gambler:   "Zocker",
 };
 
 const BOT_SHORT = {
@@ -31,7 +31,7 @@ const BOT_SHORT = {
 };
 
 const ACTIVE_BOTS = ['broker', 'professor', 'rebel', 'sniper', 'gambler'];
-const BOT_EMOJI   = { broker: '💼', professor: '🎓', rebel: '🔥', sniper: '🎯', gambler: '🎲' };
+const BOT_EMOJI   = { broker: '', professor: '', rebel: '', sniper: '', gambler: '' };
 const BOT_LABEL   = { broker: 'Broker', professor: 'Prof.', rebel: 'Rebell', sniper: 'Sniper', gambler: 'Zocker' };
 
 // User-designed "build-a-bot". Distinct cyan so it stands out from the house bots.
@@ -42,11 +42,11 @@ const DEFAULT_BOT_PARAMS = { market_weight: 0.7, risk: 0.0, draw_bias: 0.0, unde
 // Race chart palette (separate from scoreboard colors — these are real hex
 // values because Chart.js can't resolve CSS vars).
 const BOT_RACE_META = {
-    broker:    { name: '💼 Broker',    color: '#5b9bd5' },
-    professor: { name: '🎓 Professor', color: '#4caf82' },
-    rebel:     { name: '🔥 Rebell',    color: '#d9a441' },
-    sniper:    { name: '🎯 X-Sniper',  color: '#9b6dd1' },
-    gambler:   { name: '🎲 Zocker',    color: '#9a9a9a' },
+    broker:    { name: 'Broker',    color: '#5b9bd5' },
+    professor: { name: 'Professor', color: '#4caf82' },
+    rebel:     { name: 'Rebell',    color: '#d9a441' },
+    sniper:    { name: 'X-Sniper',  color: '#9b6dd1' },
+    gambler:   { name: 'Zocker',    color: '#9a9a9a' },
 };
 
 export async function loadPerformanceView() {
@@ -148,72 +148,58 @@ export async function loadPerformanceView() {
     const header = document.createElement('div');
     header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);gap:var(--sp-3);flex-wrap:wrap;';
     header.innerHTML = `
-        <div>
-            <div class="section-title">
-                Spielverlauf <span style="font-weight:500;opacity:0.7;">(neueste zuerst)</span>
-            </div>
-        </div>
-        <div style="display:flex;gap:6px;">
-            <button data-filter="all" class="filter-btn active">Alle</button>
-            <button data-filter="hit" class="filter-btn">✓ Treffer</button>
-            <button data-filter="miss" class="filter-btn">✗ Verpasst</button>
-            <button data-filter="notipped" class="filter-btn">Kein Tipp</button>
+        <div class="section-title">Match History</div>
+        <div class="match-history-filters">
+            <select class="mh-filter-select">
+                <option value="all">All</option>
+                <option value="hit">✓ Hits</option>
+                <option value="miss">✗ Missed</option>
+                <option value="notipped">No tip</option>
+            </select>
+            <button data-filter="all" class="filter-btn active">All</button>
+            <button data-filter="hit" class="filter-btn">✓ Hits</button>
+            <button data-filter="miss" class="filter-btn">✗ Missed</button>
+            <button data-filter="notipped" class="filter-btn">No tip</button>
         </div>`;
     listWrapper.appendChild(header);
 
-    // Column header
-    const colHeader = document.createElement('div');
-    colHeader.className = 'match-row';
-    colHeader.style.cssText = 'border-bottom:2px solid var(--border);border-left-color:transparent;padding-bottom:var(--sp-2);margin-bottom:2px;';
-    ['Datum', 'Spiel · Ergebnis', 'Mein Tipp', 'Pts', 'Algo', 'Pts'].forEach((label, i) => {
-        const th = document.createElement('div');
-        th.style.cssText = `font-size:var(--type-2xs);text-transform:uppercase;letter-spacing:1px;color:var(--text-3);font-weight:700;text-align:${i >= 2 ? 'right' : 'left'};`;
-        if (i === 4) th.classList.add('algo-cell');
-        if (i === 5) th.classList.add('algo-pts-cell');
-        th.textContent = label;
-        colHeader.appendChild(th);
-    });
-    listWrapper.appendChild(colHeader);
-
     const matchList = document.createElement('div');
-    matchList.id = 'match-list';
-    matchList.style.cssText = 'display:flex;flex-direction:column;';
+    matchList.className = 'match-history-list';
 
     completedMatches.forEach(([matchId, match, pts]) => {
-        matchList.appendChild(buildMatchRow(matchId, match, pts));
+        matchList.appendChild(buildMatchCard(matchId, match, pts));
     });
     listWrapper.appendChild(matchList);
 
     if (totals.hasReconstructed) {
         const note = document.createElement('p');
         note.style.cssText = 'font-size:var(--type-2xs);color:var(--text-3);margin-top:var(--sp-3);font-style:italic;';
-        note.innerHTML = '<span style="color:var(--amber-l);">*</span> Algo-Tipp aus Elo-Ratings rekonstruiert — angenähert, nicht das volle Quoten-Modell.';
+        note.innerHTML = '<span style="color:var(--amber-l);">*</span> Algo tip reconstructed from Elo ratings — approximate, not the full odds model.';
         listWrapper.appendChild(note);
     }
 
     grid.appendChild(listWrapper);
 
-    // Wire filter buttons
-    listWrapper.querySelectorAll('[data-filter]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            listWrapper.querySelectorAll('[data-filter]').forEach(b => {
-                b.classList.remove('active');
-            });
-            btn.classList.add('active');
-
-            const filter = btn.dataset.filter;
-            document.querySelectorAll('.match-entry[data-pts]').forEach(entry => {
-                const rowPts  = parseInt(entry.dataset.pts  ?? '0', 10);
-                const hasTip  = entry.dataset.hastip === '1';
-                const show =
-                    filter === 'all'      ? true :
-                    filter === 'hit'      ? (hasTip && rowPts >= 5) :
-                    filter === 'miss'     ? (hasTip && rowPts === 0) :
-                    filter === 'notipped' ? !hasTip : true;
-                entry.style.display = show ? '' : 'none';
-            });
+    // Wire filter buttons + mobile select
+    function applyFilter(filter) {
+        listWrapper.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+        listWrapper.querySelector('.mh-filter-select').value = filter;
+        matchList.querySelectorAll('.match-card').forEach(card => {
+            const rowPts = parseInt(card.dataset.pts ?? '0', 10);
+            const hasTip = card.dataset.hastip === '1';
+            const show =
+                filter === 'all'      ? true :
+                filter === 'hit'      ? (hasTip && rowPts >= 5) :
+                filter === 'miss'     ? (hasTip && rowPts === 0) :
+                filter === 'notipped' ? !hasTip : true;
+            card.style.display = show ? '' : 'none';
         });
-    });
+    }
+
+    listWrapper.querySelectorAll('[data-filter]').forEach(btn =>
+        btn.addEventListener('click', () => applyFilter(btn.dataset.filter)));
+    listWrapper.querySelector('.mh-filter-select').addEventListener('change', e =>
+        applyFilter(e.target.value));
 }
 
 function setKpi(matches, points, hitrate) {
@@ -294,13 +280,13 @@ function renderBotScoreboard(t, botStats, savedBot = null) {
 
     if (savedBot && savedBot.tipped > 0) {
         botRows.push({
-            label: `🤖 ${savedBot.name}`, pts: savedBot.pts, tipped: savedBot.tipped,
+            label: savedBot.name, pts: savedBot.pts, tipped: savedBot.tipped,
             tendency: savedBot.tendency, color: CUSTOM_BOT_COLOR, isUser: false, isCustom: true,
         });
     }
 
     const allRows = [
-        { label: '★ Du (User)', pts: t.totalPoints, tipped: t.completedMatches,
+        { label: 'You', pts: t.totalPoints, tipped: t.completedMatches,
           tendency: t.correctTendency, color: 'var(--gold-l)', isUser: true },
         ...botRows,
     ].sort((a, b) => b.pts - a.pts);
@@ -308,7 +294,7 @@ function renderBotScoreboard(t, botStats, savedBot = null) {
     const rowsHtml = allRows.map((r, i) => {
         const avg = r.tipped > 0 ? (r.pts / r.tipped).toFixed(2) : '—';
         const tendPct = r.tipped > 0 ? ((r.tendency / r.tipped) * 100).toFixed(0) + '%' : '—';
-        const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+        const rank = `${i + 1}.`;
         const userHighlight = r.isUser ? 'background:var(--gold-dim);'
                             : r.isCustom ? 'background:rgba(45,212,191,0.08);' : '';
         return `<tr style="border-top:1px solid var(--border);${userHighlight}">
@@ -349,7 +335,7 @@ function renderBotScoreboard(t, botStats, savedBot = null) {
 function botStrategiesHtml() {
     const card = (icon, color, title, body) => `
         <div class="bot-strat-card">
-            <div style="font-size:1.4rem;line-height:1;">${icon}</div>
+            <div style="width:28px;height:28px;border-radius:50%;background:${color};color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;">${icon}</div>
             <div>
                 <div style="font-size:var(--type-sm);font-weight:800;color:${color};margin-bottom:3px;">${title}</div>
                 <div style="font-size:0.74rem;color:var(--text-2);line-height:1.5;">${body}</div>
@@ -359,17 +345,17 @@ function botStrategiesHtml() {
     return `
         <div id="bot-strategies" style="display:none;margin-top:var(--sp-5);padding-top:var(--sp-5);border-top:1px solid var(--border);">
             <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
-                ${card('⚙️', 'var(--gold-l)', 'Algo &mdash; Das Haus-Modell',
+                ${card('A', 'var(--gold-l)', 'Algo &mdash; Das Haus-Modell',
                     '<b>70 % Buchmacher-Quoten + 30 % Elo-Ratings</b>, dann xG &rarr; Tor-für-Tor-Wahrscheinlichkeitsmatrix &rarr; der Tipp mit den meisten erwarteten Punkten (xP) gewinnt. Standardmodell der App. <i style="color:var(--text-3);">Verwendet in &bdquo;Top Tipp&ldquo; auf dem Dashboard.</i>')}
-                ${card('💼', 'var(--blue-l)', 'Der Broker &mdash; Pure Buchmacher-Quoten',
+                ${card('B', 'var(--blue-l)', 'Broker &mdash; Pure Buchmacher-Quoten',
                     '<b>100 % Markt, 0 % Elo.</b> Vertraut blind den Buchmachern: berechnet xG nur aus den entmarginalisierten Quoten und wählt den Tipp mit höchstem xP. <i style="color:var(--text-3);">Die &bdquo;Weisheit der Crowd&ldquo;-Strategie.</i>')}
-                ${card('🎓', 'var(--green-l)', 'Der Professor &mdash; Pure Elo-Ratings',
+                ${card('P', 'var(--green-l)', 'Professor &mdash; Pure Elo-Ratings',
                     '<b>100 % Elo, 0 % Markt</b> (außer für Over/Under-Realismus). Ignoriert die Buchmacher komplett, leitet alles aus den Team-Stärken her. <i style="color:var(--text-3);">Schlägt den Markt, wenn die Quoten falsch liegen &mdash; verliert hart, wenn der Markt recht hat.</i>')}
-                ${card('🔥', 'var(--amber-l)', 'Der Rebell &mdash; Kontra-Feld',
+                ${card('R', 'var(--amber-l)', 'Rebell &mdash; Kontra-Feld',
                     'Setzt <b>immer auf den Underdog</b>. Identifiziert das Team mit den schlechteren Quoten und wählt den besten Sieg-Tipp für genau dieses Team. <i style="color:var(--text-3);">Lebt von Überraschungen &mdash; selten Treffer, aber dann oft volle Punktzahl.</i>')}
-                ${card('🎯', 'var(--purple)', 'Der X-Sniper &mdash; Draw-Spezialist',
+                ${card('X', 'var(--purple)', 'X-Sniper &mdash; Draw-Spezialist',
                     'Tippt <b>immer ein Unentschieden</b>. Wählt aus den Unentschieden-Tipps (0:0, 1:1, 2:2 &hellip;) den mit dem höchsten xP. <i style="color:var(--text-3);">Hochrisiko-Strategie &mdash; trifft selten, aber wenn, dann oft volle 10 Punkte (exakter Score).</i>')}
-                ${card('🎲', 'var(--text-2)', 'Der Zocker &mdash; Gewichteter Zufall',
+                ${card('Z', 'var(--text-2)', 'Zocker &mdash; Gewichteter Zufall',
                     'Würfelt aus den <b>Top-10-Tipps</b> nach xP-Gewicht. Der wahrscheinlichste Tipp wird öfter gezogen als der zehntbeste. <i style="color:var(--text-3);">Match-ID als Seed &mdash; bei identischem Spiel kommt immer derselbe &bdquo;Zufall&ldquo; raus (reproduzierbar).</i>')}
 
                 <div style="margin-top:var(--sp-2);padding:var(--sp-3);background:var(--surface);border-radius:var(--r);border:1px dashed var(--border);">
@@ -395,21 +381,18 @@ function wireStratToggle() {
     });
 }
 
-// ── Compact match row ──
-function buildMatchRow(matchId, match, pts) {
+// ── Match history card ──
+function buildMatchCard(matchId, match, pts) {
     const userTip = match.prediction?.user_tip ?? null;
     const algoTip = match.prediction?.top_tip  ?? null;
     const algoPts = match.post_match_result?.algo_points ?? null;
     const isRecon = match.prediction?.algo_reconstructed === true;
     const hasTip  = userTip !== null;
+    const actualScore = match.post_match_result.actual_score;
 
     const ptsBadge = p => {
         if (p == null) return `<span class="points-badge pts-na">–</span>`;
-        const cls =
-            p >= 10 ? 'pts-10' :
-            p >= 8  ? 'pts-8'  :
-            p >= 5  ? 'pts-5'  :
-                      'pts-0';
+        const cls = p >= 10 ? 'pts-10' : p >= 8 ? 'pts-8' : p >= 5 ? 'pts-5' : 'pts-0';
         return `<span class="points-badge ${cls}">+${p}</span>`;
     };
 
@@ -421,81 +404,71 @@ function buildMatchRow(matchId, match, pts) {
     const resultClass = !hasTip ? '' :
         pts >= 8 ? 'result-excellent' : pts >= 5 ? 'result-ok' : 'result-miss';
 
-    // Wrapper carries filter data-attributes; bot-tips-bar inherits border color via CSS sibling selector
-    const entry = document.createElement('div');
-    entry.className = 'match-entry';
-    entry.dataset.pts    = pts;
-    entry.dataset.hastip = hasTip ? '1' : '0';
+    const myCol = hasTip
+        ? `<div class="mc-my-col">
+               <span class="mc-my-label">My tip</span>
+               <span class="mc-my-tip">${userTip}</span>
+           </div>`
+        : `<div class="mc-my-col"><span class="mc-no-tip">no tip</span></div>`;
 
-    const row = document.createElement('div');
-    row.className = `match-row ${resultClass}`;
+    const botCells = buildBotCells(match, ptsBadge);
 
-    const dateEl = document.createElement('div');
-    dateEl.style.cssText = 'font-size:var(--type-2xs);color:var(--text-3);white-space:nowrap;line-height:1.3;text-align:center;';
-    dateEl.textContent = dateStr;
+    const card = document.createElement('details');
+    card.className = `match-card ${resultClass}`;
+    card.dataset.pts    = pts;
+    card.dataset.hastip = hasTip ? '1' : '0';
 
-    const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'font-size:var(--type-sm);font-weight:600;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
-    nameEl.innerHTML = `${match.metadata.home_disp} <span style="color:var(--text-3);font-weight:400;">vs</span> ${match.metadata.away_disp}
-        <span style="color:var(--text-3);font-weight:500;font-size:var(--type-xs);"> · ${match.post_match_result.actual_score}</span>`;
+    card.innerHTML = `
+        <summary class="match-card-summary">
+            <div class="mc-date">${dateStr}</div>
+            <div class="mc-teams">
+                ${match.metadata.home_disp}
+                <span style="color:var(--text-3);font-weight:400;"> vs </span>${match.metadata.away_disp}
+            </div>
+            <div class="mc-result">${actualScore}</div>
+            ${myCol}
+            <div class="mc-right">
+                ${ptsBadge(hasTip ? pts : null)}
+                <div class="mc-chevron">›</div>
+            </div>
+        </summary>
+        <div class="match-card-body">
+            <div class="mc-detail-cols">
+                <div class="mc-detail-col">
+                    <div class="mc-detail-label">My Tip</div>
+                    <div id="tip-cell-${matchId}" class="mc-tip-input-row">${myTipCellHtml(matchId, userTip, hasTip)}</div>
+                </div>
+                <div class="mc-detail-col">
+                    <div class="mc-detail-label">Algo${isRecon ? ' <sup style="color:var(--amber-l);">*</sup>' : ''}</div>
+                    <div class="mc-detail-val">${algoTip || '–'}</div>
+                </div>
+                <div class="mc-detail-col">
+                    <div class="mc-detail-label">Algo Pts</div>
+                    <div>${ptsBadge(algoPts)}</div>
+                </div>
+            </div>
+            ${botCells ? `<div class="mc-bots">${botCells}</div>` : ''}
+        </div>`;
 
-    const myTipEl = document.createElement('div');
-    myTipEl.id = `tip-cell-${matchId}`;
-    myTipEl.style.cssText = 'display:flex;align-items:center;gap:5px;justify-content:flex-end;';
-    myTipEl.innerHTML = myTipCellHtml(matchId, userTip, hasTip);
-
-    const myPtsEl = document.createElement('div');
-    myPtsEl.style.cssText = 'text-align:right;min-width:38px;';
-    myPtsEl.innerHTML = hasTip ? ptsBadge(pts) : `<span class="points-badge pts-na">–</span>`;
-
-    const algoEl = document.createElement('div');
-    algoEl.className = 'algo-cell';
-    algoEl.style.cssText = 'display:flex;align-items:center;gap:4px;justify-content:flex-end;';
-    algoEl.innerHTML = algoTip
-        ? `<span style="font-size:var(--type-2xs);color:var(--text-3);font-weight:600;white-space:nowrap;">Algo</span>
-           <span style="font-size:var(--type-sm);font-weight:700;color:var(--text-2);">${algoTip}${isRecon ? '<sup style="color:var(--amber-l);font-size:0.55rem;">*</sup>' : ''}</span>`
-        : `<span style="font-size:var(--type-2xs);color:var(--text-3);font-style:italic;">–</span>`;
-
-    const algoPtsEl = document.createElement('div');
-    algoPtsEl.className = 'algo-pts-cell';
-    algoPtsEl.style.cssText = 'text-align:right;min-width:38px;';
-    algoPtsEl.innerHTML = ptsBadge(algoPts);
-
-    row.appendChild(dateEl);
-    row.appendChild(nameEl);
-    row.appendChild(myTipEl);
-    row.appendChild(myPtsEl);
-    row.appendChild(algoEl);
-    row.appendChild(algoPtsEl);
-
-    entry.appendChild(row);
-    const botBar = buildBotTipsBar(match, ptsBadge);
-    if (botBar) entry.appendChild(botBar);
-    return entry;
+    return card;
 }
 
-function buildBotTipsBar(match, ptsBadge) {
+function buildBotCells(match, ptsBadge) {
     const bots      = match.prediction?.bots ?? {};
     const botPoints = match.post_match_result?.bot_points ?? {};
-    if (!ACTIVE_BOTS.some(b => bots[b]?.tip)) return null;
+    if (!ACTIVE_BOTS.some(b => bots[b]?.tip)) return '';
 
-    const bar = document.createElement('div');
-    bar.className = 'bot-tips-bar';
-
-    ACTIVE_BOTS.forEach(b => {
+    return ACTIVE_BOTS.map(b => {
         const tip = bots[b]?.tip;
-        if (!tip) return;
+        if (!tip) return '';
         const pts   = botPoints[b] ?? null;
         const color = BOT_COLORS[b] || 'var(--text-3)';
-        const cell  = document.createElement('div');
-        cell.className = 'bot-tip-cell';
-        cell.innerHTML = `
+        return `<div class="bot-tip-cell">
             <span style="color:${color};font-weight:700;white-space:nowrap;font-size:var(--type-2xs);">${BOT_EMOJI[b]} ${BOT_LABEL[b]}</span>
-            <span style="font-size:var(--type-xs);font-weight:800;color:var(--text-1);font-variant-numeric:tabular-nums;">${tip}</span>
-            ${ptsBadge(pts)}`;
-        bar.appendChild(cell);
-    });
-    return bar;
+            <span style="font-size:var(--type-xs);font-weight:800;color:var(--text-1);">${tip}</span>
+            ${ptsBadge(pts)}
+        </div>`;
+    }).join('');
 }
 
 function myTipCellHtml(matchId, userTip, hasTip) {
@@ -546,13 +519,13 @@ function renderBotRace(completedSorted, savedBot = null) {
         tension: 0.3, borderWidth: 2, pointRadius: 2, pointHoverRadius: 5,
     }));
     datasets.unshift({
-        label: '★ Du', data: userSeries,
+        label: 'You', data: userSeries,
         borderColor: '#d4af37', backgroundColor: '#d4af37',
         tension: 0.3, borderWidth: 3, borderDash: [6, 3], pointRadius: 2, pointHoverRadius: 5,
     });
     if (savedBot && savedBot.tipped > 0) {
         datasets.push({
-            label: `🤖 ${savedBot.name}`, data: customSeries,
+            label: savedBot.name, data: customSeries,
             borderColor: CUSTOM_BOT_HEX, backgroundColor: CUSTOM_BOT_HEX,
             tension: 0.3, borderWidth: 3, pointRadius: 2, pointHoverRadius: 5,
         });
@@ -560,7 +533,7 @@ function renderBotRace(completedSorted, savedBot = null) {
 
     panel.innerHTML = `
         <div class="glass-card static" style="padding:var(--sp-5);">
-            <div class="section-title" style="margin-bottom:var(--sp-4);">🏁 Bot-Points-Race</div>
+            <div class="section-title" style="margin-bottom:var(--sp-4);">Points Race</div>
             <div style="height:300px;"><canvas id="botRaceChart"></canvas></div>
         </div>`;
 
@@ -632,7 +605,7 @@ async function renderBuildABot(totals) {
     const p = _bob.params;
     panel.innerHTML = `
         <div class="glass-card static" style="padding:var(--sp-5);">
-            <div class="section-title" style="margin-bottom:6px;">🤖 Bau deinen eigenen Bot</div>
+            <div class="section-title" style="margin-bottom:6px;">Build Your Bot</div>
             <div style="font-size:var(--type-xs);color:var(--text-2);margin-bottom:var(--sp-4);line-height:1.5;">
                 Stell deine eigene Tipp-Strategie ein und schau live, wie sie rückwirkend über alle bisherigen Spiele abgeschnitten hätte. <b style="color:${CUSTOM_BOT_COLOR};">Speichern</b> → dein Bot tritt dauerhaft im Scoreboard &amp; im Race gegen die Haus-Bots an.
             </div>
@@ -647,7 +620,7 @@ async function renderBuildABot(totals) {
                 <input id="bob-name" type="text" maxlength="40" value="${escapeAttr(_bob.name)}" placeholder="Bot-Name"
                        class="select-field" style="flex:1;min-width:160px;font-size:var(--type-sm);padding:6px 10px;">
                 <button id="bob-save" class="filter-btn"
-                        style="background:rgba(45,212,191,0.12);border-color:${CUSTOM_BOT_HEX};color:${CUSTOM_BOT_COLOR};font-weight:700;padding:7px 16px;">💾 Bot speichern</button>
+                        style="background:rgba(45,212,191,0.12);border-color:${CUSTOM_BOT_HEX};color:${CUSTOM_BOT_COLOR};font-weight:700;padding:7px 16px;">Save Bot</button>
             </div>
         </div>`;
 
