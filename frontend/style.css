@@ -802,13 +802,15 @@ input:checked + .toggle-track::after { background: #fff; transform: translateX(1
 }
 .edge-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s var(--ease-out); }
 
+/* Match entry wrapper (carries filter attrs; groups row + bot-tips-bar) */
+.match-entry { display: flex; flex-direction: column; }
+
 /* Match row (performance history) */
 .match-row {
     display: grid;
     grid-template-columns: 40px 1fr auto auto auto auto;
     align-items: center; gap: var(--sp-2);
     padding: var(--sp-2) var(--sp-1) var(--sp-2) var(--sp-3);
-    border-bottom: 1px solid var(--border);
     border-left: 3px solid var(--border);
     transition: background 0.12s var(--ease-out);
 }
@@ -817,6 +819,39 @@ input:checked + .toggle-track::after { background: #fff; transform: translateX(1
 .match-row.result-good { border-left-color: var(--green-l); }
 .match-row.result-ok { border-left-color: var(--amber-l); }
 .match-row.result-miss { border-left-color: var(--red-l); }
+
+/* Bot tips mini-table — sits directly below each match row */
+.bot-tips-bar {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: var(--sp-2) var(--sp-3);
+    border-left: 3px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+.match-row.result-excellent + .bot-tips-bar { border-left-color: var(--green-l); }
+.match-row.result-good      + .bot-tips-bar { border-left-color: var(--green-l); }
+.match-row.result-ok        + .bot-tips-bar { border-left-color: var(--amber-l); }
+.match-row.result-miss      + .bot-tips-bar { border-left-color: var(--red-l); }
+
+.bot-tip-cell {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--surface-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 2px 8px;
+}
+
+/* Build-a-Bot card */
+.bob-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--sp-4) var(--sp-5);
+}
+.bob-slider { display: flex; flex-direction: column; gap: 6px; }
+.bob-slider input[type=range] { cursor: pointer; }
+@media (max-width: 560px) {
+    .bob-grid { grid-template-columns: 1fr; }
+}
 
 /* Team chips */
 .team-chip {

@@ -30,6 +30,15 @@ const BOT_SHORT = {
     broker: 'Quoten', professor: 'Elo', rebel: 'Rebell', sniper: 'Sniper', gambler: 'Zocker',
 };
 
+const ACTIVE_BOTS = ['broker', 'professor', 'rebel', 'sniper', 'gambler'];
+const BOT_EMOJI   = { broker: '💼', professor: '🎓', rebel: '🔥', sniper: '🎯', gambler: '🎲' };
+const BOT_LABEL   = { broker: 'Broker', professor: 'Prof.', rebel: 'Rebell', sniper: 'Sniper', gambler: 'Zocker' };
+
+// User-designed "build-a-bot". Distinct cyan so it stands out from the house bots.
+const CUSTOM_BOT_COLOR = 'var(--cyan-l, #2dd4bf)';
+const CUSTOM_BOT_HEX   = '#2dd4bf';
+const DEFAULT_BOT_PARAMS = { market_weight: 0.7, risk: 0.0, draw_bias: 0.0, underdog_bias: 0.0 };
+
 // Race chart palette (separate from scoreboard colors — these are real hex
 // values because Chart.js can't resolve CSS vars).
 const BOT_RACE_META = {
@@ -92,15 +101,34 @@ export async function loadPerformanceView() {
         completedMatches.push([matchId, match, pts]);
     });
 
+    // Saved build-a-bot (if any) — simulate it so it competes with full history
+    // in the scoreboard and race, exactly like the house bots.
+    let savedBot = null;
+    try {
+        const cb = await api.customBot();
+        if (cb?.exists) {
+            const sim = await api.simulateCustomBot(cb.params);
+            savedBot = {
+                name: cb.name || 'Mein Bot',
+                params: cb.params,
+                pts: sim.total_points,
+                tipped: sim.matches,
+                tendency: Math.round((sim.tendency_rate || 0) * sim.matches),
+                pointsByMatch: Object.fromEntries(sim.breakdown.map(b => [b.match_id, b.points])),
+            };
+        }
+    } catch (e) { /* custom bot is optional — ignore failures */ }
+
     renderKpis(totals);
     renderYouVsAlgo(totals);
-    renderBotScoreboard(totals, botStats);
+    renderBotScoreboard(totals, botStats, savedBot);
+    renderBuildABot(totals);
 
     // Bot-race uses chronological order (oldest match first)
     const chronological = [...completedMatches].sort((a, b) =>
         new Date(a[1].pre_match_snapshot?.timestamp_recorded || 0) -
         new Date(b[1].pre_match_snapshot?.timestamp_recorded || 0));
-    renderBotRace(chronological);
+    renderBotRace(chronological, savedBot);
 
     if (totals.completedMatches === 0) {
         grid.innerHTML = `<p style="color:var(--text-2);font-size:var(--type-body);">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
@@ -174,15 +202,15 @@ export async function loadPerformanceView() {
             btn.classList.add('active');
 
             const filter = btn.dataset.filter;
-            document.querySelectorAll('.match-row[data-pts]').forEach(row => {
-                const rowPts  = parseInt(row.dataset.pts  ?? '0', 10);
-                const hasTip  = row.dataset.hastip === '1';
+            document.querySelectorAll('.match-entry[data-pts]').forEach(entry => {
+                const rowPts  = parseInt(entry.dataset.pts  ?? '0', 10);
+                const hasTip  = entry.dataset.hastip === '1';
                 const show =
                     filter === 'all'      ? true :
                     filter === 'hit'      ? (hasTip && rowPts >= 5) :
                     filter === 'miss'     ? (hasTip && rowPts === 0) :
                     filter === 'notipped' ? !hasTip : true;
-                row.style.display = show ? 'grid' : 'none';
+                entry.style.display = show ? '' : 'none';
             });
         });
     });
@@ -252,7 +280,7 @@ function progressBar(label, pts, widthPct, color) {
         </div>`;
 }
 
-function renderBotScoreboard(t, botStats) {
+function renderBotScoreboard(t, botStats, savedBot = null) {
     const panel = document.getElementById('bot-scoreboard');
     const hasBotData = BOT_NAMES.some(b => botStats[b].tipped > 0);
     if (t.completedMatches === 0 || !hasBotData) { panel.innerHTML = ''; return; }
@@ -264,6 +292,13 @@ function renderBotScoreboard(t, botStats) {
         color: BOT_COLORS[b] || 'var(--text-3)', isUser: false,
     }));
 
+    if (savedBot && savedBot.tipped > 0) {
+        botRows.push({
+            label: `🤖 ${savedBot.name}`, pts: savedBot.pts, tipped: savedBot.tipped,
+            tendency: savedBot.tendency, color: CUSTOM_BOT_COLOR, isUser: false, isCustom: true,
+        });
+    }
+
     const allRows = [
         { label: '★ Du (User)', pts: t.totalPoints, tipped: t.completedMatches,
           tendency: t.correctTendency, color: 'var(--gold-l)', isUser: true },
@@ -274,7 +309,8 @@ function renderBotScoreboard(t, botStats) {
         const avg = r.tipped > 0 ? (r.pts / r.tipped).toFixed(2) : '—';
         const tendPct = r.tipped > 0 ? ((r.tendency / r.tipped) * 100).toFixed(0) + '%' : '—';
         const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-        const userHighlight = r.isUser ? 'background:var(--gold-dim);' : '';
+        const userHighlight = r.isUser ? 'background:var(--gold-dim);'
+                            : r.isCustom ? 'background:rgba(45,212,191,0.08);' : '';
         return `<tr style="border-top:1px solid var(--border);${userHighlight}">
             <td style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-sm);font-weight:${r.isUser ? '800' : '600'};color:${r.color};">
                 <span style="color:var(--text-3);margin-right:6px;">${rank}</span>${r.label}
@@ -385,10 +421,14 @@ function buildMatchRow(matchId, match, pts) {
     const resultClass = !hasTip ? '' :
         pts >= 8 ? 'result-excellent' : pts >= 5 ? 'result-ok' : 'result-miss';
 
+    // Wrapper carries filter data-attributes; bot-tips-bar inherits border color via CSS sibling selector
+    const entry = document.createElement('div');
+    entry.className = 'match-entry';
+    entry.dataset.pts    = pts;
+    entry.dataset.hastip = hasTip ? '1' : '0';
+
     const row = document.createElement('div');
     row.className = `match-row ${resultClass}`;
-    row.dataset.pts    = pts;
-    row.dataset.hastip = hasTip ? '1' : '0';
 
     const dateEl = document.createElement('div');
     dateEl.style.cssText = 'font-size:var(--type-2xs);color:var(--text-3);white-space:nowrap;line-height:1.3;text-align:center;';
@@ -427,7 +467,35 @@ function buildMatchRow(matchId, match, pts) {
     row.appendChild(myPtsEl);
     row.appendChild(algoEl);
     row.appendChild(algoPtsEl);
-    return row;
+
+    entry.appendChild(row);
+    const botBar = buildBotTipsBar(match, ptsBadge);
+    if (botBar) entry.appendChild(botBar);
+    return entry;
+}
+
+function buildBotTipsBar(match, ptsBadge) {
+    const bots      = match.prediction?.bots ?? {};
+    const botPoints = match.post_match_result?.bot_points ?? {};
+    if (!ACTIVE_BOTS.some(b => bots[b]?.tip)) return null;
+
+    const bar = document.createElement('div');
+    bar.className = 'bot-tips-bar';
+
+    ACTIVE_BOTS.forEach(b => {
+        const tip = bots[b]?.tip;
+        if (!tip) return;
+        const pts   = botPoints[b] ?? null;
+        const color = BOT_COLORS[b] || 'var(--text-3)';
+        const cell  = document.createElement('div');
+        cell.className = 'bot-tip-cell';
+        cell.innerHTML = `
+            <span style="color:${color};font-weight:700;white-space:nowrap;font-size:var(--type-2xs);">${BOT_EMOJI[b]} ${BOT_LABEL[b]}</span>
+            <span style="font-size:var(--type-xs);font-weight:800;color:var(--text-1);font-variant-numeric:tabular-nums;">${tip}</span>
+            ${ptsBadge(pts)}`;
+        bar.appendChild(cell);
+    });
+    return bar;
 }
 
 function myTipCellHtml(matchId, userTip, hasTip) {
@@ -446,7 +514,7 @@ function myTipCellHtml(matchId, userTip, hasTip) {
 }
 
 // ── Bot-Points-Race: cumulative points per bot over the played matches ──
-function renderBotRace(completedSorted) {
+function renderBotRace(completedSorted, savedBot = null) {
     const panel = document.getElementById('bot-race-panel');
     if (!panel) return;
     if (completedSorted.length < 2) {
@@ -463,10 +531,13 @@ function renderBotRace(completedSorted) {
 
     const running = {}; activeBots.forEach(b => running[b] = 0); let userRun = 0;
     const series  = {}; activeBots.forEach(b => series[b]  = []); const userSeries = [];
-    completedSorted.forEach(([, m]) => {
+    // Custom bot accumulates by match_id (only matches it could simulate count).
+    let customRun = 0; const customSeries = [];
+    completedSorted.forEach(([mid, m]) => {
         const bp = m.post_match_result?.bot_points ?? {};
         activeBots.forEach(b => { running[b] += (bp[b] || 0); series[b].push(running[b]); });
         userRun += (m.post_match_result?.points_earned || 0); userSeries.push(userRun);
+        if (savedBot) { customRun += (savedBot.pointsByMatch?.[mid] || 0); customSeries.push(customRun); }
     });
 
     const datasets = activeBots.map(b => ({
@@ -479,6 +550,13 @@ function renderBotRace(completedSorted) {
         borderColor: '#d4af37', backgroundColor: '#d4af37',
         tension: 0.3, borderWidth: 3, borderDash: [6, 3], pointRadius: 2, pointHoverRadius: 5,
     });
+    if (savedBot && savedBot.tipped > 0) {
+        datasets.push({
+            label: `🤖 ${savedBot.name}`, data: customSeries,
+            borderColor: CUSTOM_BOT_HEX, backgroundColor: CUSTOM_BOT_HEX,
+            tension: 0.3, borderWidth: 3, pointRadius: 2, pointHoverRadius: 5,
+        });
+    }
 
     panel.innerHTML = `
         <div class="glass-card static" style="padding:var(--sp-5);">
@@ -503,6 +581,139 @@ function renderBotRace(completedSorted) {
             },
         },
     });
+}
+
+// ── Build-a-Bot: user-designed strategy with live what-if simulation ──
+const _bob = { params: { ...DEFAULT_BOT_PARAMS }, name: 'Mein Bot', totals: null, timer: null };
+
+function escapeAttr(s) {
+    return String(s).replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function bobSliderHtml(key, label, min, max, step, value) {
+    return `
+        <div class="bob-slider">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+                <label style="font-size:var(--type-xs);font-weight:700;color:var(--text-1);">${label}</label>
+                <span id="bob-val-${key}" style="font-size:var(--type-2xs);font-weight:700;color:${CUSTOM_BOT_COLOR};white-space:nowrap;"></span>
+            </div>
+            <input type="range" data-key="${key}" min="${min}" max="${max}" step="${step}" value="${value}"
+                   style="width:100%;accent-color:${CUSTOM_BOT_HEX};">
+        </div>`;
+}
+
+function bobSliderLabel(key, v) {
+    if (key === 'market_weight') return `Markt ${Math.round(v * 100)}% · Elo ${Math.round((1 - v) * 100)}%`;
+    if (key === 'risk') return v > 0 ? `Zocker +${v.toFixed(1)}` : v < 0 ? `Sicher ${v.toFixed(1)}` : 'Neutral';
+    return v <= 0 ? 'aus' : `+${v.toFixed(1)}`;
+}
+
+function updateBobLabel(inp) {
+    const el = document.getElementById(`bob-val-${inp.dataset.key}`);
+    if (el) el.textContent = bobSliderLabel(inp.dataset.key, parseFloat(inp.value));
+}
+
+async function renderBuildABot(totals) {
+    const panel = document.getElementById('build-a-bot-panel');
+    if (!panel) return;
+    if (totals.completedMatches === 0) { panel.innerHTML = ''; return; }
+    _bob.totals = totals;
+
+    // Prefill from the saved config if one exists
+    try {
+        const cb = await api.customBot();
+        if (cb?.exists) {
+            _bob.params = { ...DEFAULT_BOT_PARAMS, ...cb.params };
+            _bob.name = cb.name || 'Mein Bot';
+        }
+    } catch { /* optional */ }
+
+    const p = _bob.params;
+    panel.innerHTML = `
+        <div class="glass-card static" style="padding:var(--sp-5);">
+            <div class="section-title" style="margin-bottom:6px;">🤖 Bau deinen eigenen Bot</div>
+            <div style="font-size:var(--type-xs);color:var(--text-2);margin-bottom:var(--sp-4);line-height:1.5;">
+                Stell deine eigene Tipp-Strategie ein und schau live, wie sie rückwirkend über alle bisherigen Spiele abgeschnitten hätte. <b style="color:${CUSTOM_BOT_COLOR};">Speichern</b> → dein Bot tritt dauerhaft im Scoreboard &amp; im Race gegen die Haus-Bots an.
+            </div>
+            <div class="bob-grid">
+                ${bobSliderHtml('market_weight', 'Markt ↔ Elo', 0, 1, 0.05, p.market_weight)}
+                ${bobSliderHtml('risk', 'Risiko', -1, 1, 0.1, p.risk)}
+                ${bobSliderHtml('underdog_bias', 'Underdog-Bias', 0, 6, 0.5, p.underdog_bias)}
+                ${bobSliderHtml('draw_bias', 'Unentschieden-Bias', 0, 6, 0.5, p.draw_bias)}
+            </div>
+            <div id="bob-result" style="margin-top:var(--sp-5);min-height:64px;"></div>
+            <div style="display:flex;gap:var(--sp-3);align-items:center;margin-top:var(--sp-4);flex-wrap:wrap;">
+                <input id="bob-name" type="text" maxlength="40" value="${escapeAttr(_bob.name)}" placeholder="Bot-Name"
+                       class="select-field" style="flex:1;min-width:160px;font-size:var(--type-sm);padding:6px 10px;">
+                <button id="bob-save" class="filter-btn"
+                        style="background:rgba(45,212,191,0.12);border-color:${CUSTOM_BOT_HEX};color:${CUSTOM_BOT_COLOR};font-weight:700;padding:7px 16px;">💾 Bot speichern</button>
+            </div>
+        </div>`;
+
+    panel.querySelectorAll('input[type=range]').forEach(inp => {
+        updateBobLabel(inp);
+        inp.addEventListener('input', () => {
+            _bob.params[inp.dataset.key] = parseFloat(inp.value);
+            updateBobLabel(inp);
+            scheduleBobSim();
+        });
+    });
+    panel.querySelector('#bob-name').addEventListener('input', e => { _bob.name = e.target.value; });
+    panel.querySelector('#bob-save').addEventListener('click', saveBuildABot);
+
+    runBobSim();
+}
+
+function scheduleBobSim() {
+    clearTimeout(_bob.timer);
+    _bob.timer = setTimeout(runBobSim, 300);
+}
+
+async function runBobSim() {
+    const out = document.getElementById('bob-result');
+    if (!out) return;
+    out.innerHTML = `<span style="font-size:var(--type-sm);color:var(--text-3);">Rechne…</span>`;
+    let sim;
+    try {
+        sim = await api.simulateCustomBot(_bob.params);
+    } catch (e) {
+        out.innerHTML = `<span style="font-size:var(--type-sm);color:var(--red-l);">Simulation fehlgeschlagen: ${e.message}</span>`;
+        return;
+    }
+    const t = _bob.totals;
+    const deltaUser = sim.total_points - t.totalPoints;
+    const deltaAlgo = sim.total_points - t.algoTotal;
+    const tendPct = (sim.tendency_rate * 100).toFixed(0);
+    const chip = (label, diff) => {
+        const color = diff > 0 ? 'var(--green-l)' : diff < 0 ? 'var(--red-l)' : 'var(--text-2)';
+        const sign = diff > 0 ? '+' : '';
+        return `<span style="font-size:var(--type-xs);color:var(--text-3);">vs ${label}</span>
+                <span style="font-size:var(--type-sm);font-weight:800;color:${color};margin-right:var(--sp-3);">${sign}${diff}</span>`;
+    };
+    out.innerHTML = `
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:var(--type-xs);color:var(--text-3);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Hätte dein Bot</span>
+            <span style="font-size:1.9rem;font-weight:800;color:${CUSTOM_BOT_COLOR};line-height:1;">${sim.total_points}</span>
+            <span style="font-size:var(--type-sm);color:var(--text-2);">Punkte · ${tendPct}% Tendenz · ${sim.matches} Spiele</span>
+        </div>
+        <div style="margin-top:8px;">${chip('Du', deltaUser)} ${chip('Algo', deltaAlgo)}</div>`;
+}
+
+async function saveBuildABot() {
+    const btn = document.getElementById('bob-save');
+    if (!btn) return;
+    btn.disabled = true;
+    const prev = btn.textContent;
+    btn.textContent = '…';
+    try {
+        await api.saveCustomBot({ name: _bob.name || 'Mein Bot', params: _bob.params });
+        loadPerformanceView();  // reload so the bot shows up in scoreboard + race
+    } catch (e) {
+        btn.textContent = '✗ Fehler';
+        btn.style.color = 'var(--red-l)';
+        setTimeout(() => { btn.textContent = prev; btn.style.color = ''; btn.disabled = false; }, 2200);
+    }
 }
 
 // ── User-tip editing — invoked from inline onclicks via window globals ──
