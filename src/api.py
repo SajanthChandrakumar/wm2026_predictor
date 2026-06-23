@@ -707,7 +707,7 @@ def simulate_custom_bot(request: Request, payload: dict):
         if pmr.get("status") != "completed":
             continue
         actual = pmr.get("actual_score")
-        snap = match.get("pre_match_snapshot", {})
+        snap = match.get("pre_match_snapshot") or {}
         odds = snap.get("odds") or {}
         if not actual or not all(k in odds for k in ("home", "draw", "away")):
             continue
