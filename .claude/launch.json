@@ -4,8 +4,9 @@
     {
       "name": "wm2026-api",
       "runtimeExecutable": ".venv/bin/python",
-      "runtimeArgs": ["-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"],
-      "port": 8000
+      "runtimeArgs": ["-m", "uvicorn", "src.api:app", "--host", "0.0.0.0"],
+      "port": 8000,
+      "autoPort": true
     }
   ]
 }
