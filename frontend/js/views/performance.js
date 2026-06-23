@@ -316,7 +316,7 @@ function renderBotScoreboard(t, botStats, savedBot = null) {
                     <span>ⓘ</span> Wie funktionieren die Bots?
                 </button>
             </div>
-            <div style="overflow-x:auto;">
+            <div class="table-responsive">
                 <table class="data-table">
                     <thead>
                         <tr>${['Bot', 'Pts', 'Tipped', 'Avg/Match', 'Tendency'].map((h, i) =>
@@ -534,7 +534,7 @@ function renderBotRace(completedSorted, savedBot = null) {
     panel.innerHTML = `
         <div class="glass-card static" style="padding:var(--sp-5);">
             <div class="section-title" style="margin-bottom:var(--sp-4);">Points Race</div>
-            <div style="height:300px;"><canvas id="botRaceChart"></canvas></div>
+            <div style="height:300px;position:relative;width:100%;"><canvas id="botRaceChart"></canvas></div>
         </div>`;
 
     const ctx = document.getElementById('botRaceChart').getContext('2d');

@@ -121,7 +121,7 @@ function renderPowerRankings() {
                 </div>
                 <div style="font-size:var(--type-xs);color:var(--text-3);">${rows.length} Teams</div>
             </div>
-            <div style="max-height:520px;overflow-y:auto;border-radius:var(--r-sm);">
+            <div class="table-responsive" style="max-height:520px;overflow-y:auto;border-radius:var(--r-sm);">
                 <table class="data-table">
                     <thead>
                         <tr>${['#', 'Team', 'Elo', 'Δ Start', 'W-D-L', 'Form'].map((h, i) =>
