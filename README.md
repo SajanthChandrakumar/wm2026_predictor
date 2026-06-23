@@ -63,6 +63,7 @@ By using this software you agree that the author cannot be held liable for any l
 | **Top Value Bets** | Fixtures ranked by Expected Points — highest xP tip first |
 | **Model Edge** | Where Elo diverges most from market consensus — visualised as paired probability bars |
 | **Team Form** | Per-team Elo trajectory across the tournament (Chart.js line chart) |
+| **Groups** | Group stage standings dynamically computed from archived match results |
 | **Performance** | Full analytics: your SRF points, hit rate, You vs Algo head-to-head, bot scoreboard, cumulative points race, and editable match history |
 
 ---
@@ -101,7 +102,7 @@ The **You vs Algo** head-to-head panel shows total points, tendency hit rate, an
 | Math | NumPy, SciPy (`optimize.minimize`, L-BFGS-B), Pandas |
 | Frontend | Vanilla HTML/CSS/JS — zero framework, zero build step |
 | Charts | Chart.js (team Elo trajectory, bot cumulative points race) |
-| Data | The Odds API (live odds + match scores), API-Football (supplementary scores) |
+| Data | The Odds API (live odds + match scores), API-Football (supplementary scores), MongoDB Atlas (persisted archive, cache, and bot states) |
 | Design | Dark navy + gold WC palette; CSS custom properties; spring easing animations; fully responsive; `prefers-reduced-motion` support |
 
 ---
@@ -118,8 +119,9 @@ python3 -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 3. API key
+# 3. Environment Variables
 echo "ODDS_API_KEY=your_key_here" > .env
+echo "MONGO_URI=mongodb+srv://..." >> .env
 
 # 4. Start
 uvicorn src.main:app --reload
@@ -135,7 +137,7 @@ Open **http://127.0.0.1:8000** in your browser.
 |---|---|
 | **Auto Elo sync** | Runs daily at 04:00 UTC via APScheduler |
 | **Manual sync** | Press **Sync Elo Ratings** in the sidebar |
-| **Idempotency** | `data/processed_matches.json` tracks processed match IDs — each result is applied exactly once |
+| **Idempotency** | MongoDB `archive` collection ensures each result is applied exactly once |
 | **Cache control** | Dynamic TTL; press **Refresh Data** to force a live fetch (costs one API call) |
 | **Scores cache** | Completed match scores are cached for 30 min — syncing twice within that window uses cached data |
 
@@ -154,13 +156,7 @@ wm2026_predictor/
 │   ├── style.css            # Design system: WC palette, animations, responsive layout
 │   └── app.js               # View logic, Chart.js charts, API calls, inline tip editor
 ├── data/
-│   ├── elo_ratings.csv          # Live Elo ratings for all 48 + reserve teams
-│   ├── elo_history.json         # Per-match Elo snapshots (Team Form chart + reconstruction)
-│   ├── prediction_archive.json  # All matches: pre-match snapshot, tips, results, points
-│   ├── matches_cache.json       # Odds cache (dynamic TTL)
-│   └── processed_matches.json   # Processed match IDs (idempotency guard)
-├── test_math_engine.py
-├── test_api.py
+│   └── elo_ratings.csv          # Live Elo ratings for all 48 qualified teams
 ├── ARCHITECTURE.md          # Full mathematical derivation
 └── README.md
 ```
