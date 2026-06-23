@@ -169,22 +169,19 @@ class MathEngine:
             
         self.team_forms = forms
 
-    def get_match_elo_probabilities(self, home_team: str, away_team: str, home_resting: bool = False, away_resting: bool = False) -> tuple[float, float]:
+    def get_match_elo_probabilities(self, home_team: str, away_team: str) -> tuple[float, float]:
         home_norm = self.name_mapping.get(home_team, home_team)
         away_norm = self.name_mapping.get(away_team, away_team)
-        
+
         if home_norm in self.elo_df['team_name'].values:
             elo_home = self.elo_df.loc[self.elo_df['team_name'] == home_norm, 'elo_rating'].values[0]
         else:
             elo_home = 1500.0
-            
+
         if away_norm in self.elo_df['team_name'].values:
             elo_away = self.elo_df.loc[self.elo_df['team_name'] == away_norm, 'elo_rating'].values[0]
         else:
             elo_away = 1500.0
-            
-        if home_resting: elo_home -= 100
-        if away_resting: elo_away -= 100
 
         # BEWUSST OHNE Gastgeber-Bonus (is_a_host/is_b_host).
         # Dieser Wert wird in /api/predict zu 30% mit den Buchmacher-Quoten geblendet,
@@ -736,22 +733,6 @@ class MathEngine:
         if xp_df.empty:
             return None, None, None, None, None, None
         return score_matrix, p_home, p_draw, p_away, xp_df.iloc[0]['Tipp'], float(xp_df.iloc[0]['xP'])
-
-    def reconstruct_algo_tip(
-        self,
-        home_team: str,
-        away_team: str,
-        commence_time: str = None,
-        is_ko: bool = False,
-    ) -> tuple:
-        """
-        Rekonstruiert einen Algo-Tipp für ein Match ohne historische Quoten
-        (z. B. wenn das Match vor App-Start lief). Returns (tip, max_xp).
-        """
-        _, _, _, _, tip, xp = self._reconstruct_pipeline(
-            home_team, away_team, commence_time, is_ko
-        )
-        return tip, xp
 
     def reconstruct_bot_tips(
         self,

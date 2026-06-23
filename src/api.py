@@ -559,8 +559,6 @@ def predict_match(request: Request, payload: dict):
     math_engine.reload_elo_data()
     match_data = payload.get("match")
     is_ko = payload.get("is_ko", False)
-    home_resting = payload.get("home_resting", False)
-    away_resting = payload.get("away_resting", False)
 
     if not match_data:
         raise HTTPException(status_code=400, detail="Match data required")
@@ -589,8 +587,6 @@ def predict_match(request: Request, payload: dict):
         elo_prob_home, elo_prob_away = math_engine.get_match_elo_probabilities(
             match_data.get("home_team"),
             match_data.get("away_team"),
-            home_resting,
-            away_resting
         )
 
         # Blend only within the win/loss pool so draw probability stays fixed
