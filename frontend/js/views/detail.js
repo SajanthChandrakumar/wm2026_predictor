@@ -1,7 +1,7 @@
 // Match detail view: xG row, score-probability heatmap, odds, tip ladder.
 
 import { state } from '../state.js';
-import { api } from '../api.js?v=2';
+import { api } from '../api.js?v=3';
 import { pct, computeImpliedProbs, probColor } from '../util.js';
 import { renderFormBlocks } from './dashboard.js';
 
@@ -161,7 +161,6 @@ function renderTipLadder(tips) {
 const BOT_META = {
     broker:    { label: 'Broker',    color: 'var(--blue)'   },
     professor: { label: 'Professor', color: 'var(--green)'  },
-    rebel:     { label: 'Rebell',    color: 'var(--amber)'  },
     sniper:    { label: 'X-Sniper',  color: 'var(--purple)' },
     gambler:   { label: 'Zocker',    color: 'var(--text-2)' },
 };

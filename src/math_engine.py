@@ -406,24 +406,6 @@ class MathEngine:
             logger.warning(f"Professor bot failed: {e}")
             bots["professor"] = {"tip": fallback_tip}
 
-        # 3. The Rebel (Der Underdog)
-        try:
-            full_xp_df = self.calculate_expected_points(score_matrix, is_ko_phase, top_n=36)
-            if true_probs["home"] > true_probs["away"]:
-                # Away is underdog. Find best Away win tip.
-                rebel_df = full_xp_df[full_xp_df["Tipp"].apply(lambda x: int(x.split(":")[0]) < int(x.split(":")[1]))]
-            else:
-                # Home is underdog. Find best Home win tip.
-                rebel_df = full_xp_df[full_xp_df["Tipp"].apply(lambda x: int(x.split(":")[0]) > int(x.split(":")[1]))]
-                
-            if not rebel_df.empty:
-                bots["rebel"] = {"tip": rebel_df.iloc[0]["Tipp"]}
-            else:
-                bots["rebel"] = {"tip": fallback_tip}
-        except Exception as e:
-            logger.warning(f"Rebel bot failed: {e}")
-            bots["rebel"] = {"tip": fallback_tip}
-
         # 4. The X-Sniper (Always highest xP draw)
         try:
             draw_tip = None
@@ -455,6 +437,82 @@ class MathEngine:
 
         return bots
 
+    def custom_bot_score_matrix(
+        self,
+        odds: dict,
+        elo_home: float,
+        elo_away: float,
+        market_weight: float,
+        is_ko: bool = False,
+    ):
+        """
+        Build the score-probability matrix for a custom bot at a given market_weight.
+        Only depends on (odds, elo, market_weight, is_ko) — risk/draw/underdog biases
+        don't change the matrix, so the grid search can memoize this per market_weight
+        and skip the expensive scipy xG fit.
+
+        Returns (score_matrix, true_probs).
+        """
+        true_probs = self.remove_margin(odds["home"], odds["draw"], odds["away"])
+
+        # Elo win/loss shares from the stored ratings. No host bonus here — the
+        # blend below mirrors /api/predict, where the market already prices it in.
+        p_home_winloss = self.get_elo_probability(float(elo_home), float(elo_away))
+        elo_home_share, elo_away_share = p_home_winloss, 1.0 - p_home_winloss
+
+        # market_weight is the share of the *market*; the Elo share is its complement.
+        w_elo = max(0.0, min(1.0, 1.0 - float(market_weight)))
+        pool = true_probs["home"] + true_probs["away"]
+        if pool <= 0:
+            pool = 1e-9
+        prob_home = (true_probs["home"] / pool * (1 - w_elo) + elo_home_share * w_elo) * pool
+        prob_away = (true_probs["away"] / pool * (1 - w_elo) + elo_away_share * w_elo) * pool
+        prob_draw = true_probs["draw"]
+
+        prob_over25 = None
+        if odds.get("over25") and odds.get("under25"):
+            raw_over = 1.0 / odds["over25"]
+            raw_under = 1.0 / odds["under25"]
+            prob_over25 = raw_over / (raw_over + raw_under)
+
+        xg_h, xg_a = self.derive_xg_from_odds(prob_home, prob_draw, prob_away, prob_over25)
+
+        if is_ko:
+            base = self.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
+            p_draw_90 = float(np.sum(np.diag(base.values)))
+            et_factor = 1 + p_draw_90 / 3
+            xg_h *= et_factor
+            xg_a *= et_factor
+
+        score_matrix = self.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
+        return score_matrix, true_probs
+
+    def pick_tip_from_matrix(
+        self,
+        score_matrix,
+        true_probs: dict,
+        risk: float,
+        draw_bias: float,
+        underdog_bias: float,
+        is_ko: bool = False,
+    ) -> str:
+        """Argmax-Schleife über 0:0 – 5:5 mit den drei Bias-Knöpfen."""
+        home_is_underdog = true_probs["home"] < true_probs["away"]
+        best_tip, best_score = "1:0", float("-inf")
+        for t_home in range(6):
+            for t_away in range(6):
+                ev, std = self._points_distribution(t_home, t_away, score_matrix, is_ko)
+                score = ev + risk * std
+                if t_home == t_away:
+                    score += draw_bias
+                underdog_wins = (t_home > t_away) if home_is_underdog else (t_away > t_home)
+                if underdog_wins:
+                    score += underdog_bias
+                if score > best_score:
+                    best_score = score
+                    best_tip = f"{t_home}:{t_away}"
+        return best_tip
+
     def compute_custom_bot_tip(
         self,
         odds: dict,
@@ -480,58 +538,18 @@ class MathEngine:
         Reconstructs everything from the stored pre-match odds + Elo ratings, so it
         can be evaluated retroactively on any archived match. Returns "H:A".
         """
-        true_probs = self.remove_margin(odds["home"], odds["draw"], odds["away"])
-
-        # Elo win/loss shares from the stored ratings. No host bonus here — the
-        # blend below mirrors /api/predict, where the market already prices it in.
-        p_home_winloss = self.get_elo_probability(float(elo_home), float(elo_away))
-        elo_home_share, elo_away_share = p_home_winloss, 1.0 - p_home_winloss
-
-        # market_weight is the share of the *market*; the Elo share is its complement.
-        w_elo = max(0.0, min(1.0, 1.0 - float(params.get("market_weight", 0.7))))
-        pool = true_probs["home"] + true_probs["away"]
-        if pool <= 0:
-            pool = 1e-9
-        prob_home = (true_probs["home"] / pool * (1 - w_elo) + elo_home_share * w_elo) * pool
-        prob_away = (true_probs["away"] / pool * (1 - w_elo) + elo_away_share * w_elo) * pool
-        prob_draw = true_probs["draw"]
-
-        prob_over25 = None
-        if odds.get("over25") and odds.get("under25"):
-            raw_over = 1.0 / odds["over25"]
-            raw_under = 1.0 / odds["under25"]
-            prob_over25 = raw_over / (raw_over + raw_under)
-
-        xg_h, xg_a = self.derive_xg_from_odds(prob_home, prob_draw, prob_away, prob_over25)
-
-        if is_ko:
-            base = self.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
-            p_draw_90 = float(np.sum(np.diag(base.values)))
-            et_factor = 1 + p_draw_90 / 3
-            xg_h *= et_factor
-            xg_a *= et_factor
-
-        score_matrix = self.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
-
-        risk          = float(params.get("risk", 0.0))
-        draw_bias     = float(params.get("draw_bias", 0.0))
-        underdog_bias = float(params.get("underdog_bias", 0.0))
-        home_is_underdog = true_probs["home"] < true_probs["away"]
-
-        best_tip, best_score = "1:0", float("-inf")
-        for t_home in range(6):
-            for t_away in range(6):
-                ev, std = self._points_distribution(t_home, t_away, score_matrix, is_ko)
-                score = ev + risk * std
-                if t_home == t_away:
-                    score += draw_bias
-                underdog_wins = (t_home > t_away) if home_is_underdog else (t_away > t_home)
-                if underdog_wins:
-                    score += underdog_bias
-                if score > best_score:
-                    best_score = score
-                    best_tip = f"{t_home}:{t_away}"
-        return best_tip
+        sm, true_probs = self.custom_bot_score_matrix(
+            odds, elo_home, elo_away,
+            market_weight=float(params.get("market_weight", 0.7)),
+            is_ko=is_ko,
+        )
+        return self.pick_tip_from_matrix(
+            sm, true_probs,
+            risk=float(params.get("risk", 0.0)),
+            draw_bias=float(params.get("draw_bias", 0.0)),
+            underdog_bias=float(params.get("underdog_bias", 0.0)),
+            is_ko=is_ko,
+        )
 
     def _calculate_new_elo(self, rating_a: float, rating_b: float, actual_result_a: float, k_factor: int = 60, is_a_host: bool = False, is_b_host: bool = False, goal_diff: int = 0) -> tuple[float, float]:
         """

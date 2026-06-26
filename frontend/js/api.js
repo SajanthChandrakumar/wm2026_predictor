@@ -25,6 +25,7 @@ export const api = {
     eloHistory:   ()       => getJson('/api/elo_history'),
     eloRatings:   ()       => getJson('/api/elo_ratings'),
     standings:    ()       => getJson('/api/standings'),
+    learningBots: ()       => getJson('/api/learning_bots'),
 
     predict:      (payload)             => postJson('/api/predict', payload),
     syncElo:      ()                    => getJson('/api/sync_elo'),

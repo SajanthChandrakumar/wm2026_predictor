@@ -2,12 +2,12 @@
 // Pulled in via <script type="module"> from index.html.
 
 import { state, charts } from './state.js';
-import { api } from './api.js?v=2';
+import { api } from './api.js?v=3';
 import { renderMatchGrid } from './views/dashboard.js';
 import { renderValueBets } from './views/value-bets.js';
 import { renderEdgeView } from './views/edge.js';
-import { renderDetail } from './views/detail.js?v=2';
-import { loadPerformanceView, saveUserTip, editUserTip } from './views/performance.js';
+import { renderDetail } from './views/detail.js?v=3';
+import { loadPerformanceView, saveUserTip, editUserTip } from './views/performance.js?v=3';
 import { loadTeamFormView, toggleTeamSelect } from './views/team-form.js';
 import { loadGroupsView } from './views/groups.js';
 

@@ -106,7 +106,7 @@ USA, Canada, and Mexico receive a **+80 Elo bonus** applied during post-match up
 
 ### Elo history & idempotency
 
-Every Elo update is logged to `data/elo_history.json` with a timestamp and match ID. The processed match IDs are tracked separately in `data/processed_matches.json` — each result is applied exactly once regardless of how many times sync is triggered.
+Every Elo update is logged to the MongoDB database along with a timestamp and match ID. The processed match IDs are tracked implicitly via the MongoDB `archive` collection and its `post_match_result.status` field — each result is applied exactly once regardless of how many times sync is triggered.
 
 ---
 
@@ -303,7 +303,7 @@ Five autonomous agents tip every match independently, each representing a fixed 
 
 For matches played before the app started tracking (no pre-match odds snapshot exists), the system reconstructs the algo tip from the Elo state at match time:
 
-1. Look up both teams' Elo ratings in `elo_history.json` immediately before the match timestamp
+1. Look up both teams' Elo ratings in the database immediately before the match timestamp
 2. Apply host bonus (+80) where applicable
 3. Derive H/D/A probabilities from Elo using a heuristic draw rate: `max(0.18, 0.28 − |ΔElo| / 10000)`
 4. Solve for xG from those probabilities
@@ -315,7 +315,7 @@ Reconstructed entries are flagged `algo_reconstructed: true` in the archive and 
 
 ## Prediction Archive Schema
 
-`data/prediction_archive.json` is keyed by match ID and stores the full lifecycle of every prediction:
+The MongoDB `archive` collection stores documents keyed by `_id` (match ID) and tracks the full lifecycle of every prediction:
 
 ```json
 {
@@ -377,4 +377,4 @@ Reconstructed entries are flagged `algo_reconstructed: true` in the archive and 
 | Lazy O/U 2.5 fetch | Totals data fetched per-match on detail view open; saves bulk API quota on the fixture list |
 | Host bonus excluded from pre-match predictions | Bookmaker odds already price home advantage; adding Elo bonus would double-count it |
 | Heuristic draw rate in reconstruction | No historical odds exist; `max(0.18, 0.28 − |ΔElo|/10000)` approximates draw likelihood from Elo gap |
-| `processed_matches.json` idempotency guard | Elo updates are irreversible; re-processing the same match would compound rating changes |
+| MongoDB idempotency guard | Elo updates are irreversible; re-processing the same match would compound rating changes |

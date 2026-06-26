@@ -1,4 +1,4 @@
-import { api } from '../api.js?v=2';
+import { api } from '../api.js?v=3';
 
 // 48 teams allocated into 12 groups.
 // The tables will automatically compute standings from the match results.

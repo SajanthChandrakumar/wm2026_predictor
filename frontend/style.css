@@ -471,7 +471,7 @@ input:checked + .toggle-track::after { background: var(--bg); transform: transla
 
 .fixture-teams {
   display: grid;
-  grid-template-columns: 1fr 110px 1fr;
+  grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1fr);
   align-items: center;
   gap: var(--sp-3);
   margin-bottom: 7px;
@@ -509,7 +509,7 @@ input:checked + .toggle-track::after { background: var(--bg); transform: transla
 
 .fixture-probs {
   display: grid;
-  grid-template-columns: 1fr 110px 1fr;
+  grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1fr);
   gap: var(--sp-3);
   font-size: var(--type-xs);
   font-weight: 700;
@@ -980,7 +980,7 @@ input:checked + .toggle-track::after { background: var(--bg); transform: transla
 
 @media (max-width: 680px) {
   /* 6-col → 4-col: hide date + my-label, collapse my-col */
-  .match-card-summary { grid-template-columns: 1fr 60px auto 20px; }
+  .match-card-summary { grid-template-columns: 1fr 60px auto; }
   .mc-date { display: none; }
   .mc-my-col { display: none; }
   .match-card-body { padding-left: 16px; }
@@ -1202,8 +1202,8 @@ input:checked + .toggle-track::after { background: var(--bg); transform: transla
   nav li { flex: 1 1 auto; justify-content: center; border-left: none !important; }
   nav li.active { border-bottom: 2px solid var(--green-l); border-radius: var(--r-sm); }
   .main-content { padding: var(--sp-4) var(--sp-3); }
-  .fixture-teams { grid-template-columns: 1fr 80px 1fr; }
-  .fixture-probs { grid-template-columns: 1fr 80px 1fr; }
+  .fixture-teams { grid-template-columns: minmax(0, 1fr) 80px minmax(0, 1fr); }
+  .fixture-probs { grid-template-columns: minmax(0, 1fr) 80px minmax(0, 1fr); }
   .kpi-grid { grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
   .h2h-grid { grid-template-columns: 1fr; gap: var(--sp-3); }
   .h2h-center { order: -1; }
@@ -1213,7 +1213,7 @@ input:checked + .toggle-track::after { background: var(--bg); transform: transla
 
 @media (max-width: 560px) {
   .fixture-row { gap: var(--sp-2); padding: 12px var(--sp-3) 12px 16px; }
-  .fixture-teams, .fixture-probs { grid-template-columns: 1fr 56px 1fr; gap: 6px; }
+  .fixture-teams, .fixture-probs { grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr); gap: 6px; }
   .fixture-home, .fixture-away { font-size: 1rem; }
   .fixture-tip { min-width: 42px; font-size: 0.9rem; padding: var(--sp-1) 7px; }
   .page-header h1 { font-size: 2.25rem; }
@@ -1224,3 +1224,4 @@ input:checked + .toggle-track::after { background: var(--bg); transform: transla
   .kpi-grid { grid-template-columns: 1fr; }
   #performance-view .kpi-grid { grid-template-columns: 1fr; }
 }
+.table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
