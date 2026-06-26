@@ -108,7 +108,7 @@ class TestComputeBotTips:
             home_team="Germany", away_team="Japan",
             match_id="test123", is_ko_phase=False,
         )
-        assert set(bots.keys()) == {"broker", "professor", "rebel", "sniper", "gambler"}
+        assert set(bots.keys()) == {"broker", "professor", "sniper", "gambler"}
 
     def test_all_bots_have_valid_tips(self, engine, bot_inputs):
         sm, xp_df, true_probs = bot_inputs
@@ -132,19 +132,6 @@ class TestComputeBotTips:
         )
         h, a = map(int, bots["sniper"]["tip"].split(":"))
         assert h == a
-
-    def test_rebel_picks_underdog_win(self, engine, bot_inputs):
-        sm, xp_df, true_probs = bot_inputs
-        bots = engine.compute_bot_tips(
-            sm, xp_df, true_probs, prob_over25=0.55,
-            home_team="Germany", away_team="Japan",
-            match_id="test123", is_ko_phase=False,
-        )
-        h, a = map(int, bots["rebel"]["tip"].split(":"))
-        if true_probs["home"] > true_probs["away"]:
-            assert a > h
-        else:
-            assert h > a
 
     def test_gambler_deterministic_by_match_id(self, engine, bot_inputs):
         sm, xp_df, true_probs = bot_inputs

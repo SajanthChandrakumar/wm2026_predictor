@@ -406,7 +406,7 @@ class MathEngine:
             logger.warning(f"Professor bot failed: {e}")
             bots["professor"] = {"tip": fallback_tip}
 
-        # 4. The X-Sniper (Always highest xP draw)
+        # 3. The X-Sniper (Always highest xP draw)
         try:
             draw_tip = None
             if not base_xp_df.empty:
