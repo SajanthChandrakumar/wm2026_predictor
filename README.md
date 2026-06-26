@@ -4,6 +4,9 @@
 
 **A quantitative prediction engine and analytics dashboard for the FIFA World Cup 2026**
 
+[**Live Demo**](https://wc2026-predictor-8skd.onrender.com/)
+
+[![Tests](https://github.com/SajanthChandrakumar/wm2026_predictor/actions/workflows/test.yml/badge.svg)](https://github.com/SajanthChandrakumar/wm2026_predictor/actions/workflows/test.yml)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=flat&logo=python)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
@@ -53,6 +56,34 @@ By using this software you agree that the author cannot be held liable for any l
 | **Learning bots** | Three adaptive agents that evolve over the tournament: Optimizer (best historical params), Momentum (recency-weighted params), Mitläufer (follows current leader) |
 | **Caching** | Dynamic TTL: >24 h to kick-off → 12 h; 2–24 h → 1 h; <2 h → 15 min. Learning bot results cached by archive signature — recomputes only when new results arrive |
 | **Elo sync** | Idempotent daily background job (APScheduler, 04:00 UTC); tracks processed match IDs; warms all caches post-sync |
+
+---
+
+## Screenshots
+
+<details>
+<summary><strong>Score Matrix — Dixon-Coles bivariate Poisson heatmap</strong></summary>
+
+![Score Matrix](docs/screenshot_matrix.png)
+</details>
+
+<details>
+<summary><strong>Performance View — You vs Algo head-to-head & bot scoreboard</strong></summary>
+
+![Performance View](docs/screenshot_performance.png)
+</details>
+
+<details>
+<summary><strong>Build-a-Bot — design your own tipping strategy</strong></summary>
+
+![Build-a-Bot](docs/screenshot_build_a_bot.png)
+</details>
+
+<details>
+<summary><strong>Dashboard — live fixtures with probabilities and algo tips</strong></summary>
+
+![Dashboard](docs/screenshot_dashboard.png)
+</details>
 
 ---
 
@@ -190,7 +221,7 @@ wm2026_predictor/
 ## Running Tests
 
 ```bash
-.venv/bin/python -m pytest test_math_engine.py test_api.py -v
+.venv/bin/python -m pytest test_math_engine.py test_pool_optimizer.py test_build_a_bot.py -v
 ```
 
 ---

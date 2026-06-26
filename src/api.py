@@ -1,13 +1,9 @@
 import os
 import sys
-import json
-import time
-import statistics
 import logging
-from datetime import datetime, timezone
-import numpy as np
+
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pymongo import MongoClient
@@ -20,9 +16,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from dotenv import load_dotenv
 load_dotenv()
 
-# Engine switch: set USE_API_FOOTBALL=true in .env when the Odds-API quota is
-# exhausted. The API-Football engine normalizes responses to the legacy
-# Odds-API shape, so the rest of api.py needs no changes.
 if os.getenv("USE_API_FOOTBALL", "").lower() in ("1", "true", "yes"):
     from src.odds_engine_apifootball import OddsApiEngine
     print("Odds engine: API-Football (api-sports.io)")
@@ -38,7 +31,7 @@ app = FastAPI(title="WM 2026 Predictor API")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ── MongoDB setup ─────────────────────────────────────────────
+# ── MongoDB ──────────────────────────────────────────────────
 MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
     raise ValueError("MONGO_URI environment variable is required. Set it in your .env file.")
@@ -48,7 +41,7 @@ archive_collection = _db["archive"]
 cache_collection = _db["cache"]
 custom_bot_collection = _db["custom_bot"]
 
-# ── CORS ──────────────────────────────────────────────────────
+# ── CORS ─────────────────────────────────────────────────────
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -77,6 +70,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data:"
     return response
 
+# ── Team name normalization ──────────────────────────────────
 TEAM_MAPPING = {
     "United States": "United States", "USA": "United States",
     "Korea Republic": "South Korea", "South Korea": "South Korea",
@@ -96,6 +90,7 @@ DISPLAY_MAPPING = {
     "Ivory Coast": "Ivory Coast", "Côte d'Ivoire": "Ivory Coast",
 }
 
+# ── Engine init ──────────────────────────────────────────────
 elo_csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_ratings.csv')
 if not os.path.exists(elo_csv_path):
     os.makedirs(os.path.dirname(elo_csv_path), exist_ok=True)
@@ -107,8 +102,6 @@ if not os.path.exists(elo_csv_path):
 
 math_engine = MathEngine(elo_csv_path, TEAM_MAPPING)
 global_odds_engine = OddsApiEngine()
-
-# File paths for data that remains file-based (out of scope for MongoDB migration)
 scores_cache_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'scores_cache.json')
 
 TOTALS_CACHE_TTL = 3600   # 1h per match
