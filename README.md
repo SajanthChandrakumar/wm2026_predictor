@@ -4,6 +4,9 @@
 
 **A quantitative prediction engine and analytics dashboard for the FIFA World Cup 2026**
 
+[**Live Demo**](https://wc2026-predictor-8skd.onrender.com/)
+
+[![Tests](https://github.com/SajanthChandrakumar/wm2026_predictor/actions/workflows/test.yml/badge.svg)](https://github.com/SajanthChandrakumar/wm2026_predictor/actions/workflows/test.yml)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=flat&logo=python)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
@@ -52,6 +55,34 @@ By using this software you agree that the author cannot be held liable for any l
 | **Bot strategies** | Five independent tipping agents: Broker (pure market), Professor (pure Elo), Rebel (best underdog), X-Sniper (highest-xP draw), Gambler (weighted-random, seeded by match ID) |
 | **Caching** | Dynamic TTL: >24 h to kick-off → 12 h; 2–24 h → 1 h; <2 h → 15 min. Totals (O/U 2.5) fetched lazily per match to conserve API quota |
 | **Elo sync** | Idempotent daily background job (APScheduler, 04:00 UTC); tracks processed match IDs; retroactively creates archive entries for pre-app matches |
+
+---
+
+## Screenshots
+
+<details>
+<summary><strong>Score Matrix — Dixon-Coles bivariate Poisson heatmap</strong></summary>
+
+![Score Matrix](docs/screenshot_matrix.png)
+</details>
+
+<details>
+<summary><strong>Performance View — You vs Algo head-to-head & bot scoreboard</strong></summary>
+
+![Performance View](docs/screenshot_performance.png)
+</details>
+
+<details>
+<summary><strong>Build-a-Bot — design your own tipping strategy</strong></summary>
+
+![Build-a-Bot](docs/screenshot_build_a_bot.png)
+</details>
+
+<details>
+<summary><strong>Dashboard — live fixtures with probabilities and algo tips</strong></summary>
+
+![Dashboard](docs/screenshot_dashboard.png)
+</details>
 
 ---
 
@@ -146,22 +177,28 @@ Open **http://127.0.0.1:8000** in your browser.
 ```
 wm2026_predictor/
 ├── src/
-│   ├── api.py               # FastAPI app, all endpoints, orchestration, bot computation
-│   ├── math_engine.py       # Elo, xG solver, Dixon-Coles, xP, pool optimiser, Elo sync
-│   └── odds_engine.py       # The Odds API client; quota tracking
+│   ├── api.py                    # FastAPI app factory, middleware, shared state
+│   ├── math_engine.py            # Elo, xG solver, Dixon-Coles, xP, pool optimiser
+│   ├── odds_engine.py            # The Odds API client; quota tracking
+│   ├── routes/
+│   │   ├── matches.py            # /api/matches, /api/standings, /api/elo_*, /api/sync_elo
+│   │   └── predict.py            # /api/predict, /api/archive/*, /api/custom_bot/*, /api/quota
+│   └── services/
+│       ├── archive.py            # MongoDB archive load/upsert helpers
+│       └── elo_sync.py           # Elo sync + post-match grading + reconstruction
 ├── frontend/
-│   ├── index.html           # SPA shell (5 views + detail pane)
-│   ├── style.css            # Design system: WC palette, animations, responsive layout
-│   └── app.js               # View logic, Chart.js charts, API calls, inline tip editor
+│   ├── index.html                # SPA shell (5 views + detail pane)
+│   ├── style.css                 # Design system: WC palette, animations, responsive layout
+│   └── js/                       # View logic, Chart.js charts, API calls, inline tip editor
 ├── data/
-│   ├── elo_ratings.csv          # Live Elo ratings for all 48 + reserve teams
-│   ├── elo_history.json         # Per-match Elo snapshots (Team Form chart + reconstruction)
-│   ├── prediction_archive.json  # All matches: pre-match snapshot, tips, results, points
-│   ├── matches_cache.json       # Odds cache (dynamic TTL)
-│   └── processed_matches.json   # Processed match IDs (idempotency guard)
+│   ├── elo_ratings.csv           # Live Elo ratings for all 48 nations
+│   ├── elo_history.json          # Per-match Elo snapshots (Team Form chart + reconstruction)
+│   └── processed_matches.json    # Processed match IDs (idempotency guard)
 ├── test_math_engine.py
-├── test_api.py
-├── ARCHITECTURE.md          # Full mathematical derivation
+├── test_pool_optimizer.py
+├── test_build_a_bot.py
+├── .github/workflows/test.yml    # CI: pytest on push/PR
+├── ARCHITECTURE.md               # Full mathematical derivation
 └── README.md
 ```
 
@@ -170,7 +207,7 @@ wm2026_predictor/
 ## Running Tests
 
 ```bash
-.venv/bin/python -m pytest test_math_engine.py test_api.py -v
+.venv/bin/python -m pytest test_math_engine.py test_pool_optimizer.py test_build_a_bot.py -v
 ```
 
 ---

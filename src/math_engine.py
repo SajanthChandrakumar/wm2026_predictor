@@ -2,11 +2,14 @@ import os
 import json
 import time
 import hashlib
+import logging
 from datetime import datetime
 import pandas as pd
 import numpy as np
 import scipy.optimize as optimize
 import scipy.stats as stats
+
+logger = logging.getLogger(__name__)
 
 HOST_NATIONS = {"United States", "Canada", "Mexico"}
 HOST_ELO_BONUS = 80
@@ -386,7 +389,9 @@ class MathEngine:
             sm_o = self.generate_exact_score_matrix(xg_h_o, xg_a_o, max_goals=10)
             xp_o = self.calculate_expected_points(sm_o, is_ko_phase)
             bots["broker"] = {"tip": xp_o.iloc[0]["Tipp"] if not xp_o.empty else fallback_tip}
-        except: bots["broker"] = {"tip": fallback_tip}
+        except Exception as e:
+            logger.warning(f"Broker bot failed: {e}")
+            bots["broker"] = {"tip": fallback_tip}
 
         # 2. The Professor (100% Elo + Market Totals to fix unrealistic high scores)
         try:
@@ -397,7 +402,9 @@ class MathEngine:
             sm_e = self.generate_exact_score_matrix(xg_h_e, xg_a_e, max_goals=10)
             xp_e = self.calculate_expected_points(sm_e, is_ko_phase)
             bots["professor"] = {"tip": xp_e.iloc[0]["Tipp"] if not xp_e.empty else fallback_tip}
-        except: bots["professor"] = {"tip": fallback_tip}
+        except Exception as e:
+            logger.warning(f"Professor bot failed: {e}")
+            bots["professor"] = {"tip": fallback_tip}
 
         # 3. The Rebel (Der Underdog)
         try:
@@ -413,7 +420,9 @@ class MathEngine:
                 bots["rebel"] = {"tip": rebel_df.iloc[0]["Tipp"]}
             else:
                 bots["rebel"] = {"tip": fallback_tip}
-        except: bots["rebel"] = {"tip": fallback_tip}
+        except Exception as e:
+            logger.warning(f"Rebel bot failed: {e}")
+            bots["rebel"] = {"tip": fallback_tip}
 
         # 4. The X-Sniper (Always highest xP draw)
         try:
@@ -423,7 +432,9 @@ class MathEngine:
                 if not draws.empty:
                     draw_tip = draws.iloc[0]["Tipp"]
             bots["sniper"] = {"tip": draw_tip if draw_tip else "1:1"}
-        except: bots["sniper"] = {"tip": "1:1"}
+        except Exception as e:
+            logger.warning(f"Sniper bot failed: {e}")
+            bots["sniper"] = {"tip": "1:1"}
 
         # 5. The Gambler (Weighted Random)
         try:
@@ -438,7 +449,9 @@ class MathEngine:
                     bots["gambler"] = {"tip": top_10.iloc[rng.choice(len(top_10), p=weights)]["Tipp"]}
                 else: bots["gambler"] = {"tip": fallback_tip}
             else: bots["gambler"] = {"tip": fallback_tip}
-        except: bots["gambler"] = {"tip": fallback_tip}
+        except Exception as e:
+            logger.warning(f"Gambler bot failed: {e}")
+            bots["gambler"] = {"tip": fallback_tip}
 
         return bots
 
