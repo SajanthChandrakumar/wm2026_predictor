@@ -21,7 +21,7 @@ A full-stack quantitative prediction engine built for the [SRF Tippspiel](https:
 
 In a closed prediction pool, **maximising raw expected points is the wrong objective**. If everyone picks the chalk tip, you share points with the field even when you're right. The correct strategy is to maximise your *advantage over the field* — which sometimes means taking a calculated contrarian position.
 
-This system implements that distinction: a chalk mode (maximise expected points) and a pool mode (maximise `E[advantage] + λ · SD[advantage]`, where λ controls aggressiveness).
+This system implements that distinction: a chalk mode (maximise expected points) and a pool mode (maximise `E[advantage vs chalk] + λ · SD[advantage]`, where λ controls aggressiveness).
 
 ---
 
@@ -44,14 +44,15 @@ By using this software you agree that the author cannot be held liable for any l
 |---|---|
 | **Prediction model** | Dixon-Coles bivariate Poisson (ρ = −0.15); SciPy L-BFGS-B reverse-engineer solver for xG |
 | **Odds ingestion** | The Odds API — consensus **median** across all bookmakers (H2H + O/U 2.5); proportional margin removal |
-| **Elo system** | Dynamic ratings for all 48 nations; K = 60; margin-of-victory multiplier; +80 host bonus (USA/CAN/MEX) on post-match updates only |
+| **Elo system** | Dynamic ratings for all 32 qualified nations; K = 60; margin-of-victory multiplier; +80 host bonus (USA/CAN/MEX) on post-match updates only |
 | **Probability blend** | 70 % bookmaker odds / 30 % Elo, restricted to the win/loss pool — draw probability held fixed to prevent deflation |
 | **K.O. phase** | Extra-time xG inflation weighted by P(draw after 90 min) — conditional, not a flat 1.33× multiplier |
 | **xP optimiser** | Evaluates all 36 possible tips (0:0 – 5:5) against the full score matrix using the exact SRF Tippspiel scoring rules |
 | **Pool strategy** | Contrarian objective: `E[advantage vs chalk] + λ · SD[advantage]`; λ = 0 reproduces chalk, λ ≈ 0.3 = soft contrarian, λ ≥ 0.5 = true draw gambles |
-| **Bot strategies** | Five independent tipping agents: Broker (pure market), Professor (pure Elo), Rebel (best underdog), X-Sniper (highest-xP draw), Gambler (weighted-random, seeded by match ID) |
-| **Caching** | Dynamic TTL: >24 h to kick-off → 12 h; 2–24 h → 1 h; <2 h → 15 min. Totals (O/U 2.5) fetched lazily per match to conserve API quota |
-| **Elo sync** | Idempotent daily background job (APScheduler, 04:00 UTC); tracks processed match IDs; retroactively creates archive entries for pre-app matches |
+| **House bots** | Four fixed-strategy agents: Broker (pure market), Professor (pure Elo), X-Sniper (highest-xP draw), Zocker (weighted-random, seeded by match ID) |
+| **Learning bots** | Three adaptive agents that evolve over the tournament: Optimizer (best historical params), Momentum (recency-weighted params), Mitläufer (follows current leader) |
+| **Caching** | Dynamic TTL: >24 h to kick-off → 12 h; 2–24 h → 1 h; <2 h → 15 min. Learning bot results cached by archive signature — recomputes only when new results arrive |
+| **Elo sync** | Idempotent daily background job (APScheduler, 04:00 UTC); tracks processed match IDs; warms all caches post-sync |
 
 ---
 
@@ -62,21 +63,28 @@ By using this software you agree that the author cannot be held liable for any l
 | **Dashboard** | All tournament fixtures grouped by day with live probabilities, algo tips, and team form badges |
 | **Top Value Bets** | Fixtures ranked by Expected Points — highest xP tip first |
 | **Model Edge** | Where Elo diverges most from market consensus — visualised as paired probability bars |
-| **Team Form** | Per-team Elo trajectory across the tournament (Chart.js line chart) |
-| **Groups** | Group stage standings dynamically computed from archived match results |
+| **Team Form** | Per-team Elo trajectory across the tournament; compare up to 4 teams simultaneously |
+| **Groups** | All 12 group standings dynamically computed from the completed-match archive — no extra API call |
 | **Performance** | Full analytics: your SRF points, hit rate, You vs Algo head-to-head, bot scoreboard, cumulative points race, and editable match history |
 
 ---
 
 ## Performance & Tracking
 
-The Performance view tracks three parallel scoring streams in real time:
+The Performance view tracks parallel scoring streams in real time:
 
-- **You** — manual tips entered via the inline editor (or imported from the SRF site)
+- **You** — manual tips entered via the inline editor
 - **Algo** — the system's top-pick tip at prediction time; retroactively reconstructed from pre-match Elo baselines for matches played before the app started (flagged as `ALGO*`)
-- **Bots** — five autonomous agents, each with a fixed strategy; scored independently against every completed result
+- **House Bots** — four fixed-strategy agents (Broker, Professor, X-Sniper, Zocker)
+- **Learning Bots** — three adaptive agents that reveal what they "learned":
 
-The **You vs Algo** head-to-head panel shows total points, tendency hit rate, and a progress bar for each, with a live leader message. The **bot scoreboard** ranks all five bots by total points, average per match, and tendency accuracy. A cumulative points race chart visualises how each strategy has performed over the tournament.
+| Bot | Philosophy | What it shows |
+|---|---|---|
+| **Optimizer** | Best cumulative params over all completed matches | `Markt 50% · Risiko +0.5 · Draw +2` |
+| **Momentum** | Best recency-weighted params (decay = 0.9) | `Markt 75% · Risiko 0` |
+| **Mitläufer** | Copies the current house bot leader each match | `Folgt: Professor` |
+
+The **bot scoreboard** ranks all agents by total points, average per match, and tendency accuracy. A cumulative points race chart shows how each strategy evolves over the tournament.
 
 ---
 
@@ -85,12 +93,14 @@ The **You vs Algo** head-to-head panel shows total points, tendency hit rate, an
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/matches` | All fixtures with odds, Elo, top tip, xP, and model edge; `?force=true` bypasses cache |
-| `POST` | `/api/predict` | Full prediction for one match: xG, score matrix, ranked tips; accepts K.O. / resting toggles |
+| `POST` | `/api/predict` | Full prediction for one match: xG, score matrix, ranked tips; accepts K.O. toggle |
 | `GET` | `/api/archive` | Complete prediction archive: all matches, user tips, algo tips, bot tips, results, and points |
 | `POST` | `/api/archive/user_tip` | Save or update a user tip; recalculates points if result is already known |
 | `GET` | `/api/elo_history` | Per-team Elo snapshots across the tournament (powers Team Form chart) |
-| `POST` | `/api/sync_elo` | Trigger an immediate Elo sync from completed match scores |
+| `POST` | `/api/sync_elo` | Trigger an immediate Elo sync from completed match scores; warms all downstream caches |
 | `GET` | `/api/quota` | Remaining requests for The Odds API and API-Football |
+| `GET` | `/api/standings` | Group standings for all 12 WC 2026 groups; 1 h MongoDB cache |
+| `GET` | `/api/learning_bots` | Current state of all three learning bots; signature-keyed cache (recomputes on new results) |
 
 ---
 
@@ -100,10 +110,10 @@ The **You vs Algo** head-to-head panel shows total points, tendency hit rate, an
 |---|---|
 | Backend | Python 3.12, FastAPI, Uvicorn, APScheduler |
 | Math | NumPy, SciPy (`optimize.minimize`, L-BFGS-B), Pandas |
-| Frontend | Vanilla HTML/CSS/JS — zero framework, zero build step |
-| Charts | Chart.js (team Elo trajectory, bot cumulative points race) |
-| Data | The Odds API (live odds + match scores), API-Football (supplementary scores), MongoDB Atlas (persisted archive, cache, and bot states) |
-| Design | Dark navy + gold WC palette; CSS custom properties; spring easing animations; fully responsive; `prefers-reduced-motion` support |
+| Frontend | Vanilla ES modules — zero framework, zero build step |
+| Charts | Chart.js (Elo trajectory, cumulative bot race) |
+| Data | The Odds API (live odds + match scores), API-Football (supplementary scores), MongoDB Atlas (archive, cache, bot states) |
+| Design | Editorial-Minimal: Inter typography, flat surfaces, emerald accent (`#34d399`), CSS custom properties, fully responsive |
 
 ---
 
@@ -135,11 +145,11 @@ Open **http://127.0.0.1:8000** in your browser.
 
 | Operation | How |
 |---|---|
-| **Auto Elo sync** | Runs daily at 04:00 UTC via APScheduler |
+| **Auto Elo sync** | Runs daily at 04:00 UTC via APScheduler; warms learning bots + standings cache automatically |
 | **Manual sync** | Press **Sync Elo Ratings** in the sidebar |
 | **Idempotency** | MongoDB `archive` collection ensures each result is applied exactly once |
 | **Cache control** | Dynamic TTL; press **Refresh Data** to force a live fetch (costs one API call) |
-| **Scores cache** | Completed match scores are cached for 30 min — syncing twice within that window uses cached data |
+| **Learning bot cache** | Keyed by archive signature — auto-invalidates when new results arrive, never on a timer |
 
 ---
 
@@ -148,16 +158,30 @@ Open **http://127.0.0.1:8000** in your browser.
 ```
 wm2026_predictor/
 ├── src/
-│   ├── api.py               # FastAPI app, all endpoints, orchestration, bot computation
-│   ├── math_engine.py       # Elo, xG solver, Dixon-Coles, xP, pool optimiser, Elo sync
-│   └── odds_engine.py       # The Odds API client; quota tracking
+│   ├── api.py                       # FastAPI app, all endpoints, orchestration, cache warm-up
+│   ├── math_engine.py               # Elo, xG solver, Dixon-Coles, xP, pool optimiser, bot tips
+│   ├── learning_bots.py             # Optimizer / Momentum / Mitläufer — grid-search + follow-the-leader
+│   ├── odds_engine_apifootball.py   # API-Football client; standings + supplementary scores
+│   └── odds_engine.py               # The Odds API client; quota tracking
 ├── frontend/
-│   ├── index.html           # SPA shell (5 views + detail pane)
-│   ├── style.css            # Design system: WC palette, animations, responsive layout
-│   └── app.js               # View logic, Chart.js charts, API calls, inline tip editor
+│   ├── index.html                   # SPA shell (6 views + detail pane)
+│   ├── style.css                    # Design system: Editorial-Minimal, CSS custom properties
+│   └── js/
+│       ├── main.js                  # Boot, view router, sidebar wiring
+│       ├── api.js                   # Typed fetch wrappers for all endpoints
+│       ├── state.js                 # Shared app state
+│       ├── util.js                  # Formatting, probability helpers
+│       └── views/
+│           ├── dashboard.js         # Fixture grid + form badges
+│           ├── value-bets.js        # xP-ranked fixture list
+│           ├── edge.js              # Model vs market divergence
+│           ├── team-form.js         # Elo history chart + team compare
+│           ├── groups.js            # Group standings from archive
+│           ├── performance.js       # Bot scoreboard, race chart, match history
+│           └── detail.js            # Heatmap, tip ladder, bot tips
 ├── data/
-│   └── elo_ratings.csv          # Live Elo ratings for all 48 qualified teams
-├── ARCHITECTURE.md          # Full mathematical derivation
+│   └── elo_ratings.csv              # Live Elo ratings for all qualified teams
+├── ARCHITECTURE.md                  # Full mathematical derivation
 └── README.md
 ```
 

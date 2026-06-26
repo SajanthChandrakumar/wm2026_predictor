@@ -31,6 +31,7 @@ else:
     print("Odds engine: The Odds API")
 
 from src.math_engine import MathEngine
+from src.learning_bots import compute_learning_bots
 
 app = FastAPI(title="WM 2026 Predictor API")
 
@@ -787,6 +788,56 @@ def get_standings():
         pass
     return []
 
+
+# Bump when the learning-bots logic or the set of house bots changes — invalidates the cache.
+_LEARNING_BOTS_CODE_VERSION = 2
+
+
+def _archive_signature(archive: dict) -> str:
+    """Cheap fingerprint of completed-match set; cache invalidates when this changes."""
+    completed_ids = sorted(
+        mid for mid, m in archive.items()
+        if (m.get("post_match_result") or {}).get("status") == "completed"
+    )
+    return f"v{_LEARNING_BOTS_CODE_VERSION}:{len(completed_ids)}:{hash(tuple(completed_ids))}"
+
+
+@app.get("/api/learning_bots")
+def get_learning_bots():
+    """
+    Three self-tuning bots derived from the archive. Cached in MongoDB; the
+    cache is keyed on the set of completed matches, so a new result invalidates
+    it automatically. Re-computed lazily here if missing or stale; also warmed
+    proactively in `perform_elo_sync` after new grades are applied.
+    """
+    archive = _load_archive_from_db()
+    sig = _archive_signature(archive)
+
+    try:
+        doc = cache_collection.find_one({"_id": "learning_bots_cache"})
+        if doc and doc.get("signature") == sig:
+            return doc.get("data", [])
+    except Exception:
+        pass
+
+    try:
+        bots = compute_learning_bots(math_engine, archive)
+        cache_collection.update_one(
+            {"_id": "learning_bots_cache"},
+            {"$set": {"signature": sig, "timestamp": time.time(), "data": bots}},
+            upsert=True,
+        )
+        return bots
+    except Exception as e:
+        logger.error(f"Learning bots computation failed: {e}", exc_info=True)
+        try:
+            doc = cache_collection.find_one({"_id": "learning_bots_cache"})
+            if doc and doc.get("data"):
+                return doc["data"]
+        except Exception:
+            pass
+        return []
+
 @app.get("/api/elo_history")
 def get_elo_history():
     history_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_history.json')
@@ -822,6 +873,45 @@ def perform_elo_sync() -> dict:
     print("Elo sync triggered...")
     odds_engine = OddsApiEngine()
     processed_json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'processed_matches.json')
+
+    # Fetch and cache group standings (if available)
+    if hasattr(odds_engine, "get_standings"):
+        try:
+            raw = odds_engine.get_standings()
+            groups = []
+            for entry in raw:
+                league = entry.get("league", {})
+                for standings_group in league.get("standings", []):
+                    rows = []
+                    group_name = None
+                    for row in standings_group:
+                        if not group_name:
+                            group_name = row.get("group", "")
+                        team = row.get("team", {})
+                        all_stats = row.get("all", {})
+                        rows.append({
+                            "pos": row.get("rank", 0),
+                            "team": team.get("name", ""),
+                            "logo": team.get("logo", ""),
+                            "p": all_stats.get("played", 0),
+                            "w": all_stats.get("win", 0),
+                            "d": all_stats.get("draw", 0),
+                            "l": all_stats.get("lose", 0),
+                            "gf": all_stats.get("goals", {}).get("for", 0),
+                            "ga": all_stats.get("goals", {}).get("against", 0),
+                            "gd": row.get("goalsDiff", 0),
+                            "pts": row.get("points", 0),
+                        })
+                    groups.append({"name": group_name, "rows": rows})
+            cache_collection.update_one(
+                {"_id": "standings_cache"},
+                {"$set": {"timestamp": time.time(), "data": groups}},
+                upsert=True,
+            )
+            print(f"Standings cached: {len(groups)} groups")
+        except Exception as e:
+            print(f"Standings fetch failed: {e}")
+
     try:
         # Scores cache: avoid burning quota when sync is triggered multiple times within 30 min
         scores_cache = {}
@@ -995,6 +1085,24 @@ def perform_elo_sync() -> dict:
                 print(f"Algo tips reconstructed: {reconstructed} matches (Elo-only pipeline).")
         except Exception as e:
             print(f"Archive grading failed: {e}")
+
+        # Warm the learning-bots cache so the Performance view doesn't pay the
+        # grid-search cost on the next request. Cache key invalidates itself
+        # when the set of completed matches changes.
+        try:
+            fresh_archive = _load_archive_from_db()
+            sig = _archive_signature(fresh_archive)
+            existing = cache_collection.find_one({"_id": "learning_bots_cache"})
+            if not existing or existing.get("signature") != sig:
+                bots = compute_learning_bots(math_engine, fresh_archive)
+                cache_collection.update_one(
+                    {"_id": "learning_bots_cache"},
+                    {"$set": {"signature": sig, "timestamp": time.time(), "data": bots}},
+                    upsert=True,
+                )
+                print(f"Learning bots cached: {len(bots)}")
+        except Exception as e:
+            print(f"Learning bots warm-cache failed: {e}")
 
         if updates > 0:
             return {"status": "success", "updates": updates}

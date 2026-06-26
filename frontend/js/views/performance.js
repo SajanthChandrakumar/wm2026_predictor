@@ -3,36 +3,35 @@
 // with inline user-tip editing.
 
 import { charts } from '../state.js';
-import { api } from '../api.js?v=2';
+import { api } from '../api.js?v=3';
 
 // Canonical bot order. Includes legacy English names so old archive entries
 // (from before the German reskinning) still aggregate cleanly.
 const BOT_NAMES = ['chalk', 'odds_pure', 'elo_pure', 'draw_hunter', 'random',
-                   'broker', 'professor', 'rebel', 'sniper', 'gambler'];
+                   'broker', 'professor', 'sniper', 'gambler'];
 
 const BOT_COLORS = {
     chalk: 'var(--gold-l)', odds_pure: 'var(--green-l)', elo_pure: 'var(--blue-l)',
     draw_hunter: 'var(--amber-l)', random: 'var(--text-2)',
-    broker: 'var(--blue-l)', professor: 'var(--green-l)', rebel: 'var(--amber-l)',
+    broker: 'var(--blue-l)', professor: 'var(--green-l)',
     sniper: 'var(--purple)', gambler: 'var(--text-2)',
 };
 
 const BOT_DISPLAY = {
     broker:    "Broker",
     professor: "Professor",
-    rebel:     "Rebell",
     sniper:    "X-Sniper",
     gambler:   "Zocker",
 };
 
 const BOT_SHORT = {
     chalk: 'Chalk', odds_pure: 'Odds', elo_pure: 'Elo', draw_hunter: 'Draw', random: 'Rnd',
-    broker: 'Quoten', professor: 'Elo', rebel: 'Rebell', sniper: 'Sniper', gambler: 'Zocker',
+    broker: 'Quoten', professor: 'Elo', sniper: 'Sniper', gambler: 'Zocker',
 };
 
-const ACTIVE_BOTS = ['broker', 'professor', 'rebel', 'sniper', 'gambler'];
-const BOT_EMOJI   = { broker: '', professor: '', rebel: '', sniper: '', gambler: '' };
-const BOT_LABEL   = { broker: 'Broker', professor: 'Prof.', rebel: 'Rebell', sniper: 'Sniper', gambler: 'Zocker' };
+const ACTIVE_BOTS = ['broker', 'professor', 'sniper', 'gambler'];
+const BOT_EMOJI   = { broker: '', professor: '', sniper: '', gambler: '' };
+const BOT_LABEL   = { broker: 'Broker', professor: 'Prof.', sniper: 'Sniper', gambler: 'Zocker' };
 
 // User-designed "build-a-bot". Distinct cyan so it stands out from the house bots.
 const CUSTOM_BOT_COLOR = 'var(--cyan-l, #2dd4bf)';
@@ -44,7 +43,6 @@ const DEFAULT_BOT_PARAMS = { market_weight: 0.7, risk: 0.0, draw_bias: 0.0, unde
 const BOT_RACE_META = {
     broker:    { name: 'Broker',    color: '#5b9bd5' },
     professor: { name: 'Professor', color: '#4caf82' },
-    rebel:     { name: 'Rebell',    color: '#d9a441' },
     sniper:    { name: 'X-Sniper',  color: '#9b6dd1' },
     gambler:   { name: 'Zocker',    color: '#9a9a9a' },
 };
@@ -101,34 +99,43 @@ export async function loadPerformanceView() {
         completedMatches.push([matchId, match, pts]);
     });
 
-    // Saved build-a-bot (if any) — simulate it so it competes with full history
-    // in the scoreboard and race, exactly like the house bots.
-    let savedBot = null;
+    // Extra bots that compete alongside the house bots: the user's saved
+    // build-a-bot (if any) + the three self-tuning "learning" bots from the
+    // backend. Same data shape, so the scoreboard & race chart treat them
+    // identically.
+    const extraBots = [];
+
     try {
         const cb = await api.customBot();
         if (cb?.exists) {
             const sim = await api.simulateCustomBot(cb.params);
-            savedBot = {
+            extraBots.push({
+                key: 'custom',
                 name: cb.name || 'Mein Bot',
-                params: cb.params,
+                color: CUSTOM_BOT_HEX,
                 pts: sim.total_points,
                 tipped: sim.matches,
                 tendency: Math.round((sim.tendency_rate || 0) * sim.matches),
                 pointsByMatch: Object.fromEntries(sim.breakdown.map(b => [b.match_id, b.points])),
-            };
+            });
         }
-    } catch (e) { /* custom bot is optional — ignore failures */ }
+    } catch (e) { /* custom bot is optional */ }
+
+    try {
+        const learners = await api.learningBots();
+        if (Array.isArray(learners)) extraBots.push(...learners);
+    } catch (e) { /* learning bots optional */ }
 
     renderKpis(totals);
     renderYouVsAlgo(totals);
-    renderBotScoreboard(totals, botStats, savedBot);
+    renderBotScoreboard(totals, botStats, extraBots);
     renderBuildABot(totals);
 
     // Bot-race uses chronological order (oldest match first)
     const chronological = [...completedMatches].sort((a, b) =>
         new Date(a[1].pre_match_snapshot?.timestamp_recorded || 0) -
         new Date(b[1].pre_match_snapshot?.timestamp_recorded || 0));
-    renderBotRace(chronological, savedBot);
+    renderBotRace(chronological, extraBots);
 
     if (totals.completedMatches === 0) {
         grid.innerHTML = `<p style="color:var(--text-2);font-size:var(--type-body);">No completed matches yet. Run "Sync Elo Ratings" after matches finish.</p>`;
@@ -266,7 +273,7 @@ function progressBar(label, pts, widthPct, color) {
         </div>`;
 }
 
-function renderBotScoreboard(t, botStats, savedBot = null) {
+function renderBotScoreboard(t, botStats, extraBots = []) {
     const panel = document.getElementById('bot-scoreboard');
     const hasBotData = BOT_NAMES.some(b => botStats[b].tipped > 0);
     if (t.completedMatches === 0 || !hasBotData) { panel.innerHTML = ''; return; }
@@ -278,12 +285,19 @@ function renderBotScoreboard(t, botStats, savedBot = null) {
         color: BOT_COLORS[b] || 'var(--text-3)', isUser: false,
     }));
 
-    if (savedBot && savedBot.tipped > 0) {
+    extraBots.forEach(eb => {
+        if (!eb || !(eb.tipped > 0)) return;
         botRows.push({
-            label: savedBot.name, pts: savedBot.pts, tipped: savedBot.tipped,
-            tendency: savedBot.tendency, color: CUSTOM_BOT_COLOR, isUser: false, isCustom: true,
+            label: eb.name,
+            pts: eb.pts,
+            tipped: eb.tipped,
+            tendency: eb.tendency,
+            color: eb.color || 'var(--text-3)',
+            isUser: false,
+            isExtra: true,
+            learned_label: eb.learned_label || null,
         });
-    }
+    });
 
     const allRows = [
         { label: 'You', pts: t.totalPoints, tipped: t.completedMatches,
@@ -296,10 +310,14 @@ function renderBotScoreboard(t, botStats, savedBot = null) {
         const tendPct = r.tipped > 0 ? ((r.tendency / r.tipped) * 100).toFixed(0) + '%' : '—';
         const rank = `${i + 1}.`;
         const userHighlight = r.isUser ? 'background:var(--gold-dim);'
-                            : r.isCustom ? 'background:rgba(45,212,191,0.08);' : '';
+                            : r.isExtra  ? 'background:rgba(255,255,255,0.015);' : '';
+        const learnedHtml = r.learned_label
+            ? `<div style="font-size:var(--type-2xs);color:var(--text-3);font-weight:500;margin-top:2px;letter-spacing:0;">${r.learned_label}</div>`
+            : '';
         return `<tr style="border-top:1px solid var(--border);${userHighlight}">
             <td style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-sm);font-weight:${r.isUser ? '800' : '600'};color:${r.color};">
                 <span style="color:var(--text-3);margin-right:6px;">${rank}</span>${r.label}
+                ${learnedHtml}
             </td>
             <td class="text-right" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-body);font-weight:800;color:${r.color};">${r.pts}</td>
             <td class="text-right" style="padding:var(--sp-2) var(--sp-3);font-size:var(--type-sm);color:var(--text-2);">${r.tipped}</td>
@@ -351,8 +369,6 @@ function botStrategiesHtml() {
                     '<b>100 % Markt, 0 % Elo.</b> Vertraut blind den Buchmachern: berechnet xG nur aus den entmarginalisierten Quoten und wählt den Tipp mit höchstem xP. <i style="color:var(--text-3);">Die &bdquo;Weisheit der Crowd&ldquo;-Strategie.</i>')}
                 ${card('P', 'var(--green-l)', 'Professor &mdash; Pure Elo-Ratings',
                     '<b>100 % Elo, 0 % Markt</b> (außer für Over/Under-Realismus). Ignoriert die Buchmacher komplett, leitet alles aus den Team-Stärken her. <i style="color:var(--text-3);">Schlägt den Markt, wenn die Quoten falsch liegen &mdash; verliert hart, wenn der Markt recht hat.</i>')}
-                ${card('R', 'var(--amber-l)', 'Rebell &mdash; Kontra-Feld',
-                    'Setzt <b>immer auf den Underdog</b>. Identifiziert das Team mit den schlechteren Quoten und wählt den besten Sieg-Tipp für genau dieses Team. <i style="color:var(--text-3);">Lebt von Überraschungen &mdash; selten Treffer, aber dann oft volle Punktzahl.</i>')}
                 ${card('X', 'var(--purple)', 'X-Sniper &mdash; Draw-Spezialist',
                     'Tippt <b>immer ein Unentschieden</b>. Wählt aus den Unentschieden-Tipps (0:0, 1:1, 2:2 &hellip;) den mit dem höchsten xP. <i style="color:var(--text-3);">Hochrisiko-Strategie &mdash; trifft selten, aber wenn, dann oft volle 10 Punkte (exakter Score).</i>')}
                 ${card('Z', 'var(--text-2)', 'Zocker &mdash; Gewichteter Zufall',
@@ -487,7 +503,7 @@ function myTipCellHtml(matchId, userTip, hasTip) {
 }
 
 // ── Bot-Points-Race: cumulative points per bot over the played matches ──
-function renderBotRace(completedSorted, savedBot = null) {
+function renderBotRace(completedSorted, extraBots = []) {
     const panel = document.getElementById('bot-race-panel');
     if (!panel) return;
     if (completedSorted.length < 2) {
@@ -504,13 +520,17 @@ function renderBotRace(completedSorted, savedBot = null) {
 
     const running = {}; activeBots.forEach(b => running[b] = 0); let userRun = 0;
     const series  = {}; activeBots.forEach(b => series[b]  = []); const userSeries = [];
-    // Custom bot accumulates by match_id (only matches it could simulate count).
-    let customRun = 0; const customSeries = [];
+    // Each extra bot accumulates from its own pointsByMatch map.
+    const extraRunning = extraBots.map(() => 0);
+    const extraSeries  = extraBots.map(() => []);
     completedSorted.forEach(([mid, m]) => {
         const bp = m.post_match_result?.bot_points ?? {};
         activeBots.forEach(b => { running[b] += (bp[b] || 0); series[b].push(running[b]); });
         userRun += (m.post_match_result?.points_earned || 0); userSeries.push(userRun);
-        if (savedBot) { customRun += (savedBot.pointsByMatch?.[mid] || 0); customSeries.push(customRun); }
+        extraBots.forEach((eb, i) => {
+            extraRunning[i] += (eb.pointsByMatch?.[mid] || 0);
+            extraSeries[i].push(extraRunning[i]);
+        });
     });
 
     const datasets = activeBots.map(b => ({
@@ -523,13 +543,15 @@ function renderBotRace(completedSorted, savedBot = null) {
         borderColor: '#d4af37', backgroundColor: '#d4af37',
         tension: 0.3, borderWidth: 3, borderDash: [6, 3], pointRadius: 2, pointHoverRadius: 5,
     });
-    if (savedBot && savedBot.tipped > 0) {
+    extraBots.forEach((eb, i) => {
+        if (!(eb.tipped > 0)) return;
+        const color = eb.color || CUSTOM_BOT_HEX;
         datasets.push({
-            label: savedBot.name, data: customSeries,
-            borderColor: CUSTOM_BOT_HEX, backgroundColor: CUSTOM_BOT_HEX,
+            label: eb.name, data: extraSeries[i],
+            borderColor: color, backgroundColor: color,
             tension: 0.3, borderWidth: 3, pointRadius: 2, pointHoverRadius: 5,
         });
-    }
+    });
 
     panel.innerHTML = `
         <div class="glass-card static" style="padding:var(--sp-5);">
