@@ -1,7 +1,11 @@
 import os
-import json
 import requests
 from dotenv import load_dotenv
+
+try:
+    from src.quota_store import write_quota
+except ImportError:
+    from quota_store import write_quota
 
 load_dotenv()
 
@@ -17,12 +21,7 @@ class OddsApiEngine:
     def _update_quota(self, headers: dict):
         remaining = headers.get("x-requests-remaining", "Unknown")
         used = headers.get("x-requests-used", "Unknown")
-        
-        quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota_odds.json')
-        os.makedirs(os.path.dirname(quota_path), exist_ok=True)
-        
-        with open(quota_path, 'w', encoding='utf-8') as f:
-            json.dump({"remaining": remaining, "used": used}, f, indent=4)
+        write_quota("odds", {"remaining": remaining, "used": used})
 
     def get_world_cup_odds(self, market: str = "h2h") -> list[dict]:
         """Fetch odds for all upcoming WC matches. Each market string costs 1 API request."""

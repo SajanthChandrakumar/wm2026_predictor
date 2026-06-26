@@ -1,9 +1,14 @@
 import os
 import sys
+import time
+import json
 import logging
+import statistics
+from datetime import datetime, timezone
 
+import numpy as np
 import pandas as pd
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pymongo import MongoClient
@@ -25,6 +30,7 @@ else:
 
 from src.math_engine import MathEngine
 from src.learning_bots import compute_learning_bots
+from src.quota_store import read_quota
 
 app = FastAPI(title="WM 2026 Predictor API")
 
@@ -290,19 +296,11 @@ def _enrich_edge(matches: list) -> list:
 @app.get("/api/quota")
 def get_quota():
     """Return both providers' quota so the sidebar can show each.
-    odds   -> The Odds API   (data/api_quota_odds.json)
-    football-> API-Football  (data/api_quota.json)
+
+    Persisted in MongoDB (via src.quota_store) so the counters survive Render's
+    ephemeral filesystem; falls back to local files in dev without MONGO_URI.
     """
-    base = os.path.join(os.path.dirname(__file__), '..', 'data')
-
-    def _load(fname):
-        try:
-            with open(os.path.join(base, fname), 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
-            return {"remaining": "--", "used": "?"}
-
-    return {"odds": _load('api_quota_odds.json'), "football": _load('api_quota.json')}
+    return {"odds": read_quota("odds"), "football": read_quota("football")}
 
 
 @app.get("/api/matches")

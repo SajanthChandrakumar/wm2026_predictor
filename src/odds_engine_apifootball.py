@@ -14,6 +14,11 @@ import requests
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
+try:
+    from src.quota_store import write_quota
+except ImportError:
+    from quota_store import write_quota
+
 load_dotenv()
 
 
@@ -44,10 +49,7 @@ class OddsApiEngine:
             used = int(limit) - int(remaining)
         except (ValueError, TypeError):
             used = "Unknown"
-        quota_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'api_quota.json')
-        os.makedirs(os.path.dirname(quota_path), exist_ok=True)
-        with open(quota_path, 'w', encoding='utf-8') as f:
-            json.dump({"remaining": remaining, "used": used, "limit": limit}, f, indent=4)
+        write_quota("football", {"remaining": remaining, "used": used, "limit": limit})
 
     # ── Public API (matches src.odds_engine.OddsApiEngine signatures) ────────
 
