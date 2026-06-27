@@ -857,115 +857,64 @@ input:checked + .toggle-track::after { background: var(--bg); transform: transla
 
 /* ═══════════ Match History ═══════════ */
 
-.match-history-list { display: flex; flex-direction: column; }
-
-/* Each match is a <details> element */
-.match-card {
-  border-left: 3px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  transition: border-left-color 0.2s var(--ease-out);
-}
-.match-card:first-child { border-top: 1px solid var(--border); border-radius: var(--r) var(--r) 0 0; }
-.match-card:last-child  { border-radius: 0 0 var(--r) var(--r); }
-.match-card:first-child:last-child { border-radius: var(--r); }
-.match-card.result-excellent,
-.match-card.result-good { border-left-color: var(--green-l); }
-.match-card.result-ok   { border-left-color: var(--amber-l); }
-.match-card.result-miss { border-left-color: var(--red-l); }
-
-/* ── Summary row ── */
-.match-card-summary {
+/* ── Match history — card-per-game layout ── */
+.match-history-list {
   display: grid;
-  grid-template-columns: 38px 1fr 72px 1fr auto 20px;
-  align-items: center;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--sp-3);
-  padding: 11px var(--sp-4) 11px 16px;
-  cursor: pointer; list-style: none; user-select: none;
-  transition: background 0.15s var(--ease-out);
 }
-.match-card-summary::-webkit-details-marker,
-.match-card-summary::marker { display: none; }
-.match-card-summary:hover { background: var(--surface-2); }
+.mh-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.mh-card.result-excellent,
+.mh-card.result-good { border-left-color: var(--green-l); }
+.mh-card.result-ok   { border-left-color: var(--amber-l); }
+.mh-card.result-miss { border-left-color: var(--red-l); }
 
-.mc-date {
-  font-size: var(--type-2xs); color: var(--text-3); font-weight: 700;
-  text-align: center; line-height: 1.3; white-space: nowrap;
+.mh-card-header {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
 }
-.mc-teams {
-  font-size: var(--type-sm); font-weight: 600; color: var(--text-1);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
-}
-/* Actual result — prominent pill */
-.mc-result {
-  font-family: var(--font-bc);
-  font-size: 1rem; font-weight: 800; letter-spacing: 0.5px;
-  text-align: center; white-space: nowrap;
-  background: var(--surface-2); border: 1px solid var(--border-2);
-  border-radius: var(--r-sm); padding: 2px 8px; color: var(--text-1);
-}
-/* My tip column */
-.mc-my-col {
-  display: flex; align-items: center; gap: var(--sp-2); min-width: 0;
-}
-.mc-my-label {
+.mh-card-date {
   font-size: var(--type-2xs); color: var(--text-3); font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap; flex-shrink: 0;
+  white-space: nowrap; flex-shrink: 0;
 }
-.mc-my-tip {
-  font-family: var(--font-bc);
-  font-size: 0.88rem; font-weight: 800;
-  color: var(--gold-l); background: var(--gold-dim);
-  border: 1px solid var(--gold-b);
-  border-radius: var(--r-sm); padding: 1px 7px;
-  white-space: nowrap;
+.mh-card-teams {
+  font-size: var(--type-sm); font-weight: 600; color: var(--text-1);
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.mc-no-tip {
-  font-size: var(--type-2xs); color: var(--text-3);
-  font-style: italic; white-space: nowrap;
-}
-/* Right side: pts badge + chevron */
-.mc-right { display: flex; align-items: center; gap: var(--sp-2); flex-shrink: 0; }
-.mc-chevron {
-  color: var(--text-3); font-size: 0.9rem; flex-shrink: 0; line-height: 1;
-  transition: transform 0.22s var(--ease-out);
-}
-.match-card[open] .mc-chevron { transform: rotate(90deg); }
-
-/* ── Expanded body ── */
-.match-card-body {
-  border-top: 1px solid var(--border);
-  background: var(--surface-subtle);
-  padding: var(--sp-3) var(--sp-4) var(--sp-4) calc(16px + 38px + var(--sp-3));
-  display: flex; flex-direction: column; gap: var(--sp-3);
-  animation: expandIn 0.18s var(--ease-out);
-}
-@keyframes expandIn {
-  from { opacity: 0; transform: translateY(-3px); }
-  to   { opacity: 1; transform: translateY(0); }
+.mh-vs { color: var(--text-3); font-weight: 400; }
+.mh-card-result {
+  font-size: var(--type-body); font-weight: 800; letter-spacing: 0.5px;
+  white-space: nowrap; color: var(--text-1);
+  background: var(--surface-2); border: 1px solid var(--border-2);
+  border-radius: var(--r-sm); padding: 2px 10px; flex-shrink: 0;
 }
 
-.mc-detail-cols {
-  display: flex; gap: var(--sp-6); align-items: flex-start; flex-wrap: wrap;
+.mh-card-tips {
+  padding: var(--sp-2) var(--sp-4) var(--sp-3);
+  display: flex; flex-direction: column;
 }
-.mc-detail-col { display: flex; flex-direction: column; gap: 4px; }
-.mc-detail-label {
-  font-size: var(--type-2xs); text-transform: uppercase;
-  letter-spacing: 1px; color: var(--text-3); font-weight: 700;
+.mh-tip-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center; gap: var(--sp-2);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
 }
-.mc-detail-val {
-  font-family: var(--font-bc);
-  font-size: 1rem; font-weight: 800; color: var(--text-1);
+.mh-tip-row:last-child { border-bottom: none; }
+.mh-tip-label {
+  font-size: var(--type-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
 }
-.mc-tip-input-row { display: flex; align-items: center; gap: 5px; }
+.mh-tip-pts { display: flex; justify-content: flex-end; }
 
-/* Bot cells */
-.mc-bots { display: flex; flex-wrap: wrap; gap: 6px; }
-.bot-tip-cell {
-  display: flex; align-items: center; gap: 5px;
-  background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: var(--r-sm); padding: 3px 8px;
-}
+.mc-tip-input-row { display: inline-flex; align-items: center; gap: 5px; }
 
 /* ── Filter bar ── */
 .match-history-filters { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
@@ -978,18 +927,10 @@ input:checked + .toggle-track::after { background: var(--bg); transform: transla
 }
 .mh-filter-select:focus { border-color: var(--green-l); box-shadow: 0 0 0 3px var(--green-dim); }
 
-@media (max-width: 680px) {
-  /* 6-col → 4-col: hide date + my-label, collapse my-col */
-  .match-card-summary { grid-template-columns: 1fr 60px auto; }
-  .mc-date { display: none; }
-  .mc-my-col { display: none; }
-  .match-card-body { padding-left: 16px; }
-}
 @media (max-width: 560px) {
+  .match-history-list { grid-template-columns: 1fr; }
   .match-history-filters .filter-btn { display: none; }
   .mh-filter-select { display: block; }
-  /* result pill tighter on small screens */
-  .mc-result { font-size: 0.88rem; padding: 2px 6px; }
 }
 
 /* Build-a-Bot */

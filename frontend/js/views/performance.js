@@ -133,8 +133,8 @@ export async function loadPerformanceView() {
 
     // Bot-race uses chronological order (oldest match first)
     const chronological = [...completedMatches].sort((a, b) =>
-        new Date(a[1].pre_match_snapshot?.timestamp_recorded || 0) -
-        new Date(b[1].pre_match_snapshot?.timestamp_recorded || 0));
+        new Date(a[1].metadata?.commence_time || a[1].pre_match_snapshot?.timestamp_recorded || 0) -
+        new Date(b[1].metadata?.commence_time || b[1].pre_match_snapshot?.timestamp_recorded || 0));
     renderBotRace(chronological, extraBots);
 
     if (totals.completedMatches === 0) {
@@ -144,8 +144,8 @@ export async function loadPerformanceView() {
 
     // Sort match history newest first
     completedMatches.sort((a, b) =>
-        new Date(b[1].pre_match_snapshot?.timestamp_recorded || 0) -
-        new Date(a[1].pre_match_snapshot?.timestamp_recorded || 0));
+        new Date(b[1].metadata?.commence_time || b[1].pre_match_snapshot?.timestamp_recorded || 0) -
+        new Date(a[1].metadata?.commence_time || a[1].pre_match_snapshot?.timestamp_recorded || 0));
 
     const listWrapper = document.createElement('div');
     listWrapper.className = 'glass-card static';
@@ -191,7 +191,7 @@ export async function loadPerformanceView() {
     function applyFilter(filter) {
         listWrapper.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
         listWrapper.querySelector('.mh-filter-select').value = filter;
-        matchList.querySelectorAll('.match-card').forEach(card => {
+        matchList.querySelectorAll('.mh-card').forEach(card => {
             const rowPts = parseInt(card.dataset.pts ?? '0', 10);
             const hasTip = card.dataset.hastip === '1';
             const show =
@@ -398,93 +398,79 @@ function wireStratToggle() {
 }
 
 // ── Match history card ──
+function matchDate(match) {
+    const ct = match.metadata?.commence_time;
+    if (ct) {
+        const d = new Date(ct);
+        return d.toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: 'short' });
+    }
+    const ts = match.pre_match_snapshot?.timestamp_recorded;
+    return ts ? new Date(ts).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' }) : '—';
+}
+
+function ptsBadge(p) {
+    if (p == null) return `<span class="points-badge pts-na">–</span>`;
+    const cls = p >= 10 ? 'pts-10' : p >= 8 ? 'pts-8' : p >= 5 ? 'pts-5' : 'pts-0';
+    return `<span class="points-badge ${cls}">${p}</span>`;
+}
+
 function buildMatchCard(matchId, match, pts) {
     const userTip = match.prediction?.user_tip ?? null;
-    const algoTip = match.prediction?.top_tip  ?? null;
+    const algoTip = match.prediction?.top_tip ?? null;
     const algoPts = match.post_match_result?.algo_points ?? null;
     const isRecon = match.prediction?.algo_reconstructed === true;
-    const hasTip  = userTip !== null;
+    const hasTip = userTip !== null;
     const actualScore = match.post_match_result.actual_score;
-
-    const ptsBadge = p => {
-        if (p == null) return `<span class="points-badge pts-na">–</span>`;
-        const cls = p >= 10 ? 'pts-10' : p >= 8 ? 'pts-8' : p >= 5 ? 'pts-5' : 'pts-0';
-        return `<span class="points-badge ${cls}">+${p}</span>`;
-    };
-
-    const ts = match.pre_match_snapshot?.timestamp_recorded;
-    const dateStr = ts
-        ? new Date(ts).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })
-        : '—';
+    const bots = match.prediction?.bots ?? {};
+    const botPoints = match.post_match_result?.bot_points ?? {};
 
     const resultClass = !hasTip ? '' :
         pts >= 8 ? 'result-excellent' : pts >= 5 ? 'result-ok' : 'result-miss';
 
-    const myCol = hasTip
-        ? `<div class="mc-my-col">
-               <span class="mc-my-label">My tip</span>
-               <span class="mc-my-tip">${userTip}</span>
-           </div>`
-        : `<div class="mc-my-col"><span class="mc-no-tip">no tip</span></div>`;
+    const tipRows = [];
 
-    const botCells = buildBotCells(match, ptsBadge);
+    // Algo row
+    tipRows.push({ label: 'Algo' + (isRecon ? '*' : ''), tip: algoTip || '–', pts: algoPts, color: 'var(--blue-l)', isAlgo: true });
 
-    const card = document.createElement('details');
-    card.className = `match-card ${resultClass}`;
-    card.dataset.pts    = pts;
+    // User row
+    tipRows.push({ label: 'Du', tip: userTip || '–', pts: hasTip ? pts : null, color: 'var(--gold-l)', isUser: true, matchId });
+
+    // Bot rows
+    ACTIVE_BOTS.forEach(b => {
+        const tip = bots[b]?.tip;
+        if (!tip) return;
+        tipRows.push({ label: BOT_LABEL[b], tip, pts: botPoints[b] ?? null, color: BOT_COLORS[b] || 'var(--text-3)' });
+    });
+
+    const tipsHtml = tipRows.map(r => {
+        const tipStyle = r.isUser && !userTip ? 'color:var(--text-3);font-weight:400;' : `color:var(--text-1);font-weight:800;`;
+        const editBtn = r.isUser ? `<span id="tip-cell-${matchId}" class="mc-tip-input-row" style="display:inline-flex;align-items:center;gap:4px;">
+            ${myTipCellHtml(matchId, userTip, hasTip)}</span>` : '';
+        const tipDisplay = r.isUser ? editBtn :
+            `<span style="font-size:var(--type-sm);${tipStyle};font-variant-numeric:tabular-nums;">${r.tip}</span>`;
+        return `<div class="mh-tip-row">
+            <span class="mh-tip-label" style="color:${r.color};">${r.label}</span>
+            ${tipDisplay}
+            <span class="mh-tip-pts">${ptsBadge(r.pts)}</span>
+        </div>`;
+    }).join('');
+
+    const card = document.createElement('div');
+    card.className = `mh-card ${resultClass}`;
+    card.dataset.pts = pts;
     card.dataset.hastip = hasTip ? '1' : '0';
 
     card.innerHTML = `
-        <summary class="match-card-summary">
-            <div class="mc-date">${dateStr}</div>
-            <div class="mc-teams">
-                ${match.metadata.home_disp}
-                <span style="color:var(--text-3);font-weight:400;"> vs </span>${match.metadata.away_disp}
+        <div class="mh-card-header">
+            <div class="mh-card-date">${matchDate(match)}</div>
+            <div class="mh-card-teams">
+                ${match.metadata.home_disp} <span class="mh-vs">vs</span> ${match.metadata.away_disp}
             </div>
-            <div class="mc-result">${actualScore}</div>
-            ${myCol}
-            <div class="mc-right">
-                ${ptsBadge(hasTip ? pts : null)}
-                <div class="mc-chevron">›</div>
-            </div>
-        </summary>
-        <div class="match-card-body">
-            <div class="mc-detail-cols">
-                <div class="mc-detail-col">
-                    <div class="mc-detail-label">My Tip</div>
-                    <div id="tip-cell-${matchId}" class="mc-tip-input-row">${myTipCellHtml(matchId, userTip, hasTip)}</div>
-                </div>
-                <div class="mc-detail-col">
-                    <div class="mc-detail-label">Algo${isRecon ? ' <sup style="color:var(--amber-l);">*</sup>' : ''}</div>
-                    <div class="mc-detail-val">${algoTip || '–'}</div>
-                </div>
-                <div class="mc-detail-col">
-                    <div class="mc-detail-label">Algo Pts</div>
-                    <div>${ptsBadge(algoPts)}</div>
-                </div>
-            </div>
-            ${botCells ? `<div class="mc-bots">${botCells}</div>` : ''}
-        </div>`;
+            <div class="mh-card-result">${actualScore}</div>
+        </div>
+        <div class="mh-card-tips">${tipsHtml}</div>`;
 
     return card;
-}
-
-function buildBotCells(match, ptsBadge) {
-    const bots      = match.prediction?.bots ?? {};
-    const botPoints = match.post_match_result?.bot_points ?? {};
-    if (!ACTIVE_BOTS.some(b => bots[b]?.tip)) return '';
-
-    return ACTIVE_BOTS.map(b => {
-        const tip = bots[b]?.tip;
-        if (!tip) return '';
-        const pts   = botPoints[b] ?? null;
-        const color = BOT_COLORS[b] || 'var(--text-3)';
-        return `<div class="bot-tip-cell">
-            <span style="color:${color};font-weight:700;white-space:nowrap;font-size:var(--type-2xs);">${BOT_EMOJI[b]} ${BOT_LABEL[b]}</span>
-            <span style="font-size:var(--type-xs);font-weight:800;color:var(--text-1);">${tip}</span>
-            ${ptsBadge(pts)}
-        </div>`;
-    }).join('');
 }
 
 function myTipCellHtml(matchId, userTip, hasTip) {

@@ -7,7 +7,7 @@ import { renderMatchGrid } from './views/dashboard.js';
 import { renderValueBets } from './views/value-bets.js';
 import { renderEdgeView } from './views/edge.js';
 import { renderDetail } from './views/detail.js?v=3';
-import { loadPerformanceView, saveUserTip, editUserTip } from './views/performance.js?v=3';
+import { loadPerformanceView, saveUserTip, editUserTip } from './views/performance.js?v=4';
 import { loadTeamFormView, toggleTeamSelect } from './views/team-form.js';
 import { loadGroupsView } from './views/groups.js';
 

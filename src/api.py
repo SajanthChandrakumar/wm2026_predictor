@@ -118,7 +118,7 @@ try:
     if _hist_doc and _hist_doc.get("data"):
         _hist_path = os.path.join(_data_dir, 'elo_history.json')
         with open(_hist_path, 'w', encoding='utf-8') as _hf:
-            json.dump(_hist_doc["data"], _hf)
+            json.dump(_hist_doc["data"], _hf, indent=4)
         logger.info("Startup: restored elo_history.json from MongoDB")
     _proc_doc = cache_collection.find_one({"_id": "processed_match_ids"})
     if _proc_doc and _proc_doc.get("ids") is not None:
@@ -269,6 +269,27 @@ def _fetch_or_cache_totals(event_id: str, raw_match: dict, fetch_if_missing: boo
     merged["bookmakers"] = list(existing.values())
     return merged
 
+def _sync_archive_tips(matches: list, archive: dict) -> list:
+    """Keep archived algo tips in sync with the current dashboard calculation
+    so Dashboard and Performance always show the same tip."""
+    changed = {}
+    for m in matches:
+        mid = m.get("id")
+        tip = m.get("top_tip")
+        if not mid or not tip or tip == "N/A":
+            continue
+        entry = archive.get(mid)
+        if not entry or not entry.get("prediction"):
+            continue
+        if entry["prediction"].get("top_tip") != tip:
+            entry["prediction"]["top_tip"] = tip
+            entry["prediction"]["max_xp"] = m.get("max_xp", 0)
+            changed[mid] = entry
+    for mid, entry in changed.items():
+        _upsert_archive_entry(mid, entry)
+    return matches
+
+
 def _enrich_edge(matches: list) -> list:
     """
     Berechnet die Edge (Elo vs Markt im Sieg/Niederlage-Pool) aus den bereits
@@ -344,7 +365,7 @@ def get_matches(force: bool = False):
                 if data is not None:
                     ttl = _dynamic_ttl(data)
                     if time.time() - timestamp < ttl:
-                        return _enrich_edge(data)
+                        return _sync_archive_tips(_enrich_edge(data), archive)
         except Exception:
             pass
 
@@ -357,7 +378,7 @@ def get_matches(force: bool = False):
             cached = cache_collection.find_one({"_id": "matches_cache"})
             if cached and cached.get("data"):
                 print(f"Odds API unavailable, serving stale cache: {e}")
-                return _enrich_edge(cached["data"])
+                return _sync_archive_tips(_enrich_edge(cached["data"]), archive)
         except Exception:
             pass
         raise HTTPException(status_code=503, detail=f"Odds API unavailable: {e}")
@@ -515,7 +536,8 @@ def get_matches(force: bool = False):
                         "away_team": r["away_team"],
                         "home_disp": r["home_disp"],
                         "away_disp": r["away_disp"],
-                        "is_ko_phase": False
+                        "is_ko_phase": False,
+                        "commence_time": r.get("raw_match", {}).get("commence_time"),
                     },
                     "pre_match_snapshot": {
                         "timestamp_recorded": datetime.now(timezone.utc).isoformat(),
@@ -567,7 +589,7 @@ def get_matches(force: bool = False):
         arc = archive.get(r["id"], {})
         r["bots"] = arc.get("prediction", {}).get("bots", {})
 
-    return results
+    return _sync_archive_tips(results, archive)
 
 @app.post("/api/predict")
 @limiter.limit("20/minute")
@@ -953,7 +975,7 @@ def perform_elo_sync() -> dict:
             completed_matches = scores_cache.get("data", [])
             print("Elo sync: using cached scores (< 30 min old)")
         else:
-            completed_matches = odds_engine.get_completed_scores(days_from=3)
+            completed_matches = odds_engine.get_completed_scores(days_from=30)
             try:
                 cache_collection.update_one(
                     {"_id": "scores_cache"},
@@ -1038,7 +1060,8 @@ def perform_elo_sync() -> dict:
                             "away_team": away_team,
                             "home_disp": DISPLAY_MAPPING.get(home_team, home_team),
                             "away_disp": DISPLAY_MAPPING.get(away_team, away_team),
-                            "is_ko_phase": False
+                            "is_ko_phase": False,
+                            "commence_time": match.get("commence_time"),
                         },
                         "pre_match_snapshot": None,
                         "prediction": {"top_tip": None, "max_xp": None},
@@ -1053,35 +1076,56 @@ def perform_elo_sync() -> dict:
                     retro += 1
                     continue
 
-                if archive[match_id]["post_match_result"]["status"] != "pending":
-                    continue
-
                 algo_tip  = archive[match_id]["prediction"].get("top_tip")
                 user_tip  = archive[match_id]["prediction"].get("user_tip")
                 is_ko     = archive[match_id]["metadata"]["is_ko_phase"]
                 active_tip = user_tip if user_tip else algo_tip
-                archive[match_id]["post_match_result"]["status"]        = "completed"
-                archive[match_id]["post_match_result"]["actual_score"]  = actual_score_str
-                archive[match_id]["post_match_result"]["points_earned"] = (
-                    MathEngine.calculate_actual_points(active_tip, actual_score_str, is_ko)
-                    if active_tip else None
-                )
-                archive[match_id]["post_match_result"]["algo_points"] = (
-                    MathEngine.calculate_actual_points(algo_tip, actual_score_str, is_ko)
-                    if algo_tip else None
-                )
-                bots = archive[match_id]["prediction"].get("bots", {})
-                if bots:
-                    archive[match_id]["post_match_result"]["bot_points"] = {
-                        bot: MathEngine.calculate_actual_points(info["tip"], actual_score_str, is_ko)
-                        for bot, info in bots.items() if info.get("tip")
-                    }
-                changed_entries[match_id] = archive[match_id]
-                graded += 1
+
+                old_score = archive[match_id]["post_match_result"].get("actual_score")
+                score_changed = old_score != actual_score_str
+
+                if archive[match_id]["post_match_result"]["status"] == "pending" or score_changed:
+                    archive[match_id]["post_match_result"]["status"]        = "completed"
+                    archive[match_id]["post_match_result"]["actual_score"]  = actual_score_str
+                    archive[match_id]["post_match_result"]["points_earned"] = (
+                        MathEngine.calculate_actual_points(active_tip, actual_score_str, is_ko)
+                        if active_tip else None
+                    )
+                    archive[match_id]["post_match_result"]["algo_points"] = (
+                        MathEngine.calculate_actual_points(algo_tip, actual_score_str, is_ko)
+                        if algo_tip else None
+                    )
+                    bots = archive[match_id]["prediction"].get("bots", {})
+                    if bots:
+                        archive[match_id]["post_match_result"]["bot_points"] = {
+                            bot: MathEngine.calculate_actual_points(info["tip"], actual_score_str, is_ko)
+                            for bot, info in bots.items() if info.get("tip")
+                        }
+                    changed_entries[match_id] = archive[match_id]
+                    graded += 1
+                    updates += 1  # Count score recalculations as updates
+
+            # Backfill commence_time for archive entries that are missing it.
+            # The matches cache has the correct kickoff times from the API.
+            ct_map = {m.get('id'): m.get('commence_time') for m in completed_matches}
+            try:
+                mc = cache_collection.find_one({"_id": "matches_cache"})
+                if mc and mc.get("data"):
+                    for mm in mc["data"]:
+                        mid = mm.get("id") or mm.get("raw_match", {}).get("id")
+                        ct = mm.get("commence_time") or mm.get("raw_match", {}).get("commence_time")
+                        if mid and ct:
+                            ct_map.setdefault(mid, ct)
+            except Exception:
+                pass
+
+            for mid, entry in archive.items():
+                if not entry.get("metadata", {}).get("commence_time") and ct_map.get(mid):
+                    entry["metadata"]["commence_time"] = ct_map[mid]
+                    changed_entries[mid] = entry
 
             # Reconstruction: Algo-Tipps für completed Einträge ohne pre_match_snapshot
             # aus der Elo-only-Pipeline ableiten (z. B. Matches vor App-Start).
-            ct_map = {m.get('id'): m.get('commence_time') for m in completed_matches}
             reconstructed = 0
             for mid, entry in archive.items():
                 if entry.get('post_match_result', {}).get('status') != 'completed':
@@ -1172,6 +1216,37 @@ def perform_elo_sync() -> dict:
     except Exception as e:
         print(f"Elo sync failed: {str(e)}")
         raise e
+
+@app.get("/api/recalculate_points")
+def recalculate_all_points():
+    """Recalculate algo_points and bot_points for ALL completed matches in the archive."""
+    archive = _load_archive_from_db()
+    updated = 0
+    for match_id, entry in archive.items():
+        if entry.get("post_match_result", {}).get("status") == "completed":
+            actual_score = entry.get("post_match_result", {}).get("actual_score")
+            algo_tip = entry.get("prediction", {}).get("top_tip")
+            is_ko = entry.get("metadata", {}).get("is_ko_phase", False)
+
+            if actual_score and algo_tip:
+                old_algo_pts = entry.get("post_match_result", {}).get("algo_points")
+                new_algo_pts = MathEngine.calculate_actual_points(algo_tip, actual_score, is_ko)
+
+                if old_algo_pts != new_algo_pts:
+                    entry["post_match_result"]["algo_points"] = new_algo_pts
+                    updated += 1
+
+                    # Also recalculate bot points
+                    bots = entry.get("prediction", {}).get("bots", {})
+                    if bots:
+                        entry["post_match_result"]["bot_points"] = {
+                            bot: MathEngine.calculate_actual_points(info["tip"], actual_score, is_ko)
+                            for bot, info in bots.items() if info.get("tip")
+                        }
+
+                    _upsert_archive_entry(match_id, entry)
+
+    return {"status": "success", "recalculated": updated}
 
 @app.get("/api/sync_elo")
 @limiter.limit("5/hour")
