@@ -892,7 +892,7 @@ def get_elo_ratings():
 
 def perform_elo_sync() -> dict:
     print("Elo sync triggered...")
-    odds_engine = OddsApiEngine()
+    odds_engine = global_odds_engine
     processed_json_path = os.path.join(_data_dir, 'processed_matches.json')
 
     # Fetch and cache group standings (if available)
