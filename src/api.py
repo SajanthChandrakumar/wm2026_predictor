@@ -97,18 +97,41 @@ DISPLAY_MAPPING = {
 }
 
 # ── Engine init ──────────────────────────────────────────────
-elo_csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_ratings.csv')
+_data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
+os.makedirs(_data_dir, exist_ok=True)
+elo_csv_path = os.path.join(_data_dir, 'elo_ratings.csv')
 if not os.path.exists(elo_csv_path):
-    os.makedirs(os.path.dirname(elo_csv_path), exist_ok=True)
     pd.DataFrame({
         "team_code": ["GER", "ARG", "FRA"],
         "team_name": ["Deutschland", "Argentinien", "Frankreich"],
         "elo_rating": [1980, 2140, 2090]
     }).to_csv(elo_csv_path, index=False)
 
+# Restore persisted Elo state from MongoDB on startup (survives Render restarts).
+# On first deploy the files come from git; subsequent restarts reload from Mongo.
+try:
+    _elo_doc = cache_collection.find_one({"_id": "elo_ratings"})
+    if _elo_doc and _elo_doc.get("rows"):
+        pd.DataFrame(_elo_doc["rows"]).to_csv(elo_csv_path, index=False)
+        logger.info("Startup: restored elo_ratings.csv from MongoDB")
+    _hist_doc = cache_collection.find_one({"_id": "elo_history"})
+    if _hist_doc and _hist_doc.get("data"):
+        _hist_path = os.path.join(_data_dir, 'elo_history.json')
+        with open(_hist_path, 'w', encoding='utf-8') as _hf:
+            json.dump(_hist_doc["data"], _hf)
+        logger.info("Startup: restored elo_history.json from MongoDB")
+    _proc_doc = cache_collection.find_one({"_id": "processed_match_ids"})
+    if _proc_doc and _proc_doc.get("ids") is not None:
+        _proc_path = os.path.join(_data_dir, 'processed_matches.json')
+        with open(_proc_path, 'w', encoding='utf-8') as _pf:
+            json.dump(_proc_doc["ids"], _pf)
+        logger.info(f"Startup: restored {len(_proc_doc['ids'])} processed match IDs from MongoDB")
+except Exception as _e:
+    logger.warning(f"Startup: MongoDB restore skipped — {_e}")
+
 math_engine = MathEngine(elo_csv_path, TEAM_MAPPING)
 global_odds_engine = OddsApiEngine()
-scores_cache_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'scores_cache.json')
+scores_cache_path = os.path.join(_data_dir, 'scores_cache.json')
 
 TOTALS_CACHE_TTL = 3600   # 1h per match
 SCORES_CACHE_TTL = 1800   # 30 min — avoids burning quota on repeated manual syncs
@@ -831,13 +854,20 @@ def get_learning_bots():
 
 @app.get("/api/elo_history")
 def get_elo_history():
-    history_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_history.json')
+    # MongoDB first (survives Render restarts); fall back to local file in dev.
+    try:
+        doc = cache_collection.find_one({"_id": "elo_history"})
+        if doc and doc.get("data"):
+            return doc["data"]
+    except Exception:
+        pass
+    history_path = os.path.join(_data_dir, 'elo_history.json')
     if os.path.exists(history_path):
         try:
             with open(history_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except json.JSONDecodeError:
-            return {}
+            pass
     return {}
 
 @app.get("/api/elo_ratings")
@@ -863,7 +893,7 @@ def get_elo_ratings():
 def perform_elo_sync() -> dict:
     print("Elo sync triggered...")
     odds_engine = OddsApiEngine()
-    processed_json_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'processed_matches.json')
+    processed_json_path = os.path.join(_data_dir, 'processed_matches.json')
 
     # Fetch and cache group standings (if available)
     if hasattr(odds_engine, "get_standings"):
@@ -904,14 +934,20 @@ def perform_elo_sync() -> dict:
             print(f"Standings fetch failed: {e}")
 
     try:
-        # Scores cache: avoid burning quota when sync is triggered multiple times within 30 min
+        # Scores cache: avoid burning quota when sync is triggered multiple times within 30 min.
+        # Read from MongoDB first (survives restarts), fall back to local file.
         scores_cache = {}
-        if os.path.exists(scores_cache_path):
-            try:
-                with open(scores_cache_path, 'r', encoding='utf-8') as f:
-                    scores_cache = json.load(f)
-            except Exception:
-                pass
+        try:
+            _sc_doc = cache_collection.find_one({"_id": "scores_cache"})
+            if _sc_doc:
+                scores_cache = {"timestamp": _sc_doc.get("timestamp", 0), "data": _sc_doc.get("data", [])}
+        except Exception:
+            if os.path.exists(scores_cache_path):
+                try:
+                    with open(scores_cache_path, 'r', encoding='utf-8') as f:
+                        scores_cache = json.load(f)
+                except Exception:
+                    pass
 
         if time.time() - scores_cache.get("timestamp", 0) < SCORES_CACHE_TTL:
             completed_matches = scores_cache.get("data", [])
@@ -919,9 +955,11 @@ def perform_elo_sync() -> dict:
         else:
             completed_matches = odds_engine.get_completed_scores(days_from=3)
             try:
-                os.makedirs(os.path.dirname(scores_cache_path), exist_ok=True)
-                with open(scores_cache_path, 'w', encoding='utf-8') as f:
-                    json.dump({"timestamp": time.time(), "data": completed_matches}, f, indent=4)
+                cache_collection.update_one(
+                    {"_id": "scores_cache"},
+                    {"$set": {"timestamp": time.time(), "data": completed_matches}},
+                    upsert=True,
+                )
             except Exception as e:
                 print(f"Scores cache write failed: {e}")
 
@@ -932,6 +970,37 @@ def perform_elo_sync() -> dict:
         if updates > 0:
             math_engine.elo_df.to_csv(math_engine.elo_csv_path, index=False)
             print(f"Elo sync completed: {updates} updates.")
+
+            # Persist all three Elo data files to MongoDB so they survive Render restarts.
+            try:
+                # 1. Elo ratings (current state of the DataFrame)
+                cache_collection.update_one(
+                    {"_id": "elo_ratings"},
+                    {"$set": {"rows": math_engine.elo_df.to_dict("records")}},
+                    upsert=True,
+                )
+                # 2. Processed match IDs (idempotency guard)
+                if os.path.exists(processed_json_path):
+                    with open(processed_json_path, 'r', encoding='utf-8') as pf:
+                        processed_ids = json.load(pf)
+                    cache_collection.update_one(
+                        {"_id": "processed_match_ids"},
+                        {"$set": {"ids": processed_ids}},
+                        upsert=True,
+                    )
+                # 3. Elo history (Team Form chart + historical Elo lookups)
+                history_path = os.path.join(_data_dir, 'elo_history.json')
+                if os.path.exists(history_path):
+                    with open(history_path, 'r', encoding='utf-8') as hf:
+                        history_data = json.load(hf)
+                    cache_collection.update_one(
+                        {"_id": "elo_history"},
+                        {"$set": {"data": history_data}},
+                        upsert=True,
+                    )
+                print("Elo state persisted to MongoDB (ratings, history, processed IDs)")
+            except Exception as persist_err:
+                print(f"Warning: MongoDB persist failed (local files still updated): {persist_err}")
 
         # Post-match grading: score archived predictions against actual results
         # Also create retroactive entries for completed matches played before the app started
