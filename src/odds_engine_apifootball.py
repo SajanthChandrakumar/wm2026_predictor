@@ -35,6 +35,8 @@ class OddsApiEngine:
                 "Get one at https://dashboard.api-football.com/profile?access"
             )
         self._headers = {"x-apisports-key": self.api_key}
+        self._h2h_mem_cache = {}
+        self._lineup_mem_cache = {}
 
     def _request(self, path: str, params: dict | None = None) -> dict:
         response = requests.get(f"{self.BASE_URL}{path}", headers=self._headers, params=params or {}, timeout=10)
@@ -101,9 +103,13 @@ class OddsApiEngine:
         except Exception:
             cache = {}
             
+        if str(fixture_id) in self._lineup_mem_cache:
+            return self._lineup_mem_cache[str(fixture_id)]
+
         if str(fixture_id) in cache:
+            self._lineup_mem_cache[str(fixture_id)] = cache[str(fixture_id)]
             return cache[str(fixture_id)]
-            
+
         # Check if within 60 mins of kickoff
         try:
             kickoff = datetime.strptime(commence_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
@@ -154,15 +160,19 @@ class OddsApiEngine:
         """
         if not team1_id or not team2_id:
             return {}
+        key = f"{min(team1_id, team2_id)}-{max(team1_id, team2_id)}"
+        if key in self._h2h_mem_cache:
+            return self._h2h_mem_cache[key]
+
         cache_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'h2h_cache.json')
         try:
             with open(cache_path, 'r', encoding='utf-8') as f:
                 cache = json.load(f)
         except Exception:
             cache = {}
-            
-        key = f"{min(team1_id, team2_id)}-{max(team1_id, team2_id)}"
+
         if key in cache:
+            self._h2h_mem_cache[key] = cache[key]
             return cache[key]
             
         resp = self._request("/fixtures/headtohead", {"h2h": key})
@@ -189,9 +199,10 @@ class OddsApiEngine:
                 
         res = {str(team1_id): w1, str(team2_id): w2, "draws": d}
         cache[key] = res
+        self._h2h_mem_cache[key] = res
         with open(cache_path, 'w', encoding='utf-8') as f:
             json.dump(cache, f, indent=4)
-            
+
         return res
 
     def get_event_odds(self, event_id: str, market: str = "totals") -> dict:
@@ -259,6 +270,7 @@ class OddsApiEngine:
                 "home_team": home,
                 "away_team": away,
                 "commence_time": fixture.get("date", ""),
+                "round": (m.get("league") or {}).get("round", ""),
                 "scores": (
                     [
                         {"name": home, "score": str(goals.get("home"))},
@@ -330,4 +342,5 @@ class OddsApiEngine:
             "home_team": home,
             "away_team": away,
             "bookmakers": legacy_bookies,
+            "round": (fixture.get("league") or {}).get("round", ""),
         }

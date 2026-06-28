@@ -69,9 +69,10 @@ export function buildFixtureRow(match, showXp = false) {
 
     const homeFire = match.home_form?.on_fire ? '<span class="fire-badge" title="In top form"></span>' : '';
     const awayFire = match.away_form?.on_fire ? '<span class="fire-badge" title="In top form"></span>' : '';
+    const koBadge = match.is_ko_phase ? '<span class="ko-badge">KO</span>' : '';
 
     row.innerHTML = `
-        <div class="fixture-time${isPast ? ' past' : ''}">${timeStr}</div>
+        <div class="fixture-time${isPast ? ' past' : ''}">${timeStr}${koBadge}</div>
         <div class="fixture-body">
             <div class="fixture-teams">
                 <span class="fixture-home">${match.home_disp}${homeFire}</span>

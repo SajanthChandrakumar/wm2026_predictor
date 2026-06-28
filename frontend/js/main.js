@@ -156,6 +156,9 @@ async function syncElo() {
 function openMatch(id) {
     state.selectedMatchId = id;
     const match = state.currentMatches.find(m => m.id === id);
+    if (match) {
+        document.getElementById('ko-toggle').checked = !!match.is_ko_phase;
+    }
     updatePrediction();
 }
 

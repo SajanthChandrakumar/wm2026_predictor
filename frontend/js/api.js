@@ -28,7 +28,7 @@ export const api = {
     learningBots: ()       => getJson('/api/learning_bots'),
 
     predict:      (payload)             => postJson('/api/predict', payload),
-    syncElo:      ()                    => getJson('/api/sync_elo'),
+    syncElo:      ()                    => getJson('/api/sync_elo?force=true'),
     saveUserTip:  (match_id, user_tip)  => postJson('/api/archive/user_tip', { match_id, user_tip }),
 
     customBot:        ()        => getJson('/api/custom_bot'),

@@ -1018,6 +1018,13 @@ input:checked + .toggle-track::after { background: var(--bg); transform: transla
   cursor: help;
 }
 
+.ko-badge {
+  display: inline-block; font-size: 9px; font-weight: 700;
+  background: var(--accent); color: #000; padding: 1px 5px;
+  border-radius: 3px; margin-left: 6px; vertical-align: middle;
+  letter-spacing: 0.5px;
+}
+
 .lineup-alert {
   width: 100%;
   background: var(--red-dim);

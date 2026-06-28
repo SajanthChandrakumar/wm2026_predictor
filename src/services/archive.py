@@ -1,11 +1,11 @@
 import logging
-from pymongo.collection import Collection
 
 logger = logging.getLogger(__name__)
 
+_LEARNING_BOTS_CODE_VERSION = 2
 
-def load_archive_from_db(archive_collection: Collection) -> dict:
-    """Load the full prediction archive from MongoDB as a {match_id: entry} dict."""
+
+def load_archive_from_db(archive_collection) -> dict:
     result = {}
     try:
         for doc in archive_collection.find():
@@ -16,10 +16,17 @@ def load_archive_from_db(archive_collection: Collection) -> dict:
     return result
 
 
-def upsert_archive_entry(archive_collection: Collection, match_id: str, entry: dict) -> None:
-    """Upsert a single archive entry into MongoDB."""
+def upsert_archive_entry(archive_collection, match_id: str, entry: dict) -> None:
     archive_collection.replace_one(
         {"_id": match_id},
         {"_id": match_id, **entry},
         upsert=True
     )
+
+
+def archive_signature(archive: dict) -> str:
+    completed_ids = sorted(
+        mid for mid, m in archive.items()
+        if (m.get("post_match_result") or {}).get("status") == "completed"
+    )
+    return f"v{_LEARNING_BOTS_CODE_VERSION}:{len(completed_ids)}:{hash(tuple(completed_ids))}"
