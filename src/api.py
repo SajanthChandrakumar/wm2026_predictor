@@ -361,6 +361,8 @@ def sync_elo(request: Request, force: bool = False):
         logger.error(f"Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An error occurred processing your request")
 
-frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend'))
+# v2 (React/Vite build) is the live frontend; legacy frontend/ stays in the
+# repo as fallback — flip the path back to '..', 'frontend' to roll back.
+frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend-v2', 'dist'))
 os.makedirs(frontend_dir, exist_ok=True)
 app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")

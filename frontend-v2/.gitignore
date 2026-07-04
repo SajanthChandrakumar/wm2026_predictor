@@ -8,7 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# dist is committed on purpose: Render runs a Python-only service and
+# serves the pre-built bundle — no Node build step in the deploy.
 dist-ssr
 *.local
 
