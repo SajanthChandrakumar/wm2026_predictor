@@ -147,3 +147,19 @@ export interface SyncResult {
   updates?: number
   message?: string
 }
+
+export interface KnockoutTeamResult {
+  team: string
+  elo: number
+  reached_qf: number
+  reached_sf: number
+  reached_final: number
+  champion: number
+}
+
+export interface KnockoutSimulation {
+  n_runs: number
+  bracket: { home: string; away: string }[]
+  round_labels: string[]
+  results: KnockoutTeamResult[]
+}

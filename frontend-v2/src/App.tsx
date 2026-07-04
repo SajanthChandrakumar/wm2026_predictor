@@ -9,6 +9,7 @@ import { EdgeView } from './features/edge/EdgeView'
 import { TeamFormView } from './features/team-form/TeamFormView'
 import { GroupsView } from './features/groups/GroupsView'
 import { PerformanceView } from './features/performance/PerformanceView'
+import { SimulatorView } from './features/simulator/SimulatorView'
 
 export default function App() {
   const { light, toggle } = useTheme()
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="/team-form" element={<TeamFormView />} />
             <Route path="/groups" element={<GroupsView />} />
             <Route path="/performance" element={<PerformanceView />} />
+            <Route path="/simulator" element={<SimulatorView />} />
           </Route>
         </Routes>
       </HashRouter>

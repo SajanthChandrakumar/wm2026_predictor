@@ -12,6 +12,7 @@ const NAV = [
   { to: '/team-form', icon: '∿', label: 'Team Form' },
   { to: '/groups', icon: '▤', label: 'Groups' },
   { to: '/performance', icon: '◈', label: 'Performance' },
+  { to: '/simulator', icon: '🎲', label: 'K.O. Simulator' },
 ]
 
 function QuotaMeter() {
@@ -164,8 +165,29 @@ export function Sidebar() {
         </label>
       </div>
 
-      <div className="mt-auto max-lg:mt-2">
+      <div className="mt-auto max-lg:mt-2 space-y-3">
         <SidebarButtons />
+        <a
+          href="https://github.com/SajanthChandrakumar"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex items-center justify-between gap-2 rounded-xl border border-emerald-a/25 bg-gradient-to-r from-emerald-dim/40 via-surface/40 to-surface p-2.5 text-[11px] font-medium text-fg-2 transition-all hover:border-emerald-a/50 hover:bg-emerald-dim/60 hover:text-fg hover:shadow-[0_0_16px_-4px_var(--emerald)]"
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-dim text-[10px] font-bold text-emerald-a">
+              SC
+            </span>
+            <div className="truncate">
+              <span className="block text-[9px] font-bold uppercase tracking-wider text-fg-3 group-hover:text-emerald-a/80">
+                Engineered by
+              </span>
+              <span className="truncate font-semibold text-fg">Sajanth Chandrakumar</span>
+            </div>
+          </div>
+          <span className="text-fg-3 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-a">
+            ↗
+          </span>
+        </a>
       </div>
     </aside>
   )

@@ -1,6 +1,6 @@
 import type {
   Archive, BotSimulation, CustomBot, CustomBotParams, EloHistory,
-  EloRatings, LearningBot, Match, Prediction, Quota, RawMatch, SyncResult,
+  EloRatings, KnockoutSimulation, LearningBot, Match, Prediction, Quota, RawMatch, SyncResult,
 } from './types'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -44,4 +44,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ params }),
     }),
+  simulateKnockout: (runs = 20_000) =>
+    request<KnockoutSimulation>(`/simulate_knockout?runs=${runs}`),
 }

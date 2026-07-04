@@ -39,6 +39,9 @@ export const useEloRatings = () =>
 export const useLearningBots = () =>
   useQuery({ queryKey: ['learningBots'], queryFn: api.learningBots, staleTime: 300_000, retry: false })
 
+export const useKnockoutSimulation = () =>
+  useQuery({ queryKey: ['knockoutSim'], queryFn: () => api.simulateKnockout(), staleTime: 300_000 })
+
 export const useCustomBot = () =>
   useQuery({ queryKey: ['customBot'], queryFn: api.customBot, staleTime: 300_000, retry: false })
 

@@ -34,6 +34,7 @@ from src.services.elo_sync import perform_elo_sync
 from src.routes.matches import init_router as matches_router
 from src.routes.predict import init_router as predict_router
 from src.routes.custom_bot import init_router as custom_bot_router
+from src.routes.simulate import init_router as simulate_router
 
 app = FastAPI(title="WM 2026 Predictor API")
 
@@ -124,6 +125,7 @@ scores_cache_path = os.path.join(_data_dir, 'scores_cache.json')
 app.include_router(matches_router(math_engine, global_odds_engine, cache_collection, archive_collection))
 app.include_router(predict_router(math_engine, global_odds_engine, cache_collection, limiter))
 app.include_router(custom_bot_router(math_engine, archive_collection, custom_bot_collection, limiter))
+app.include_router(simulate_router(math_engine, cache_collection))
 
 # ── Small endpoints (not worth extracting) ───────────────────
 
