@@ -20,7 +20,8 @@ DISPLAY_MAPPING = {
 TOTALS_CACHE_TTL = 3600   # 1h per match
 SCORES_CACHE_TTL = 1800   # 30 min — avoids burning quota on repeated manual syncs
 
-_KO_ROUND_KEYWORDS = {"round of 16", "quarter", "semi", "final", "3rd place"}
+# "round of" catches both the WC2026 Round of 32 and the Round of 16.
+_KO_ROUND_KEYWORDS = {"round of", "quarter", "semi", "final", "3rd place"}
 
 
 def _is_ko_round(round_str: str) -> bool:

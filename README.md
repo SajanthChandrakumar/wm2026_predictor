@@ -46,7 +46,8 @@ By using this software you agree that the author cannot be held liable for any l
 | Component | Detail |
 |---|---|
 | **Prediction model** | Dixon-Coles bivariate Poisson (ρ = −0.15); SciPy L-BFGS-B reverse-engineer solver for xG |
-| **Odds ingestion** | The Odds API — consensus **median** across all bookmakers (H2H + O/U 2.5); proportional margin removal |
+| **Fixtures & results** | ESPN public scoreboard — full played + upcoming fixture list, live scores, KO-round detection, group standings (no auth, no quota) |
+| **Odds ingestion** | The Odds API — consensus **median** across all bookmakers (H2H + O/U 2.5) for upcoming games; ESPN/DraftKings odds as fallback; proportional margin removal |
 | **Elo system** | Dynamic ratings for all 32 qualified nations; K = 60; margin-of-victory multiplier; +80 host bonus (USA/CAN/MEX) on post-match updates only |
 | **Probability blend** | 70 % bookmaker odds / 30 % Elo, restricted to the win/loss pool — draw probability held fixed to prevent deflation |
 | **K.O. phase** | Extra-time xG inflation weighted by P(draw after 90 min) — conditional, not a flat 1.33× multiplier |
@@ -129,7 +130,7 @@ The **bot scoreboard** ranks all agents by total points, average per match, and 
 | `POST` | `/api/archive/user_tip` | Save or update a user tip; recalculates points if result is already known |
 | `GET` | `/api/elo_history` | Per-team Elo snapshots across the tournament (powers Team Form chart) |
 | `POST` | `/api/sync_elo` | Trigger an immediate Elo sync from completed match scores; warms all downstream caches |
-| `GET` | `/api/quota` | Remaining requests for The Odds API and API-Football |
+| `GET` | `/api/quota` | Remaining requests for The Odds API (ESPN is unmetered) |
 | `GET` | `/api/standings` | Group standings for all 12 WC 2026 groups; 1 h MongoDB cache |
 | `GET` | `/api/learning_bots` | Current state of all three learning bots; signature-keyed cache (recomputes on new results) |
 
@@ -143,7 +144,7 @@ The **bot scoreboard** ranks all agents by total points, average per match, and 
 | Math | NumPy, SciPy (`optimize.minimize`, L-BFGS-B), Pandas |
 | Frontend | Vanilla ES modules — zero framework, zero build step |
 | Charts | Chart.js (Elo trajectory, cumulative bot race) |
-| Data | The Odds API (live odds + match scores), API-Football (supplementary scores), MongoDB Atlas (archive, cache, bot states) |
+| Data | ESPN public API (fixtures, scores, standings, KO rounds), The Odds API (multi-bookmaker odds for upcoming games), MongoDB Atlas (archive, cache, bot states) |
 | Design | Editorial-Minimal: Inter typography, flat surfaces, emerald accent (`#34d399`), CSS custom properties, fully responsive |
 
 ---
@@ -189,11 +190,21 @@ Open **http://127.0.0.1:8000** in your browser.
 ```
 wm2026_predictor/
 ├── src/
-│   ├── api.py                       # FastAPI app, all endpoints, orchestration, cache warm-up
+│   ├── api.py                       # FastAPI app: init, middleware, router wiring, small endpoints
+│   ├── constants.py                 # Team-name maps, TTLs, KO-round detection
 │   ├── math_engine.py               # Elo, xG solver, Dixon-Coles, xP, pool optimiser, bot tips
 │   ├── learning_bots.py             # Optimizer / Momentum / Mitläufer — grid-search + follow-the-leader
-│   ├── odds_engine_apifootball.py   # API-Football client; standings + supplementary scores
-│   └── odds_engine.py               # The Odds API client; quota tracking
+│   ├── odds_engine.py               # The Odds API client; quota tracking
+│   ├── odds_engine_apifootball.py   # Legacy API-Football client (unused; kept as fallback)
+│   ├── routes/
+│   │   ├── matches.py               # GET /matches — ESPN fixtures × Odds API hybrid, edge enrichment
+│   │   ├── predict.py               # POST /predict — full single-match prediction
+│   │   └── custom_bot.py            # Build-a-Bot save / simulate endpoints
+│   └── services/
+│       ├── espn_data.py             # ESPN fixtures, scores, standings (public, no quota)
+│       ├── odds_helpers.py          # extract_odds (median), dynamic TTL, totals cache
+│       ├── archive.py               # Load/upsert archive, ID-index resolution, signature
+│       └── elo_sync.py              # perform_elo_sync — grading, backfills, cache warm-up
 ├── frontend/
 │   ├── index.html                   # SPA shell (6 views + detail pane)
 │   ├── style.css                    # Design system: Editorial-Minimal, CSS custom properties

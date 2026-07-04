@@ -8,6 +8,8 @@ from src.constants import _is_ko_round
 
 class TestIsKoRound:
     @pytest.mark.parametrize("round_str", [
+        "Round of 32",
+        "round of 32",
         "Round of 16",
         "Quarter-finals",
         "Semi-finals",

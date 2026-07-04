@@ -1,10 +1,16 @@
 // Pure helpers — no DOM, no state.
 
-// Format implied probabilities (rounded percent).
-export const pct = p => (p * 100).toFixed(0) + '%';
+// Format implied probabilities (rounded percent). Non-finite / zero → dash,
+// so placeholder KO fixtures (teams TBD, no odds) don't render "NaN%".
+export const pct = p => (Number.isFinite(p) && p > 0) ? (p * 100).toFixed(0) + '%' : '–';
 
 // Remove the bookmaker margin from h2h decimal odds → true probabilities.
+// Returns zeros when odds are missing (e.g. undecided bracket slots) so the
+// probability bars collapse to empty instead of producing NaN widths.
 export function computeImpliedProbs(odds) {
+    if (!odds || !odds.home || !odds.draw || !odds.away) {
+        return { home: 0, draw: 0, away: 0 };
+    }
     const rh = 1 / odds.home, rd = 1 / odds.draw, ra = 1 / odds.away;
     const t = rh + rd + ra;
     return { home: rh / t, draw: rd / t, away: ra / t };

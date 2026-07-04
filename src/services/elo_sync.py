@@ -4,92 +4,51 @@ import time
 import logging
 
 from src.constants import DISPLAY_MAPPING, SCORES_CACHE_TTL, _is_ko_round
-from src.services.archive import load_archive_from_db, upsert_archive_entry, archive_signature
-from src.services.espn_scores import get_completed_scores as espn_completed_scores
+from src.services.archive import (
+    load_archive_from_db, upsert_archive_entry, archive_signature,
+    build_archive_id_index, resolve_archive_id,
+)
+from src.services import espn_data
+
+logger = logging.getLogger(__name__)
 
 
-def _remap_to_archive_ids(scores: list, archive_collection) -> list:
+def _remap_to_archive_ids(scores: list, archive: dict) -> list:
     """
     ESPN's fixture IDs don't match the IDs the odds engine used when entries
-    were first written to the archive. To keep `processed_matches.json`
-    idempotent (and let the grading loop find the right `pending` entry),
-    swap each ESPN match's `id` for the existing archive ID found by
-    (home_team, away_team) when one exists. Matches with no archive entry
-    keep the ESPN id and flow through the retro-entry branch as before.
+    were first written to the archive. Swap each ESPN match's `id` for the
+    existing archive ID (resolved by home/away/date) so grading finds the
+    right `pending` entry and `processed_matches.json` stays idempotent.
+    Matches with no archive entry keep the ESPN id (retro-entry branch).
     """
-    # Two-level lookup: prefer (h, a, YYYY-MM-DD) so a stale WC2022 entry can't
-    # absorb a WC2026 result. Fall back to (h, a) for legacy entries that were
-    # written without a commence_time (older odds-engine pipeline).
-    lookup_dated = {}
-    lookup_undated = {}
-    for doc in archive_collection.find({}, {"metadata.home_team": 1, "metadata.away_team": 1, "metadata.commence_time": 1}):
-        meta = doc.get("metadata") or {}
-        h, a, ct = meta.get("home_team"), meta.get("away_team"), meta.get("commence_time") or ""
-        if not (h and a):
-            continue
-        if ct[:10]:
-            lookup_dated[(h, a, ct[:10])] = doc["_id"]
-        else:
-            lookup_undated.setdefault((h, a), doc["_id"])
-
+    index = build_archive_id_index(archive)
     for s in scores:
-        h, a = s.get("home_team"), s.get("away_team")
-        ct = (s.get("commence_time") or "")[:10]
-        archived_id = lookup_dated.get((h, a, ct)) or lookup_undated.get((h, a))
+        archived_id = resolve_archive_id(index, s.get("home_team"), s.get("away_team"), s.get("commence_time"))
         if archived_id:
             s["id"] = archived_id
     return scores
-
-logger = logging.getLogger(__name__)
 
 
 def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collection, data_dir, scores_cache_path, MathEngine, compute_learning_bots, force: bool = False) -> dict:
     print("Elo sync triggered...")
     processed_json_path = os.path.join(data_dir, 'processed_matches.json')
 
-    # Fetch and cache group standings (if available) — reuse if < 30 min old
-    if hasattr(odds_engine, "get_standings"):
-        try:
-            _st_doc = cache_collection.find_one({"_id": "standings_cache"})
-            if not force and _st_doc and time.time() - _st_doc.get("timestamp", 0) < SCORES_CACHE_TTL:
-                print(f"Standings: using cache (< 30 min old)")
-                raw = None
-            else:
-                raw = odds_engine.get_standings()
-            if raw is not None:
-                groups = []
-                for entry in raw:
-                    league = entry.get("league", {})
-                    for standings_group in league.get("standings", []):
-                        rows = []
-                        group_name = None
-                        for row in standings_group:
-                            if not group_name:
-                                group_name = row.get("group", "")
-                            team = row.get("team", {})
-                            all_stats = row.get("all", {})
-                            rows.append({
-                                "pos": row.get("rank", 0),
-                                "team": team.get("name", ""),
-                                "logo": team.get("logo", ""),
-                                "p": all_stats.get("played", 0),
-                                "w": all_stats.get("win", 0),
-                                "d": all_stats.get("draw", 0),
-                                "l": all_stats.get("lose", 0),
-                                "gf": all_stats.get("goals", {}).get("for", 0),
-                                "ga": all_stats.get("goals", {}).get("against", 0),
-                                "gd": row.get("goalsDiff", 0),
-                                "pts": row.get("points", 0),
-                            })
-                        groups.append({"name": group_name, "rows": rows})
+    # Fetch and cache group standings from ESPN — reuse if < 30 min old
+    try:
+        _st_doc = cache_collection.find_one({"_id": "standings_cache"})
+        if not force and _st_doc and time.time() - _st_doc.get("timestamp", 0) < SCORES_CACHE_TTL:
+            print("Standings: using cache (< 30 min old)")
+        else:
+            groups = espn_data.get_standings_groups()
+            if groups:
                 cache_collection.update_one(
                     {"_id": "standings_cache"},
                     {"$set": {"timestamp": time.time(), "data": groups}},
                     upsert=True,
                 )
                 print(f"Standings cached: {len(groups)} groups")
-        except Exception as e:
-            print(f"Standings fetch failed: {e}")
+    except Exception as e:
+        print(f"Standings fetch failed: {e}")
 
     try:
         scores_cache = {}
@@ -113,8 +72,8 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
                 print("Elo sync: force=true — bypassing scores cache")
             # Source: ESPN scoreboard (public, no quota). API-Football dropped
             # WC access on this tier, so its `get_completed_scores` returns 0.
-            completed_matches = espn_completed_scores(days_from=30)
-            completed_matches = _remap_to_archive_ids(completed_matches, archive_collection)
+            completed_matches = espn_data.get_completed_scores(days_from=30)
+            completed_matches = _remap_to_archive_ids(completed_matches, load_archive_from_db(archive_collection))
             print(f"Elo sync: ESPN returned {len(completed_matches)} completed fixtures")
             try:
                 cache_collection.update_one(
@@ -257,6 +216,25 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
                 if not entry.get("metadata", {}).get("commence_time") and ct_map.get(mid):
                     entry["metadata"]["commence_time"] = ct_map[mid]
                     changed_entries[mid] = entry
+
+            # Name-based commence_time backfill from the FULL ESPN scoreboard —
+            # covers pending/legacy entries whose id isn't in ct_map.
+            try:
+                from src.services.archive import _canon_team
+                name_ct = {}
+                for f in espn_data.get_scoreboard():
+                    if f.get("commence_time"):
+                        name_ct[(_canon_team(f["home_team"]), _canon_team(f["away_team"]))] = f["commence_time"]
+                for mid, entry in archive.items():
+                    meta = entry.get("metadata", {})
+                    if meta.get("commence_time"):
+                        continue
+                    ct = name_ct.get((_canon_team(meta.get("home_team", "")), _canon_team(meta.get("away_team", ""))))
+                    if ct:
+                        entry["metadata"]["commence_time"] = ct
+                        changed_entries[mid] = entry
+            except Exception as e:
+                print(f"commence_time name-backfill failed: {e}")
 
             # Backfill is_ko_phase
             round_map = {m.get("id"): m.get("round", "") for m in completed_matches if m.get("round")}

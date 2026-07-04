@@ -4,9 +4,29 @@
     {
       "name": "wm2026-api",
       "runtimeExecutable": ".venv/bin/python",
-      "runtimeArgs": ["-m", "uvicorn", "src.api:app", "--host", "0.0.0.0"],
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "src.api:app",
+        "--host",
+        "0.0.0.0"
+      ],
       "port": 8000,
       "autoPort": true
+    },
+    {
+      "name": "frontend-v2",
+      "cwd": "frontend-v2",
+      "runtimeExecutable": "/opt/homebrew/bin/npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
+      "port": 5173
     }
   ]
 }

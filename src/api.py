@@ -77,6 +77,12 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data:"
+    # Force browsers to revalidate JS/CSS/HTML every load (ETag → 304 when
+    # unchanged). Without this, unversioned ES-module sub-imports get cached
+    # indefinitely and code changes silently fail to reach the browser.
+    path = request.url.path
+    if path == "/" or path.endswith((".js", ".css", ".html")):
+        response.headers["Cache-Control"] = "no-cache"
     return response
 
 # ── Engine init ──────────────────────────────────────────────
@@ -265,6 +271,76 @@ def recalculate_all_points():
                     upsert_archive_entry(archive_collection, match_id, entry)
 
     return {"status": "success", "recalculated": updated}
+
+
+@app.get("/api/rebuild_honest_tips")
+def rebuild_honest_tips():
+    """One-off repair: recompute every completed match's algo tip from its
+    pre_match_snapshot (odds + Elo captured BEFORE kickoff) using the exact
+    dashboard pipeline. Removes any hindsight tips that leaked into the
+    archive, then regrades algo_points from the honest tip."""
+    import numpy as np
+    archive = load_archive_from_db(archive_collection)
+    rebuilt = skipped = 0
+    for match_id, entry in archive.items():
+        if entry.get("post_match_result", {}).get("status") != "completed":
+            continue
+        snap = entry.get("pre_match_snapshot") or {}
+        odds = snap.get("odds") or {}
+        elo = snap.get("elo_state") or {}
+        if not all(k in odds for k in ("home", "draw", "away")) or \
+           "home_rating" not in elo or "away_rating" not in elo:
+            skipped += 1
+            continue
+
+        try:
+            true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
+            # Same blend as the dashboard: no host bonus (odds already price it in).
+            elo_home_share = math_engine.get_elo_probability(elo["home_rating"], elo["away_rating"])
+            elo_away_share = 1.0 - elo_home_share
+            pool = true_probs["home"] + true_probs["away"]
+            prob_home = (true_probs["home"] / pool * 0.7 + elo_home_share * 0.3) * pool
+            prob_away = (true_probs["away"] / pool * 0.7 + elo_away_share * 0.3) * pool
+            prob_draw = true_probs["draw"]
+
+            if "over25" in odds and "under25" in odds:
+                raw_over, raw_under = 1.0 / odds["over25"], 1.0 / odds["under25"]
+                prob_over25 = raw_over / (raw_over + raw_under)
+            else:
+                prob_over25 = None
+
+            is_ko = entry.get("metadata", {}).get("is_ko_phase", False)
+            xg_h, xg_a = math_engine.derive_xg_from_odds(prob_home, prob_draw, prob_away, prob_over25)
+            if is_ko:
+                base = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
+                et_factor = 1 + float(np.sum(np.diag(base.values))) / 3
+                xg_h *= et_factor
+                xg_a *= et_factor
+            sm = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
+            df_xp = math_engine.calculate_expected_points(sm, is_ko_phase=is_ko)
+            if df_xp.empty:
+                skipped += 1
+                continue
+
+            tip = df_xp.iloc[0]["Tipp"]
+            entry["prediction"]["top_tip"] = tip
+            entry["prediction"]["max_xp"] = float(df_xp.iloc[0]["xP"])
+            entry["prediction"]["algo_reconstructed"] = False
+            entry["prediction"]["tip_source"] = "pre_match_snapshot"
+
+            actual = entry.get("post_match_result", {}).get("actual_score")
+            if actual:
+                entry["post_match_result"]["algo_points"] = \
+                    MathEngine.calculate_actual_points(tip, actual, is_ko)
+
+            upsert_archive_entry(archive_collection, match_id, entry)
+            rebuilt += 1
+        except Exception as e:
+            logger.warning(f"rebuild_honest_tips failed for {match_id}: {e}")
+            skipped += 1
+
+    return {"status": "success", "rebuilt": rebuilt, "skipped": skipped}
+
 
 @app.get("/api/sync_elo")
 @limiter.limit("5/hour")

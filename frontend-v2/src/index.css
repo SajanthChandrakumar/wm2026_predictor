@@ -1,0 +1,177 @@
+@import 'tailwindcss';
+
+/* ── Design tokens ─────────────────────────────────────────────── */
+:root {
+  /* Dark (default) — futuristic trading-floor look */
+  --bg: #07090f;
+  --bg-glow: radial-gradient(1200px 600px at 75% -10%, rgba(16, 185, 129, 0.07), transparent 60%),
+             radial-gradient(900px 500px at -10% 110%, rgba(59, 130, 246, 0.05), transparent 60%);
+  --surface: rgba(255, 255, 255, 0.03);
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-2: rgba(255, 255, 255, 0.14);
+  --text-1: #f2f4f8;
+  --text-2: #9aa3b2;
+  --text-3: #5c6474;
+  --emerald: #10b981;
+  --emerald-dim: rgba(16, 185, 129, 0.12);
+  --gold: #d4af37;
+  --gold-dim: rgba(212, 175, 55, 0.12);
+  --blue: #5b9bd5;
+  --purple: #9b6dd1;
+  --red: #de7a76;
+  --amber: #d9a441;
+  --heat-0: 13 18 32;
+  --heat-1: 90 55 10;
+  --heat-2: 210 148 26;
+}
+
+[data-theme='light'] {
+  --bg: #f4efe6;
+  --bg-glow: radial-gradient(1200px 600px at 75% -10%, rgba(16, 185, 129, 0.08), transparent 60%);
+  --surface: rgba(255, 255, 255, 0.65);
+  --surface-2: rgba(255, 255, 255, 0.9);
+  --border: rgba(30, 30, 30, 0.1);
+  --border-2: rgba(30, 30, 30, 0.18);
+  --text-1: #1c1f26;
+  --text-2: #565e6c;
+  --text-3: #8b93a3;
+  --emerald: #0a9670;
+  --emerald-dim: rgba(10, 150, 112, 0.12);
+  --gold: #a17c1a;
+  --gold-dim: rgba(161, 124, 26, 0.12);
+  --blue: #3873ad;
+  --purple: #7a4fb0;
+  --red: #c05550;
+  --amber: #b07f1d;
+  --heat-0: 245 240 230;
+  --heat-1: 217 140 88;
+  --heat-2: 200 121 65;
+}
+
+/* ── Tailwind theme mapping ────────────────────────────────────── */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-line-2: var(--border-2);
+  --color-fg: var(--text-1);
+  --color-fg-2: var(--text-2);
+  --color-fg-3: var(--text-3);
+  --color-emerald-a: var(--emerald);
+  --color-emerald-dim: var(--emerald-dim);
+  --color-gold-a: var(--gold);
+  --color-gold-dim: var(--gold-dim);
+  --color-blue-a: var(--blue);
+  --color-purple-a: var(--purple);
+  --color-red-a: var(--red);
+  --color-amber-a: var(--amber);
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+/* ── Base ──────────────────────────────────────────────────────── */
+html, body, #root { min-height: 100vh; }
+body {
+  background-color: var(--bg);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+/* Ambient glow — fixed pseudo-element instead of background-attachment: fixed,
+   which breaks compositing (black frames) on some renderers. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--bg-glow);
+  pointer-events: none;
+}
+/* Subtle blueprint grid over the glow — gives the "trading terminal" depth. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 0%, transparent 75%);
+  opacity: 0.45;
+  pointer-events: none;
+}
+::selection { background: var(--emerald-dim); }
+
+/* Scrollbar (webkit) */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Utilities ─────────────────────────────────────────────────── */
+@utility glass {
+  position: relative;
+  background: linear-gradient(160deg, var(--surface-2) 0%, var(--surface) 30%);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 30px -18px rgba(0, 0, 0, 0.6);
+}
+/* Hairline gradient edge along the top of every panel */
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: -1px -1px auto -1px;
+  height: 1px;
+  border-radius: 1rem 1rem 0 0;
+  background: linear-gradient(90deg, transparent 5%, color-mix(in srgb, var(--emerald) 55%, transparent) 50%, transparent 95%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+@utility glass-hover {
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  &:hover {
+    background: var(--surface-2);
+    border-color: color-mix(in srgb, var(--emerald) 35%, var(--border-2));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 0 0 1px color-mix(in srgb, var(--emerald) 12%, transparent),
+      0 14px 34px -16px rgba(0, 0, 0, 0.7);
+    transform: translateY(-1px);
+  }
+}
+
+@utility display-num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Gradient display text for hero numbers / headers */
+@utility text-glow {
+  background: linear-gradient(180deg, var(--text-1) 20%, color-mix(in srgb, var(--text-1) 55%, var(--emerald)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility kicker {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--emerald);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

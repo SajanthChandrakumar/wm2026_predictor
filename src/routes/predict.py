@@ -25,13 +25,28 @@ def init_router(math_engine, odds_engine, cache_collection, limiter):
 
         try:
             event_id = match_data.get("id", "")
-            match_data = fetch_or_cache_totals(event_id, match_data, odds_engine, cache_collection, TOTALS_CACHE_TTL)
+            # Totals already ride along in raw_match.bookmakers from /api/matches
+            # (Odds API h2h+totals or ESPN). Only serve from cache — never fire a
+            # live per-event call keyed by an ESPN/archive id the Odds API won't know.
+            match_data = fetch_or_cache_totals(event_id, match_data, odds_engine, cache_collection, TOTALS_CACHE_TTL, fetch_if_missing=False)
 
             math_engine.ensure_teams_exist(
                 TEAM_MAPPING.get(match_data.get("home_team"), match_data.get("home_team")),
                 TEAM_MAPPING.get(match_data.get("away_team"), match_data.get("away_team")),
             )
-            odds = extract_odds(match_data)
+            try:
+                odds = extract_odds(match_data)
+            except ValueError:
+                # ESPN-sourced raw_match entries carry no bookmakers — fall back
+                # to the aggregated odds stored alongside the match in the cache.
+                odds = None
+                cached = cache_collection.find_one({"_id": "matches_cache"})
+                for m in (cached or {}).get("data", []):
+                    if m.get("id") == event_id and m.get("odds", {}).get("home"):
+                        odds = m["odds"]
+                        break
+                if not odds:
+                    raise
 
             true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
             b_prob_home = true_probs["home"]

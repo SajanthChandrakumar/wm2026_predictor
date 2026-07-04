@@ -1,0 +1,126 @@
+import { useMemo, useState } from 'react'
+import { useAppState } from '../../state/AppState'
+import { flag, cn } from '../../lib/util'
+import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
+import { PageTransition, PageHeader } from '../../components/shared/PageTransition'
+import { useTeamFormData } from './useTeamFormData'
+import { EloChart } from './EloChart'
+
+const FORM_STYLE: Record<string, string> = {
+  W: 'bg-emerald-dim text-emerald-a',
+  D: 'bg-surface-2 text-fg-3',
+  L: 'bg-red-a/10 text-red-a',
+}
+
+export function TeamFormView() {
+  const { rows, history, matchInfo, isLoading } = useTeamFormData()
+  const { selectedTeams, toggleTeam } = useAppState()
+  const [search, setSearch] = useState('')
+
+  const filtered = useMemo(
+    () => rows.filter((r) => r.team.toLowerCase().includes(search.toLowerCase())),
+    [rows, search],
+  )
+
+  return (
+    <PageTransition>
+      <PageHeader title="Team Form" subtitle="Elo Power Rankings & Verlauf — bis zu 4 Teams vergleichen" />
+      {isLoading && <p className="text-fg-2">Lade…</p>}
+
+      <div className="space-y-4">
+        {/* Chart + picker */}
+        <GlassCard>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <SectionTitle>Elo-Verlauf</SectionTitle>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Team suchen…"
+              className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-fg outline-none placeholder:text-fg-3 focus:border-emerald-a/50"
+            />
+          </div>
+
+          <div className="mb-4 flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+            {filtered.map((r) => {
+              const active = selectedTeams.includes(r.team)
+              return (
+                <button
+                  key={r.team}
+                  onClick={() => toggleTeam(r.team)}
+                  className={cn(
+                    'rounded-full border px-2.5 py-1 text-xs font-semibold transition',
+                    active
+                      ? 'border-emerald-a/50 bg-emerald-dim text-emerald-a'
+                      : 'border-line bg-surface text-fg-2 hover:border-line-2',
+                  )}
+                >
+                  {flag(r.team)} {r.team}
+                </button>
+              )
+            })}
+          </div>
+
+          <EloChart teams={selectedTeams} history={history} matchInfo={matchInfo} />
+        </GlassCard>
+
+        {/* Power rankings */}
+        <GlassCard className="!p-0">
+          <div className="border-b border-line px-5 py-4">
+            <SectionTitle>Power Rankings</SectionTitle>
+            <p className="mt-1 text-xs text-fg-3">
+              Gastgeber-Bonus: +80 Elo für 🇺🇸 USA, 🇨🇦 Kanada & 🇲🇽 Mexiko · Zeile anklicken für den Chart
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-fg-3">
+                  <th className="px-5 py-2">#</th>
+                  <th className="px-2 py-2">Team</th>
+                  <th className="px-2 py-2 text-right">Elo</th>
+                  <th className="px-2 py-2 text-right">Δ</th>
+                  <th className="px-2 py-2 text-center max-sm:hidden">S-U-N</th>
+                  <th className="px-5 py-2 text-right">Form</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => {
+                  const active = selectedTeams.includes(r.team)
+                  return (
+                    <tr
+                      key={r.team}
+                      onClick={() => toggleTeam(r.team)}
+                      className={cn(
+                        'cursor-pointer border-t border-line transition hover:bg-surface-2',
+                        active && 'bg-gold-dim/60',
+                      )}
+                    >
+                      <td className="px-5 py-2 tabular-nums text-fg-3">{i + 1}</td>
+                      <td className="px-2 py-2 font-semibold text-fg">{flag(r.team)} <span className="ml-1">{r.team}</span></td>
+                      <td className="display-num px-2 py-2 text-right text-fg">{Math.round(r.elo)}</td>
+                      <td className={cn('px-2 py-2 text-right tabular-nums', r.delta > 0 ? 'text-emerald-a' : r.delta < 0 ? 'text-red-a' : 'text-fg-3')}>
+                        {r.delta > 0 ? '+' : ''}{Math.round(r.delta)}
+                      </td>
+                      <td className="px-2 py-2 text-center tabular-nums text-fg-2 max-sm:hidden">
+                        {r.w}-{r.d}-{r.l}
+                      </td>
+                      <td className="px-5 py-2">
+                        <span className="flex justify-end gap-0.5">
+                          {r.last5.map((res, j) => (
+                            <span key={j} className={cn('flex h-4 w-4 items-center justify-center rounded text-[9px] font-extrabold', FORM_STYLE[res])}>
+                              {res === 'W' ? 'S' : res === 'D' ? 'U' : 'N'}
+                            </span>
+                          ))}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </GlassCard>
+      </div>
+    </PageTransition>
+  )
+}

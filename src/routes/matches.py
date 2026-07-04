@@ -1,27 +1,97 @@
 import time
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import numpy as np
 from fastapi import APIRouter, HTTPException
 
 from src.constants import TEAM_MAPPING, DISPLAY_MAPPING, _is_ko_round
-from src.services.odds_helpers import extract_odds, dynamic_ttl, fetch_or_cache_totals
-from src.services.archive import load_archive_from_db, upsert_archive_entry
+from src.services.odds_helpers import extract_odds, dynamic_ttl
+from src.services.archive import (
+    load_archive_from_db, upsert_archive_entry,
+    build_archive_id_index, resolve_archive_id, _canon_team,
+)
+from src.services import espn_data
 from src.math_engine import MathEngine
 
 logger = logging.getLogger(__name__)
 
 
+def _synth_bookmakers(espn_odds: dict, home_team: str, away_team: str) -> list:
+    """Build a single-bookmaker entry (ESPN/DraftKings) in the legacy shape
+    extract_odds() expects, used when The Odds API has no match for a fixture."""
+    h2h = [
+        {"name": home_team, "price": espn_odds["home"]},
+        {"name": "Draw", "price": espn_odds["draw"]},
+        {"name": away_team, "price": espn_odds["away"]},
+    ]
+    markets = [{"key": "h2h", "outcomes": h2h}]
+    if "over25" in espn_odds and "under25" in espn_odds:
+        markets.append({"key": "totals", "outcomes": [
+            {"name": "Over", "price": espn_odds["over25"], "point": 2.5},
+            {"name": "Under", "price": espn_odds["under25"], "point": 2.5},
+        ]})
+    return [{"key": "espn_draftkings", "title": "DraftKings (ESPN)", "markets": markets}]
+
+
+def _build_odds_api_lookup(odds_engine) -> dict:
+    """Fetch The Odds API once (h2h+totals) → {(canon_home,canon_away,date): bookmakers}.
+    Best-effort: returns {} on any failure so ESPN odds are used instead."""
+    try:
+        games = odds_engine.get_world_cup_odds(market="h2h,totals")
+    except Exception as e:
+        print(f"Odds API fetch failed, using ESPN odds only: {e}")
+        return {}
+    lookup = {}
+    for g in games or []:
+        h = _canon_team(g.get("home_team", ""))
+        a = _canon_team(g.get("away_team", ""))
+        date = (g.get("commence_time") or "")[:10]
+        if h and a and g.get("bookmakers"):
+            lookup[(h, a, date)] = g["bookmakers"]
+    return lookup
+
+
+def _match_odds_api(lookup: dict, home: str, away: str, date: str):
+    """Resolve Odds-API bookmakers for a fixture; tolerate ±1 day (UTC edge)."""
+    h, a = _canon_team(home), _canon_team(away)
+    d = (date or "")[:10]
+    if (h, a, d) in lookup:
+        return lookup[(h, a, d)]
+    try:
+        base = datetime.fromisoformat(d)
+        for delta in (-1, 1):
+            alt = (base + timedelta(days=delta)).strftime("%Y-%m-%d")
+            if (h, a, alt) in lookup:
+                return lookup[(h, a, alt)]
+    except Exception:
+        pass
+    return None
+
+
 def _sync_archive_tips(matches, archive, archive_collection):
+    """Reconcile dashboard tips with the archive.
+
+    Pending matches: the archive follows the latest recalculation (prediction
+    may legitimately shift until kickoff). Completed matches: the archived
+    pre-match tip is FROZEN — the dashboard shows it instead of a tip
+    recalculated with post-match Elo (that would be hindsight)."""
     changed = {}
     for m in matches:
         mid = m.get("id")
-        tip = m.get("top_tip")
-        if not mid or not tip or tip == "N/A":
-            continue
         entry = archive.get(mid)
-        if not entry or not entry.get("prediction"):
+        if not mid or not entry or not entry.get("prediction"):
+            continue
+
+        if entry.get("post_match_result", {}).get("status") == "completed":
+            frozen = entry["prediction"].get("top_tip")
+            if frozen:
+                m["top_tip"] = frozen
+                m["max_xp"] = float(entry["prediction"].get("max_xp") or 0)
+            continue
+
+        tip = m.get("top_tip")
+        if not tip or tip == "N/A":
             continue
         if entry["prediction"].get("top_tip") != tip:
             entry["prediction"]["top_tip"] = tip
@@ -34,8 +104,8 @@ def _sync_archive_tips(matches, archive, archive_collection):
 
 def _enrich_edge(matches, math_engine, odds_engine):
     for m in matches:
-        if "is_ko_phase" not in m:
-            m["is_ko_phase"] = _is_ko_round(m.get("raw_match", {}).get("round", ""))
+        # Always recompute — round-keyword logic may have changed since caching.
+        m["is_ko_phase"] = _is_ko_round(m.get("raw_match", {}).get("round", ""))
 
         home_norm = TEAM_MAPPING.get(m.get("home_team"), m.get("home_team"))
         away_norm = TEAM_MAPPING.get(m.get("away_team"), m.get("away_team"))
@@ -93,6 +163,11 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                     if data is not None:
                         ttl = dynamic_ttl(data)
                         if time.time() - timestamp < ttl:
+                            data = [
+                                m for m in data
+                                if not (espn_data._is_placeholder(m.get("home_team", ""))
+                                        or espn_data._is_placeholder(m.get("away_team", "")))
+                            ]
                             return _sync_archive_tips(
                                 _enrich_edge(data, math_engine, odds_engine),
                                 archive, archive_collection
@@ -100,33 +175,70 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
             except Exception:
                 pass
 
+        # Fixture skeleton comes from ESPN (only source with played + upcoming).
         try:
-            data = odds_engine.get_world_cup_odds(market="h2h")
+            fixtures = espn_data.get_scoreboard()
         except Exception as e:
             try:
                 cached = cache_collection.find_one({"_id": "matches_cache"})
                 if cached and cached.get("data"):
-                    print(f"Odds API unavailable, serving stale cache: {e}")
+                    print(f"ESPN unavailable, serving stale cache: {e}")
                     return _sync_archive_tips(
                         _enrich_edge(cached["data"], math_engine, odds_engine),
                         archive, archive_collection
                     )
             except Exception:
                 pass
-            raise HTTPException(status_code=503, detail=f"Odds API unavailable: {e}")
+            raise HTTPException(status_code=503, detail=f"Fixture source unavailable: {e}")
 
-        from src.constants import TOTALS_CACHE_TTL
+        # Multi-bookmaker odds for upcoming games from The Odds API (best-effort).
+        odds_lookup = _build_odds_api_lookup(odds_engine)
+        id_index = build_archive_id_index(archive)
 
         results = []
         _bot_inputs = {}
-        for m in data:
-            home_raw = m.get("home_team")
-            away_raw = m.get("away_team")
-            try:
-                event_id = m.get("id", "")
-                m = fetch_or_cache_totals(event_id, m, odds_engine, cache_collection, TOTALS_CACHE_TTL, fetch_if_missing=False)
-                odds = extract_odds(m)
+        for fx in fixtures:
+            home_raw = fx["home_team"]
+            away_raw = fx["away_team"]
+            date = fx.get("commence_time", "")
 
+            # Keep the same _id the archive already uses for this pairing.
+            match_id = resolve_archive_id(id_index, home_raw, away_raw, date) or fx["id"]
+
+            # Prefer Odds-API multi-book bookmakers; fall back to ESPN/DraftKings.
+            bookmakers = _match_odds_api(odds_lookup, home_raw, away_raw, date)
+            if not bookmakers and fx.get("espn_odds"):
+                bookmakers = _synth_bookmakers(fx["espn_odds"], home_raw, away_raw)
+
+            raw_match = {
+                "id": match_id,
+                "home_team": home_raw,
+                "away_team": away_raw,
+                "commence_time": date,
+                "round": fx.get("round", ""),
+                "bookmakers": bookmakers or [],
+            }
+            is_ko_detected = _is_ko_round(fx.get("round", ""))
+
+            odds = {}
+            top_tip, max_xp = "N/A", 0.0
+            elo_home_share = market_home_share = edge_home = None
+            try:
+                odds = extract_odds(raw_match)
+            except ValueError:
+                odds = {}
+
+            # Completed games: show the frozen odds + algo tip from the archive
+            # (recomputing with today's Elo would corrupt a past prediction).
+            arc = archive.get(match_id) or {}
+            arc_tip = (arc.get("prediction") or {}).get("top_tip")
+            if fx.get("completed") and arc_tip:
+                snap_odds = (arc.get("pre_match_snapshot") or {}).get("odds") or {}
+                if all(k in snap_odds for k in ("home", "draw", "away")):
+                    odds = snap_odds
+                top_tip = arc_tip
+                max_xp = float((arc.get("prediction") or {}).get("max_xp") or 0.0)
+            elif odds:
                 try:
                     math_engine.ensure_teams_exist(
                         TEAM_MAPPING.get(home_raw, home_raw),
@@ -147,7 +259,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                     else:
                         prob_over25 = None
 
-                    is_ko = _is_ko_round(m.get("round", ""))
+                    is_ko = is_ko_detected
                     xg_h, xg_a = math_engine.derive_xg_from_odds(
                         prob_home, prob_draw, prob_away, prob_over25
                     )
@@ -165,45 +277,38 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                     if not df_xp.empty:
                         top_tip = df_xp.iloc[0]["Tipp"]
                         max_xp = float(df_xp.iloc[0]["xP"])
-                    else:
-                        top_tip = "N/A"
-                        max_xp = 0.0
 
                     market_home_share = (true_probs["home"] / win_loss_pool) if win_loss_pool > 0 else 0.5
                     edge_home = elo_home_share - market_home_share
 
-                    if event_id and top_tip != "N/A":
-                        _bot_inputs[event_id] = {
+                    if top_tip != "N/A":
+                        _bot_inputs[match_id] = {
                             "score_matrix": sm,
                             "base_xp_df": df_xp,
                             "true_probs": true_probs,
                             "prob_over25": prob_over25,
                         }
                 except Exception:
-                    top_tip = "N/A"
-                    max_xp = 0.0
-                    elo_home_share = None
-                    market_home_share = None
-                    edge_home = None
+                    top_tip, max_xp = "N/A", 0.0
+                    elo_home_share = market_home_share = edge_home = None
 
-                is_ko_detected = _is_ko_round(m.get("round", ""))
-                results.append({
-                    "id": m.get("id"),
-                    "home_team": home_raw,
-                    "away_team": away_raw,
-                    "home_disp": DISPLAY_MAPPING.get(home_raw, home_raw),
-                    "away_disp": DISPLAY_MAPPING.get(away_raw, away_raw),
-                    "odds": odds,
-                    "top_tip": top_tip,
-                    "max_xp": max_xp,
-                    "elo_home_share": elo_home_share,
-                    "market_home_share": market_home_share,
-                    "edge_home": edge_home,
-                    "is_ko_phase": is_ko_detected,
-                    "raw_match": m
-                })
-            except ValueError:
-                continue
+            results.append({
+                "id": match_id,
+                "home_team": home_raw,
+                "away_team": away_raw,
+                "home_disp": DISPLAY_MAPPING.get(home_raw, home_raw),
+                "away_disp": DISPLAY_MAPPING.get(away_raw, away_raw),
+                "odds": odds,
+                "top_tip": top_tip,
+                "max_xp": max_xp,
+                "elo_home_share": elo_home_share,
+                "market_home_share": market_home_share,
+                "edge_home": edge_home,
+                "is_ko_phase": is_ko_detected,
+                "actual_score": fx.get("actual_score"),
+                "completed": fx.get("completed", False),
+                "raw_match": raw_match,
+            })
 
         # Cache update — merge with existing
         try:
@@ -218,15 +323,40 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                 prev = existing_matches.get(r["id"])
                 if prev:
                     old_o, new_o = prev.get("odds", {}), r.get("odds", {})
+                    # Never overwrite previously-captured odds with an odds-less
+                    # fixture (e.g. a completed game whose odds ESPN no longer lists).
+                    if old_o and not new_o:
+                        merged_entry = dict(r)
+                        merged_entry["odds"] = old_o
+                        merged_entry["top_tip"] = prev.get("top_tip", "N/A")
+                        merged_entry["max_xp"] = prev.get("max_xp", 0)
+                        merged_entry["raw_match"] = prev.get("raw_match", r["raw_match"])
+                        existing_matches[r["id"]] = merged_entry
+                        continue
                     odds_changed = any(
                         abs(new_o.get(k, 0) - old_o.get(k, 0)) > 0.02
                         for k in ["home", "draw", "away"]
                     )
                     missing_edge = "edge_home" not in prev and r.get("edge_home") is not None
                     if not odds_changed and not missing_edge:
+                        # Preserve fresh ESPN-sourced fields (result + recomputed KO flag).
+                        prev.update({
+                            "actual_score": r.get("actual_score"),
+                            "completed": r.get("completed", False),
+                            "is_ko_phase": r.get("is_ko_phase", False),
+                        })
+                        prev.setdefault("raw_match", {})["round"] = r["raw_match"].get("round", "")
+                        existing_matches[r["id"]] = prev
                         continue
                 existing_matches[r["id"]] = r
-            merged = sorted(existing_matches.values(), key=lambda m: m.get("raw_match", {}).get("commence_time", ""))
+            # Drop stale placeholder bracket slots (teams undecided) that a
+            # previous cache may still hold — the merge otherwise keeps them.
+            merged = sorted(
+                (m for m in existing_matches.values()
+                 if not (espn_data._is_placeholder(m.get("home_team", ""))
+                         or espn_data._is_placeholder(m.get("away_team", "")))),
+                key=lambda m: m.get("raw_match", {}).get("commence_time", ""),
+            )
             cache_collection.update_one(
                 {"_id": "matches_cache"},
                 {"$set": {"timestamp": time.time(), "data": merged}},
