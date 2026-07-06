@@ -30,6 +30,7 @@ from src.learning_bots import compute_learning_bots
 from src.quota_store import read_quota
 from src.constants import TEAM_MAPPING, SCORES_CACHE_TTL, _is_ko_round
 from src.services.archive import load_archive_from_db, upsert_archive_entry, archive_signature
+from src.services.owner_auth import require_owner
 from src.services.elo_sync import perform_elo_sync
 from src.routes.matches import init_router as matches_router
 from src.routes.predict import init_router as predict_router
@@ -137,6 +138,7 @@ def get_quota():
 @app.post("/api/archive/user_tip")
 @limiter.limit("30/minute")
 def set_user_tip(request: Request, payload: dict):
+    require_owner(request)
     match_id  = payload.get("match_id")
     user_tip  = payload.get("user_tip", "").strip()
 
