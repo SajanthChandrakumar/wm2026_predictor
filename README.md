@@ -9,8 +9,8 @@
 [![Tests](https://github.com/SajanthChandrakumar/wm2026_predictor/actions/workflows/test.yml/badge.svg)](https://github.com/SajanthChandrakumar/wm2026_predictor/actions/workflows/test.yml)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=flat&logo=python)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-19-61dafb?style=flat&logo=react)](https://react.dev/)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=flat)]()
 
 </div>
 
@@ -30,14 +30,7 @@ This system implements that distinction: a chalk mode (maximise expected points)
 
 ## ⚠️ Disclaimer
 
-This project is developed **strictly for scientific, educational, and research purposes** as a companion tool for the [SRF Tippspiel](https://wmtippspiel.srf.ch) — a free, non-monetary prediction competition.
-
-- The author **accepts no responsibility or liability** for any decisions made by third parties based on the output of this software.
-- This tool does **not** constitute financial, investment, or betting advice.
-- Using this software to place real-money wagers is entirely at the user's own risk and is explicitly **not** the intended use case.
-- All probability estimates are model outputs subject to uncertainty and should never be treated as guaranteed outcomes.
-
-By using this software you agree that the author cannot be held liable for any losses, damages, or legal consequences arising from its use.
+This project is developed **strictly for scientific, educational, and research purposes** as a companion tool for the [SRF Tippspiel](https://wmtippspiel.srf.ch) — a free, non-monetary prediction competition. It does **not** constitute financial, investment, or betting advice; all probability estimates are model outputs subject to uncertainty. Using this software to place real-money wagers is entirely at the user's own risk and explicitly not the intended use case. The author accepts no liability for losses or damages arising from its use.
 
 ---
 
@@ -53,10 +46,12 @@ By using this software you agree that the author cannot be held liable for any l
 | **K.O. phase** | Extra-time xG inflation weighted by P(draw after 90 min) — conditional, not a flat 1.33× multiplier |
 | **xP optimiser** | Evaluates all 36 possible tips (0:0 – 5:5) against the full score matrix using the exact SRF Tippspiel scoring rules |
 | **Pool strategy** | Contrarian objective: `E[advantage vs chalk] + λ · SD[advantage]`; λ = 0 reproduces chalk, λ ≈ 0.3 = soft contrarian, λ ≥ 0.5 = true draw gambles |
+| **Monte Carlo simulator** | Full knockout-bracket simulation (default 20 000 runs) from live Elo ratings — per-team title odds and round-reach probabilities |
 | **House bots** | Four fixed-strategy agents: Broker (pure market), Professor (pure Elo), X-Sniper (highest-xP draw), Zocker (weighted-random, seeded by match ID) |
 | **Learning bots** | Three adaptive agents that evolve over the tournament: Optimizer (best historical params), Momentum (recency-weighted params), Mitläufer (follows current leader) |
 | **Caching** | Dynamic TTL: >24 h to kick-off → 12 h; 2–24 h → 1 h; <2 h → 15 min. Learning bot results cached by archive signature — recomputes only when new results arrive |
 | **Elo sync** | Idempotent daily background job (APScheduler, 04:00 UTC); tracks processed match IDs; warms all caches post-sync |
+| **Read-only sharing** | Owner-secret gate: shared links are view-only; edit mode (tips, custom bot) unlocks via `?owner=<secret>` and is enforced server-side |
 
 ---
 
@@ -97,26 +92,8 @@ By using this software you agree that the author cannot be held liable for any l
 | **Model Edge** | Where Elo diverges most from market consensus — visualised as paired probability bars |
 | **Team Form** | Per-team Elo trajectory across the tournament; compare up to 4 teams simultaneously |
 | **Groups** | All 12 group standings dynamically computed from the completed-match archive — no extra API call |
-| **Performance** | Full analytics: your SRF points, hit rate, You vs Algo head-to-head, bot scoreboard, cumulative points race, and editable match history |
-
----
-
-## Performance & Tracking
-
-The Performance view tracks parallel scoring streams in real time:
-
-- **You** — manual tips entered via the inline editor
-- **Algo** — the system's top-pick tip at prediction time; retroactively reconstructed from pre-match Elo baselines for matches played before the app started (flagged as `ALGO*`)
-- **House Bots** — four fixed-strategy agents (Broker, Professor, X-Sniper, Zocker)
-- **Learning Bots** — three adaptive agents that reveal what they "learned":
-
-| Bot | Philosophy | What it shows |
-|---|---|---|
-| **Optimizer** | Best cumulative params over all completed matches | `Markt 50% · Risiko +0.5 · Draw +2` |
-| **Momentum** | Best recency-weighted params (decay = 0.9) | `Markt 75% · Risiko 0` |
-| **Mitläufer** | Copies the current house bot leader each match | `Folgt: Professor` |
-
-The **bot scoreboard** ranks all agents by total points, average per match, and tendency accuracy. A cumulative points race chart shows how each strategy evolves over the tournament.
+| **Performance** | Full analytics: your SRF points, hit rate, You vs Algo head-to-head, bot scoreboard, Build-a-Bot, cumulative points race, and editable match history |
+| **K.O. Simulator** | Monte Carlo knockout-bracket simulation — title odds and round-reach probabilities per team |
 
 ---
 
@@ -127,12 +104,17 @@ The **bot scoreboard** ranks all agents by total points, average per match, and 
 | `GET` | `/api/matches` | All fixtures with odds, Elo, top tip, xP, and model edge; `?force=true` bypasses cache |
 | `POST` | `/api/predict` | Full prediction for one match: xG, score matrix, ranked tips; accepts K.O. toggle |
 | `GET` | `/api/archive` | Complete prediction archive: all matches, user tips, algo tips, bot tips, results, and points |
-| `POST` | `/api/archive/user_tip` | Save or update a user tip; recalculates points if result is already known |
+| `POST` | `/api/archive/user_tip` | Save or update a user tip (owner-gated); recalculates points if result is already known |
+| `GET/POST` | `/api/custom_bot` | Load / save the Build-a-Bot strategy (save is owner-gated) |
+| `POST` | `/api/custom_bot/simulate` | Backtest a bot parameter set against all completed matches |
+| `GET` | `/api/simulate_knockout` | Monte Carlo knockout simulation; `?runs=` controls sample size |
 | `GET` | `/api/elo_history` | Per-team Elo snapshots across the tournament (powers Team Form chart) |
+| `GET` | `/api/elo_ratings` | Current Elo table for all qualified teams |
 | `POST` | `/api/sync_elo` | Trigger an immediate Elo sync from completed match scores; warms all downstream caches |
-| `GET` | `/api/quota` | Remaining requests for The Odds API (ESPN is unmetered) |
+| `GET` | `/api/learning_bots` | Current state of all three learning bots; signature-keyed cache |
 | `GET` | `/api/standings` | Group standings for all 12 WC 2026 groups; 1 h MongoDB cache |
-| `GET` | `/api/learning_bots` | Current state of all three learning bots; signature-keyed cache (recomputes on new results) |
+| `GET` | `/api/quota` | Remaining requests for The Odds API (ESPN is unmetered) |
+| `GET` | `/api/ping` | Keep-alive endpoint (prevents Render free-tier cold starts) |
 
 ---
 
@@ -142,10 +124,9 @@ The **bot scoreboard** ranks all agents by total points, average per match, and 
 |---|---|
 | Backend | Python 3.12, FastAPI, Uvicorn, APScheduler |
 | Math | NumPy, SciPy (`optimize.minimize`, L-BFGS-B), Pandas |
-| Frontend | Vanilla ES modules — zero framework, zero build step |
-| Charts | Chart.js (Elo trajectory, cumulative bot race) |
-| Data | ESPN public API (fixtures, scores, standings, KO rounds), The Odds API (multi-bookmaker odds for upcoming games), MongoDB Atlas (archive, cache, bot states) |
-| Design | Editorial-Minimal: Inter typography, flat surfaces, emerald accent (`#34d399`), CSS custom properties, fully responsive |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, TanStack Query, React Router |
+| Charts | Recharts (Elo trajectory, cumulative bot race, simulation odds) |
+| Data | ESPN public API (fixtures, scores, standings, KO rounds), The Odds API (multi-bookmaker odds), MongoDB Atlas (archive, cache, bot states) |
 
 ---
 
@@ -156,32 +137,24 @@ The **bot scoreboard** ranks all agents by total points, average per match, and 
 git clone https://github.com/SajanthChandrakumar/wm2026_predictor.git
 cd wm2026_predictor
 
-# 2. Virtual environment + dependencies
+# 2. Backend: virtual environment + dependencies
 python3 -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 3. Environment Variables
+# 3. Environment variables
 echo "ODDS_API_KEY=your_key_here" > .env
 echo "MONGO_URI=mongodb+srv://..." >> .env
+echo "OWNER_SECRET=pick_a_secret" >> .env   # optional: gates tip/bot writes
 
-# 4. Start
-uvicorn src.main:app --reload
+# 4. Frontend: build the React app (FastAPI serves the dist/ folder)
+cd frontend-v2 && npm install && npm run build && cd ..
+
+# 5. Start
+uvicorn src.api:app --reload
 ```
 
-Open **http://127.0.0.1:8000** in your browser.
-
----
-
-## Tournament Operations
-
-| Operation | How |
-|---|---|
-| **Auto Elo sync** | Runs daily at 04:00 UTC via APScheduler; warms learning bots + standings cache automatically |
-| **Manual sync** | Press **Sync Elo Ratings** in the sidebar |
-| **Idempotency** | MongoDB `archive` collection ensures each result is applied exactly once |
-| **Cache control** | Dynamic TTL; press **Refresh Data** to force a live fetch (costs one API call) |
-| **Learning bot cache** | Keyed by archive signature — auto-invalidates when new results arrive, never on a timer |
+Open **http://127.0.0.1:8000** — append `?owner=<your OWNER_SECRET>` once to unlock edit mode on your device. For frontend development with hot reload, run `npm run dev` inside `frontend-v2` (proxies `/api` to port 8000).
 
 ---
 
@@ -190,41 +163,15 @@ Open **http://127.0.0.1:8000** in your browser.
 ```
 wm2026_predictor/
 ├── src/
-│   ├── api.py                       # FastAPI app: init, middleware, router wiring, small endpoints
-│   ├── constants.py                 # Team-name maps, TTLs, KO-round detection
-│   ├── math_engine.py               # Elo, xG solver, Dixon-Coles, xP, pool optimiser, bot tips
-│   ├── learning_bots.py             # Optimizer / Momentum / Mitläufer — grid-search + follow-the-leader
-│   ├── odds_engine.py               # The Odds API client; quota tracking
-│   ├── odds_engine_apifootball.py   # Legacy API-Football client (unused; kept as fallback)
-│   ├── routes/
-│   │   ├── matches.py               # GET /matches — ESPN fixtures × Odds API hybrid, edge enrichment
-│   │   ├── predict.py               # POST /predict — full single-match prediction
-│   │   └── custom_bot.py            # Build-a-Bot save / simulate endpoints
-│   └── services/
-│       ├── espn_data.py             # ESPN fixtures, scores, standings (public, no quota)
-│       ├── odds_helpers.py          # extract_odds (median), dynamic TTL, totals cache
-│       ├── archive.py               # Load/upsert archive, ID-index resolution, signature
-│       └── elo_sync.py              # perform_elo_sync — grading, backfills, cache warm-up
-├── frontend/
-│   ├── index.html                   # SPA shell (6 views + detail pane)
-│   ├── style.css                    # Design system: Editorial-Minimal, CSS custom properties
-│   └── js/
-│       ├── main.js                  # Boot, view router, sidebar wiring
-│       ├── api.js                   # Typed fetch wrappers for all endpoints
-│       ├── state.js                 # Shared app state
-│       ├── util.js                  # Formatting, probability helpers
-│       └── views/
-│           ├── dashboard.js         # Fixture grid + form badges
-│           ├── value-bets.js        # xP-ranked fixture list
-│           ├── edge.js              # Model vs market divergence
-│           ├── team-form.js         # Elo history chart + team compare
-│           ├── groups.js            # Group standings from archive
-│           ├── performance.js       # Bot scoreboard, race chart, match history
-│           └── detail.js            # Heatmap, tip ladder, bot tips
-├── data/
-│   └── elo_ratings.csv              # Live Elo ratings for all qualified teams
-├── ARCHITECTURE.md                  # Full mathematical derivation
-└── README.md
+│   ├── api.py            # FastAPI app: init, middleware, router wiring
+│   ├── math_engine.py    # Elo, xG solver, Dixon-Coles, xP, pool optimiser
+│   ├── learning_bots.py  # Adaptive agents (Optimizer / Momentum / Mitläufer)
+│   ├── routes/           # matches, predict, custom_bot, simulate
+│   └── services/         # ESPN data, odds helpers, archive, Elo sync, Monte Carlo, owner auth
+├── frontend-v2/          # React 19 + Vite + Tailwind SPA (live frontend, served from dist/)
+├── frontend/             # Legacy vanilla-JS frontend (kept as fallback)
+├── data/                 # Elo ratings, caches, backups
+└── ARCHITECTURE.md       # Full mathematical derivation
 ```
 
 ---
@@ -232,11 +179,5 @@ wm2026_predictor/
 ## Running Tests
 
 ```bash
-.venv/bin/python -m pytest test_math_engine.py test_pool_optimizer.py test_build_a_bot.py -v
+.venv/bin/python -m pytest test_math_engine.py test_pool_optimizer.py test_build_a_bot.py test_ko_detection.py -v
 ```
-
----
-
-## Haftungsausschluss
-
-Dieses Projekt ist ein Hobby- und Bildungsprojekt, das aus persönlichem Interesse an Data Science, Software-Architektur und Wahrscheinlichkeitsrechnung entwickelt wurde. Die generierten Daten und Expected-Points-Berechnungen dienen ausschließlich zu Informations- und Analysezwecken und stellen ausdrücklich **keine Anlage-, Finanz- oder Wettberatung** dar. Der Autor übernimmt keine Haftung für Verluste, die durch die Nutzung dieser Software entstehen.
