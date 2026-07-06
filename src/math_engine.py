@@ -21,12 +21,16 @@ class MathEngine:
     A mathematical engine for betting calculations.
     """
 
+    # How long (seconds) to skip a reload when no new results have come in.
+    ELO_RELOAD_DEBOUNCE_SEC = 300  # 5 minutes
+
     def __init__(self, elo_csv_path: str, name_mapping: dict = None):
         self.elo_csv_path = elo_csv_path
         self.elo_df = pd.read_csv(elo_csv_path)
         self.elo_df['elo_rating'] = self.elo_df['elo_rating'].astype(float)
         self.name_mapping = name_mapping or {}
         self.team_forms = {}
+        self._last_elo_reload: float = 0.0
 
     @staticmethod
     def remove_margin(odds_home: float, odds_draw: float, odds_away: float) -> dict[str, float]:
@@ -62,12 +66,18 @@ class MathEngine:
         diff = rating_a - rating_b
         return 1 / (10 ** (-diff / 400) + 1)
 
-    def reload_elo_data(self, archive: dict = None):
-        """ Reloads the latest Elo dataframe from the CSV file to ensure global state is up-to-date """
+    def reload_elo_data(self, archive: dict = None, force: bool = False):
+        """ Reloads the latest Elo dataframe from the CSV file to ensure global state is up-to-date.
+        Skips the expensive I/O if data was reloaded within ELO_RELOAD_DEBOUNCE_SEC unless force=True.
+        """
+        now = time.time()
+        if not force and (now - self._last_elo_reload) < self.ELO_RELOAD_DEBOUNCE_SEC:
+            return  # Elo is still fresh — skip disk I/O
         if os.path.exists(self.elo_csv_path):
             self.elo_df = pd.read_csv(self.elo_csv_path)
             self.elo_df['elo_rating'] = self.elo_df['elo_rating'].astype(float)
         self._build_team_forms(archive=archive)
+        self._last_elo_reload = now
 
     def _build_team_forms(self, archive: dict = None):
         """

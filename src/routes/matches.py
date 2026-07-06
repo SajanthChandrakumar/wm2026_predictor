@@ -151,9 +151,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
 
     @router.get("/matches")
     def get_matches(force: bool = False):
-        archive = load_archive_from_db(archive_collection)
-        math_engine.reload_elo_data(archive=archive)
-
+        # ── Fast path: serve from MongoDB cache without any expensive work ──
         if not force:
             try:
                 cached = cache_collection.find_one({"_id": "matches_cache"})
@@ -168,12 +166,19 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                                 if not (espn_data._is_placeholder(m.get("home_team", ""))
                                         or espn_data._is_placeholder(m.get("away_team", "")))
                             ]
+                            # Elo reload is cheap here thanks to the debounce guard.
+                            math_engine.reload_elo_data()
+                            archive = load_archive_from_db(archive_collection)
                             return _sync_archive_tips(
                                 _enrich_edge(data, math_engine, odds_engine),
                                 archive, archive_collection
                             )
             except Exception:
                 pass
+
+        # ── Slow path: cache miss or force refresh ──
+        archive = load_archive_from_db(archive_collection)
+        math_engine.reload_elo_data(archive=archive, force=True)
 
         # Fixture skeleton comes from ESPN (only source with played + upcoming).
         try:
