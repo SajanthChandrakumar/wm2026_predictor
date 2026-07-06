@@ -130,6 +130,12 @@ app.include_router(simulate_router(math_engine, cache_collection))
 
 # ── Small endpoints (not worth extracting) ───────────────────
 
+@app.get("/api/ping")
+def ping():
+    """Lightweight keep-alive endpoint — call every 5 min to prevent Render cold starts."""
+    return {"ok": True}
+
+
 @app.get("/api/quota")
 def get_quota():
     return {"odds": read_quota("odds"), "football": read_quota("football")}
