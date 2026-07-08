@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { useSaveUserTip } from '../../hooks/queries'
-import { isOwner } from '../../lib/ownerAuth'
 import { flag, cn } from '../../lib/util'
 import { shortDate } from '../../lib/format'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
@@ -155,7 +154,6 @@ function UserTipRow({ cm }: { cm: CompletedMatch }) {
   const [value, setValue] = useState(userTip ?? '')
   const [invalid, setInvalid] = useState(false)
   const saveTip = useSaveUserTip()
-  const canEdit = isOwner()
 
   const submit = () => {
     const tip = value.trim()
@@ -170,9 +168,7 @@ function UserTipRow({ cm }: { cm: CompletedMatch }) {
   return (
     <div className="grid grid-cols-[72px_1fr_auto] items-center gap-2 border-b border-line py-1.5 last:border-b-0">
       <span className="text-[10px] font-bold uppercase tracking-wide text-gold-a">Du</span>
-      {!canEdit ? (
-        <span className="display-num text-sm text-fg">{userTip ?? '–'}</span>
-      ) : editing || !userTip ? (
+      {editing || !userTip ? (
         <span className="flex items-center gap-1.5">
           <input
             value={value}

@@ -51,7 +51,6 @@ This project is developed **strictly for scientific, educational, and research p
 | **Learning bots** | Three adaptive agents that evolve over the tournament: Optimizer (best historical params), Momentum (recency-weighted params), Mitläufer (follows current leader) |
 | **Caching** | Dynamic TTL: >24 h to kick-off → 12 h; 2–24 h → 1 h; <2 h → 15 min. Learning bot results cached by archive signature — recomputes only when new results arrive |
 | **Elo sync** | Idempotent daily background job (APScheduler, 04:00 UTC); tracks processed match IDs; warms all caches post-sync |
-| **Read-only sharing** | Owner-secret gate: shared links are view-only; edit mode (tips, custom bot) unlocks via `?owner=<secret>` and is enforced server-side |
 
 ---
 
@@ -104,8 +103,8 @@ This project is developed **strictly for scientific, educational, and research p
 | `GET` | `/api/matches` | All fixtures with odds, Elo, top tip, xP, and model edge; `?force=true` bypasses cache |
 | `POST` | `/api/predict` | Full prediction for one match: xG, score matrix, ranked tips; accepts K.O. toggle |
 | `GET` | `/api/archive` | Complete prediction archive: all matches, user tips, algo tips, bot tips, results, and points |
-| `POST` | `/api/archive/user_tip` | Save or update a user tip (owner-gated); recalculates points if result is already known |
-| `GET/POST` | `/api/custom_bot` | Load / save the Build-a-Bot strategy (save is owner-gated) |
+| `POST` | `/api/archive/user_tip` | Save or update a user tip; recalculates points if result is already known |
+| `GET/POST` | `/api/custom_bot` | Load / save the Build-a-Bot strategy |
 | `POST` | `/api/custom_bot/simulate` | Backtest a bot parameter set against all completed matches |
 | `GET` | `/api/simulate_knockout` | Monte Carlo knockout simulation; `?runs=` controls sample size |
 | `GET` | `/api/elo_history` | Per-team Elo snapshots across the tournament (powers Team Form chart) |
@@ -145,7 +144,6 @@ pip install -r requirements.txt
 # 3. Environment variables
 echo "ODDS_API_KEY=your_key_here" > .env
 echo "MONGO_URI=mongodb+srv://..." >> .env
-echo "OWNER_SECRET=pick_a_secret" >> .env   # optional: gates tip/bot writes
 
 # 4. Frontend: build the React app (FastAPI serves the dist/ folder)
 cd frontend-v2 && npm install && npm run build && cd ..
@@ -154,7 +152,7 @@ cd frontend-v2 && npm install && npm run build && cd ..
 uvicorn src.api:app --reload
 ```
 
-Open **http://127.0.0.1:8000** — append `?owner=<your OWNER_SECRET>` once to unlock edit mode on your device. For frontend development with hot reload, run `npm run dev` inside `frontend-v2` (proxies `/api` to port 8000).
+Open **http://127.0.0.1:8000**. For frontend development with hot reload, run `npm run dev` inside `frontend-v2` (proxies `/api` to port 8000).
 
 ---
 

@@ -3,7 +3,6 @@ import logging
 from fastapi import APIRouter, Request
 from src.math_engine import MathEngine
 from src.services.archive import load_archive_from_db
-from src.services.owner_auth import require_owner
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +99,6 @@ def init_router(math_engine, archive_collection, custom_bot_collection, limiter)
     @router.post("/custom_bot")
     @limiter.limit("30/minute")
     def save_custom_bot(request: Request, payload: dict):
-        require_owner(request)
         name = (payload.get("name") or "Mein Bot").strip()[:40] or "Mein Bot"
         params = _clean_bot_params(payload.get("params") or {})
         custom_bot_collection.replace_one(

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSaveCustomBot } from '../../hooks/queries'
-import { isOwner } from '../../lib/ownerAuth'
 import type { BotSimulation, CustomBot, CustomBotParams } from '../../lib/types'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
 import { Slider } from '../../components/ui/Slider'
@@ -116,28 +115,26 @@ export function BuildABot({ customBot, simulate, userPoints, algoPoints }: {
         )}
       </div>
 
-      {isOwner() && (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={40}
-            placeholder="Bot-Name"
-            className="min-w-40 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-fg outline-none placeholder:text-fg-3 focus:border-emerald-a/50"
-          />
-          <button
-            onClick={onSave}
-            disabled={saveState === 'saving'}
-            className={cn(
-              'rounded-xl border px-5 py-2 text-sm font-bold transition disabled:opacity-50',
-              saveState === 'error' ? 'border-red-a text-red-a' : 'hover:brightness-110',
-            )}
-            style={saveState !== 'error' ? { borderColor: CYAN, color: CYAN, background: 'rgba(45,212,191,0.1)' } : undefined}
-          >
-            {saveState === 'saving' ? '…' : saveState === 'error' ? '✗ Fehler' : 'Save Bot'}
-          </button>
-        </div>
-      )}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={40}
+          placeholder="Bot-Name"
+          className="min-w-40 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-fg outline-none placeholder:text-fg-3 focus:border-emerald-a/50"
+        />
+        <button
+          onClick={onSave}
+          disabled={saveState === 'saving'}
+          className={cn(
+            'rounded-xl border px-5 py-2 text-sm font-bold transition disabled:opacity-50',
+            saveState === 'error' ? 'border-red-a text-red-a' : 'hover:brightness-110',
+          )}
+          style={saveState !== 'error' ? { borderColor: CYAN, color: CYAN, background: 'rgba(45,212,191,0.1)' } : undefined}
+        >
+          {saveState === 'saving' ? '…' : saveState === 'error' ? '✗ Fehler' : 'Save Bot'}
+        </button>
+      </div>
     </GlassCard>
   )
 }

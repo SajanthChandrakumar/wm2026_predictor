@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMatches, usePredict, useSaveUserTip } from '../../hooks/queries'
-import { isOwner } from '../../lib/ownerAuth'
 import { useAppState } from '../../state/AppState'
 import { computeImpliedProbs, pct, flag, cn } from '../../lib/util'
 import type { BotKey, Match } from '../../lib/types'
@@ -177,15 +176,13 @@ export function DetailView() {
                   </div>
                 ))}
               </div>
-              {isOwner() && (
-                <button
-                  onClick={adopt}
-                  disabled={saveTip.isPending}
-                  className="mt-4 w-full rounded-xl bg-gold-a/90 px-4 py-2.5 text-sm font-bold text-black transition hover:brightness-110 disabled:opacity-50"
-                >
-                  Tipp übernehmen
-                </button>
-              )}
+              <button
+                onClick={adopt}
+                disabled={saveTip.isPending}
+                className="mt-4 w-full rounded-xl bg-gold-a/90 px-4 py-2.5 text-sm font-bold text-black transition hover:brightness-110 disabled:opacity-50"
+              >
+                Tipp übernehmen
+              </button>
               {adoptStatus && <p className="mt-2 text-center text-xs text-fg-2">{adoptStatus}</p>}
             </>
           ) : (

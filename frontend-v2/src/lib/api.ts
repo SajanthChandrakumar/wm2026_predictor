@@ -2,12 +2,11 @@ import type {
   Archive, BotSimulation, CustomBot, CustomBotParams, EloHistory,
   EloRatings, KnockoutSimulation, LearningBot, Match, Prediction, Quota, RawMatch, SyncResult,
 } from './types'
-import { getOwnerSecret } from './ownerAuth'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
+    headers: { 'Content-Type': 'application/json' },
     ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
@@ -31,7 +30,6 @@ export const api = {
   saveUserTip: (matchId: string, userTip: string) =>
     request<{ status: string }>('/archive/user_tip', {
       method: 'POST',
-      headers: { 'X-Owner-Secret': getOwnerSecret() ?? '' },
       body: JSON.stringify({ match_id: matchId, user_tip: userTip }),
     }),
   learningBots: () => request<LearningBot[]>('/learning_bots'),
@@ -39,7 +37,6 @@ export const api = {
   saveCustomBot: (name: string, params: CustomBotParams) =>
     request<{ status: string }>('/custom_bot', {
       method: 'POST',
-      headers: { 'X-Owner-Secret': getOwnerSecret() ?? '' },
       body: JSON.stringify({ name, params }),
     }),
   simulateBot: (params: CustomBotParams) =>
