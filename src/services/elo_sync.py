@@ -5,7 +5,7 @@ import logging
 
 from src.constants import DISPLAY_MAPPING, SCORES_CACHE_TTL, _is_ko_round
 from src.services.archive import (
-    load_archive_from_db, upsert_archive_entry, archive_signature,
+    load_archive_from_db, upsert_archive_entry,
     build_archive_id_index, resolve_archive_id,
 )
 from src.services import espn_data
@@ -29,7 +29,7 @@ def _remap_to_archive_ids(scores: list, archive: dict) -> list:
     return scores
 
 
-def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collection, data_dir, scores_cache_path, MathEngine, compute_learning_bots, force: bool = False) -> dict:
+def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collection, data_dir, scores_cache_path, MathEngine, force: bool = False) -> dict:
     print("Elo sync triggered...")
     processed_json_path = os.path.join(data_dir, 'processed_matches.json')
 
@@ -340,22 +340,6 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
                 print(f"Algo tips reconstructed: {reconstructed} matches (Elo-only pipeline).")
         except Exception as e:
             print(f"Archive grading failed: {e}")
-
-        # Warm the learning-bots cache
-        try:
-            fresh_archive = load_archive_from_db(archive_collection)
-            sig = archive_signature(fresh_archive)
-            existing = cache_collection.find_one({"_id": "learning_bots_cache"})
-            if not existing or existing.get("signature") != sig:
-                bots = compute_learning_bots(math_engine, fresh_archive)
-                cache_collection.update_one(
-                    {"_id": "learning_bots_cache"},
-                    {"$set": {"signature": sig, "timestamp": time.time(), "data": bots}},
-                    upsert=True,
-                )
-                print(f"Learning bots cached: {len(bots)}")
-        except Exception as e:
-            print(f"Learning bots warm-cache failed: {e}")
 
         if updates > 0:
             return {"status": "success", "updates": updates}

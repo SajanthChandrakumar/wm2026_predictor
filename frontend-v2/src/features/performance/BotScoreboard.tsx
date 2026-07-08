@@ -55,7 +55,6 @@ export function BotScoreboard({ totals, botStats, extraBots }: {
                 <td className="px-5 py-2.5">
                   <span className="mr-2 text-fg-3">{i + 1}.</span>
                   <span className={cn('font-bold')} style={{ color: r.color }}>{r.label}</span>
-                  {r.learnedLabel && <span className="ml-2 block text-[10px] text-fg-3 sm:inline">{r.learnedLabel}</span>}
                 </td>
                 <td className="display-num px-2 py-2.5 text-right text-base" style={{ color: r.color }}>{r.pts}</td>
                 <td className="px-2 py-2.5 text-right tabular-nums text-fg-2">{r.tipped}</td>

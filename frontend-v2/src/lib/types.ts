@@ -131,17 +131,6 @@ export interface BotSimulation {
   breakdown: { match_id: string; points: number }[]
 }
 
-export interface LearningBot {
-  key: string
-  name: string
-  color: string
-  pts: number
-  tipped: number
-  tendency: number
-  pointsByMatch: Record<string, number>
-  learned_label?: string | null
-}
-
 export interface SyncResult {
   status: 'success' | 'info' | 'error'
   updates?: number

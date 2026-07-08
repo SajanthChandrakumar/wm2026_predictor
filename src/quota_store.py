@@ -3,7 +3,7 @@
 Render's filesystem is ephemeral — it resets on every deploy, restart, and
 free-tier spin-down. The quota counters used to live in `data/*.json`, which
 meant `/api/quota` returned `--` after every cold start. Everything else in
-this app (matches, archive, standings, learning bots) is persisted in MongoDB;
+this app (matches, archive, standings) is persisted in MongoDB;
 this module brings quota in line with that.
 
 Falls back to the local filesystem when MONGO_URI is unset (local dev), so the

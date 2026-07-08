@@ -1,6 +1,6 @@
 import type {
   Archive, BotSimulation, CustomBot, CustomBotParams, EloHistory,
-  EloRatings, KnockoutSimulation, LearningBot, Match, Prediction, Quota, RawMatch, SyncResult,
+  EloRatings, KnockoutSimulation, Match, Prediction, Quota, RawMatch, SyncResult,
 } from './types'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -32,7 +32,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ match_id: matchId, user_tip: userTip }),
     }),
-  learningBots: () => request<LearningBot[]>('/learning_bots'),
   customBot: () => request<CustomBot>('/custom_bot'),
   saveCustomBot: (name: string, params: CustomBotParams) =>
     request<{ status: string }>('/custom_bot', {

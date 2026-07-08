@@ -48,8 +48,7 @@ This project is developed **strictly for scientific, educational, and research p
 | **Pool strategy** | Contrarian objective: `E[advantage vs chalk] + λ · SD[advantage]`; λ = 0 reproduces chalk, λ ≈ 0.3 = soft contrarian, λ ≥ 0.5 = true draw gambles |
 | **Monte Carlo simulator** | Full knockout-bracket simulation (default 20 000 runs) from live Elo ratings — per-team title odds and round-reach probabilities |
 | **House bots** | Four fixed-strategy agents: Broker (pure market), Professor (pure Elo), X-Sniper (highest-xP draw), Zocker (weighted-random, seeded by match ID) |
-| **Learning bots** | Three adaptive agents that evolve over the tournament: Optimizer (best historical params), Momentum (recency-weighted params), Mitläufer (follows current leader) |
-| **Caching** | Dynamic TTL: >24 h to kick-off → 12 h; 2–24 h → 1 h; <2 h → 15 min. Learning bot results cached by archive signature — recomputes only when new results arrive |
+| **Caching** | Dynamic TTL: >24 h to kick-off → 12 h; 2–24 h → 1 h; <2 h → 15 min |
 | **Elo sync** | Idempotent daily background job (APScheduler, 04:00 UTC); tracks processed match IDs; warms all caches post-sync |
 
 ---
@@ -110,7 +109,6 @@ This project is developed **strictly for scientific, educational, and research p
 | `GET` | `/api/elo_history` | Per-team Elo snapshots across the tournament (powers Team Form chart) |
 | `GET` | `/api/elo_ratings` | Current Elo table for all qualified teams |
 | `POST` | `/api/sync_elo` | Trigger an immediate Elo sync from completed match scores; warms all downstream caches |
-| `GET` | `/api/learning_bots` | Current state of all three learning bots; signature-keyed cache |
 | `GET` | `/api/standings` | Group standings for all 12 WC 2026 groups; 1 h MongoDB cache |
 | `GET` | `/api/quota` | Remaining requests for The Odds API (ESPN is unmetered) |
 | `GET` | `/api/ping` | Keep-alive endpoint (prevents Render free-tier cold starts) |
@@ -163,7 +161,6 @@ wm2026_predictor/
 ├── src/
 │   ├── api.py            # FastAPI app: init, middleware, router wiring
 │   ├── math_engine.py    # Elo, xG solver, Dixon-Coles, xP, pool optimiser
-│   ├── learning_bots.py  # Adaptive agents (Optimizer / Momentum / Mitläufer)
 │   ├── routes/           # matches, predict, custom_bot, simulate
 │   └── services/         # ESPN data, odds helpers, archive, Elo sync, Monte Carlo, owner auth
 ├── frontend-v2/          # React 19 + Vite + Tailwind SPA (live frontend, served from dist/)

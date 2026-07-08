@@ -5,8 +5,6 @@ from src.constants import TEAM_MAPPING
 
 logger = logging.getLogger(__name__)
 
-_LEARNING_BOTS_CODE_VERSION = 2
-
 # ── In-process archive cache ─────────────────────────────────────────────────
 # Avoids a full MongoDB collection scan on every /api/matches cache-hit.
 # Invalidated explicitly after any write (upsert_archive_entry) so reads
@@ -83,11 +81,3 @@ def upsert_archive_entry(archive_collection, match_id: str, entry: dict) -> None
         upsert=True
     )
     invalidate_archive_mem_cache()  # next read will re-fetch from MongoDB
-
-
-def archive_signature(archive: dict) -> str:
-    completed_ids = sorted(
-        mid for mid, m in archive.items()
-        if (m.get("post_match_result") or {}).get("status") == "completed"
-    )
-    return f"v{_LEARNING_BOTS_CODE_VERSION}:{len(completed_ids)}:{hash(tuple(completed_ids))}"

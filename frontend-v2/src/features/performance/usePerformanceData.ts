@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useArchive, useCustomBot, useLearningBots, useSimulateBot } from '../../hooks/queries'
+import { useArchive, useCustomBot, useSimulateBot } from '../../hooks/queries'
 import { api } from '../../lib/api'
 import type { Archive, ArchiveEntry, BotKey } from '../../lib/types'
 
@@ -27,7 +27,6 @@ export interface ScoreRow {
   tendency: number
   isUser?: boolean
   isExtra?: boolean
-  learnedLabel?: string | null
   pointsByMatch?: Record<string, number>
 }
 
@@ -91,7 +90,6 @@ export function aggregate(archive: Archive | undefined) {
 
 export function usePerformanceData() {
   const { data: archive, isLoading } = useArchive()
-  const { data: learningBots } = useLearningBots()
   const { data: customBot } = useCustomBot()
   const simulate = useSimulateBot()
 
@@ -119,17 +117,8 @@ export function usePerformanceData() {
         pointsByMatch: Object.fromEntries(customSim.breakdown.map((b) => [b.match_id, b.points])),
       })
     }
-    for (const lb of learningBots ?? []) {
-      if (!(lb.tipped > 0)) continue
-      out.push({
-        key: lb.key, label: lb.name, color: lb.color,
-        pts: lb.pts, tipped: lb.tipped, tendency: lb.tendency,
-        isExtra: true, learnedLabel: lb.learned_label,
-        pointsByMatch: lb.pointsByMatch,
-      })
-    }
     return out
-  }, [learningBots, customBot, customSim])
+  }, [customBot, customSim])
 
   return { archive, completed, totals, botStats, extraBots, customBot, simulate, isLoading }
 }

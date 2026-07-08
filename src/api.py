@@ -26,10 +26,9 @@ else:
     print("Odds engine: The Odds API")
 
 from src.math_engine import MathEngine
-from src.learning_bots import compute_learning_bots
 from src.quota_store import read_quota
 from src.constants import TEAM_MAPPING, SCORES_CACHE_TTL, _is_ko_round
-from src.services.archive import load_archive_from_db, upsert_archive_entry, archive_signature
+from src.services.archive import load_archive_from_db, upsert_archive_entry
 from src.services.elo_sync import perform_elo_sync
 from src.routes.matches import init_router as matches_router
 from src.routes.predict import init_router as predict_router
@@ -185,36 +184,6 @@ def get_standings():
         pass
     return []
 
-@app.get("/api/learning_bots")
-def get_learning_bots():
-    archive = load_archive_from_db(archive_collection)
-    sig = archive_signature(archive)
-
-    try:
-        doc = cache_collection.find_one({"_id": "learning_bots_cache"})
-        if doc and doc.get("signature") == sig:
-            return doc.get("data", [])
-    except Exception:
-        pass
-
-    try:
-        bots = compute_learning_bots(math_engine, archive)
-        cache_collection.update_one(
-            {"_id": "learning_bots_cache"},
-            {"$set": {"signature": sig, "timestamp": time.time(), "data": bots}},
-            upsert=True,
-        )
-        return bots
-    except Exception as e:
-        logger.error(f"Learning bots computation failed: {e}", exc_info=True)
-        try:
-            doc = cache_collection.find_one({"_id": "learning_bots_cache"})
-            if doc and doc.get("data"):
-                return doc["data"]
-        except Exception:
-            pass
-        return []
-
 @app.get("/api/elo_history")
 def get_elo_history():
     try:
@@ -362,7 +331,6 @@ def sync_elo(request: Request, force: bool = False):
             data_dir=_data_dir,
             scores_cache_path=scores_cache_path,
             MathEngine=MathEngine,
-            compute_learning_bots=compute_learning_bots,
             force=force,
         )
     except Exception as e:
