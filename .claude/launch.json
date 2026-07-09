@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "wm2026-api",
-      "runtimeExecutable": ".venv/bin/python",
+      "runtimeExecutable": "python",
       "runtimeArgs": [
         "-m",
         "uvicorn",

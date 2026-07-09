@@ -32,15 +32,28 @@ export function PointsRaceChart({ completed, extraBots }: {
 
   if (rows.length < 2) return null
 
+  // Thin out X-axis labels once there are many matches, so they don't overlap into a smudge.
+  const tickInterval = rows.length > 24 ? Math.ceil(rows.length / 12) : rows.length > 12 ? 1 : 0
+
   return (
     <GlassCard>
       <SectionTitle className="mb-4">Points Race</SectionTitle>
-      <div className="h-72">
+      <div className="h-96">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={rows} margin={{ top: 4, right: 12, bottom: 0, left: -8 }}>
+          <LineChart data={rows} margin={{ top: 4, right: 16, bottom: 12, left: -4 }}>
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: 'var(--text-3)', fontSize: 9 }} angle={-45} textAnchor="end" height={48} tickLine={false} axisLine={{ stroke: 'var(--border)' }} />
-            <YAxis tick={{ fill: 'var(--text-3)', fontSize: 11 }} tickLine={false} axisLine={false} width={40} />
+            <XAxis
+              dataKey="label"
+              tick={{ fill: 'var(--text-3)', fontSize: 10 }}
+              interval={tickInterval}
+              angle={-40}
+              textAnchor="end"
+              height={56}
+              tickMargin={8}
+              tickLine={false}
+              axisLine={{ stroke: 'var(--border)' }}
+            />
+            <YAxis tick={{ fill: 'var(--text-3)', fontSize: 11 }} tickLine={false} axisLine={false} width={44} />
             <Tooltip
               contentStyle={{
                 background: 'var(--surface-2)', border: '1px solid var(--border-2)',
@@ -48,7 +61,10 @@ export function PointsRaceChart({ completed, extraBots }: {
               }}
               labelStyle={{ color: 'var(--text-2)', fontWeight: 700 }}
             />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Legend
+              wrapperStyle={{ fontSize: 12, paddingTop: 16, display: 'flex', flexWrap: 'wrap', gap: '4px 16px', justifyContent: 'center' }}
+              iconSize={10}
+            />
             {series.map((s) => (
               <Line
                 key={s.key} type="monotone" dataKey={s.key}
