@@ -22,9 +22,9 @@ A full-stack quantitative prediction engine built for the [SRF Tippspiel](https:
 
 ## Motivation
 
-In a closed prediction pool, **maximising raw expected points is the wrong objective**. If everyone picks the chalk tip, you share points with the field even when you're right. The correct strategy is to maximise your *advantage over the field* — which sometimes means taking a calculated contrarian position.
+In a prediction pool, picking the most likely scoreline is only part of the puzzle. While raw Expected Points (**xP**) maximize your theoretical baseline, competitive pool dynamics often require balancing chalk predictions against alternative strategies.
 
-This system implements that distinction: a chalk mode (maximise expected points) and a pool mode (maximise `E[advantage vs chalk] + λ · SD[advantage]`, where λ controls aggressiveness).
+This system provides both rigorous expected-point optimization across the full bivariate Poisson score matrix and a **Build-a-Bot** sandbox where users can design, backtest, and simulate custom tipping strategies (adjusting market vs. Elo weighting, goal scaling, and draw bias) against the field.
 
 ---
 
@@ -41,15 +41,15 @@ This project is developed **strictly for scientific, educational, and research p
 | **Prediction model** | Dixon-Coles bivariate Poisson (ρ = −0.15); SciPy L-BFGS-B reverse-engineer solver for xG |
 | **Fixtures & results** | ESPN public scoreboard — full played + upcoming fixture list, live scores, KO-round detection, group standings (no auth, no quota) |
 | **Odds ingestion** | The Odds API — consensus **median** across all bookmakers (H2H + O/U 2.5) for upcoming games; ESPN/DraftKings odds as fallback; proportional margin removal |
-| **Elo system** | Dynamic ratings for all 32 qualified nations; K = 60; margin-of-victory multiplier; +80 host bonus (USA/CAN/MEX) on post-match updates only |
+| **Elo system** | Dynamic ratings for all 48 qualified nations; K = 60; margin-of-victory multiplier; +80 host bonus (USA/CAN/MEX) on post-match updates only |
 | **Probability blend** | 70 % bookmaker odds / 30 % Elo, restricted to the win/loss pool — draw probability held fixed to prevent deflation |
 | **K.O. phase** | Extra-time xG inflation weighted by P(draw after 90 min) — conditional, not a flat 1.33× multiplier |
 | **xP optimiser** | Evaluates all 36 possible tips (0:0 – 5:5) against the full score matrix using the exact SRF Tippspiel scoring rules |
-| **Pool strategy** | Contrarian objective: `E[advantage vs chalk] + λ · SD[advantage]`; λ = 0 reproduces chalk, λ ≈ 0.3 = soft contrarian, λ ≥ 0.5 = true draw gambles |
+| **Build-a-Bot strategy** | Customizable tipping engine: adjustable market vs. Elo weighting, xG scaling, and draw bias with historical backtesting |
 | **Monte Carlo simulator** | Full knockout-bracket simulation (default 20 000 runs) from live Elo ratings — per-team title odds and round-reach probabilities |
-| **House bots** | Four fixed-strategy agents: Broker (pure market), Professor (pure Elo), X-Sniper (highest-xP draw), Zocker (weighted-random, seeded by match ID) |
+| **House bots** | Four fixed-strategy agents: Broker (pure market), Professor (pure Elo), X-Sniper (highest-xP draw), Gambler / Zocker (weighted-random, seeded by match ID) |
 | **Caching** | Dynamic TTL: >24 h to kick-off → 12 h; 2–24 h → 1 h; <2 h → 15 min |
-| **Elo sync** | Idempotent daily background job (APScheduler, 04:00 UTC); tracks processed match IDs; warms all caches post-sync |
+| **Elo sync** | On-demand synchronization via `GET /api/sync_elo`; tracks processed match IDs and warms downstream caches post-sync |
 
 ---
 
@@ -108,7 +108,9 @@ This project is developed **strictly for scientific, educational, and research p
 | `GET` | `/api/simulate_knockout` | Monte Carlo knockout simulation; `?runs=` controls sample size |
 | `GET` | `/api/elo_history` | Per-team Elo snapshots across the tournament (powers Team Form chart) |
 | `GET` | `/api/elo_ratings` | Current Elo table for all qualified teams |
-| `POST` | `/api/sync_elo` | Trigger an immediate Elo sync from completed match scores; warms all downstream caches |
+| `GET` | `/api/sync_elo` | Trigger an immediate Elo sync from completed match scores; warms all downstream caches |
+| `GET` | `/api/recalculate_points` | Recalculates all algorithm and bot points in the archive for completed matches |
+| `GET` | `/api/rebuild_honest_tips` | Rebuilds historical pre-match predictions from snapshots and regrades points |
 | `GET` | `/api/standings` | Group standings for all 12 WC 2026 groups; 1 h MongoDB cache |
 | `GET` | `/api/quota` | Remaining requests for The Odds API (ESPN is unmetered) |
 | `GET` | `/api/ping` | Keep-alive endpoint (prevents Render free-tier cold starts) |
@@ -119,11 +121,11 @@ This project is developed **strictly for scientific, educational, and research p
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.12, FastAPI, Uvicorn, APScheduler |
+| Backend | Python 3.12, FastAPI, Uvicorn, SlowAPI |
 | Math | NumPy, SciPy (`optimize.minimize`, L-BFGS-B), Pandas |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, TanStack Query, React Router |
 | Charts | Recharts (Elo trajectory, cumulative bot race, simulation odds) |
-| Data | ESPN public API (fixtures, scores, standings, KO rounds), The Odds API (multi-bookmaker odds), MongoDB Atlas (archive, cache, bot states) |
+| Data | ESPN public API (fixtures, scores, standings, KO rounds), The Odds API / API-Football (multi-bookmaker odds), MongoDB Atlas (archive, cache, bot states) |
 
 ---
 
@@ -159,14 +161,18 @@ Open **http://127.0.0.1:8000**. For frontend development with hot reload, run `n
 ```
 wm2026_predictor/
 ├── src/
-│   ├── api.py            # FastAPI app: init, middleware, router wiring
-│   ├── math_engine.py    # Elo, xG solver, Dixon-Coles, xP, pool optimiser
-│   ├── routes/           # matches, predict, custom_bot, simulate
-│   └── services/         # ESPN data, odds helpers, archive, Elo sync, Monte Carlo, owner auth
-├── frontend-v2/          # React 19 + Vite + Tailwind SPA (live frontend, served from dist/)
-├── frontend/             # Legacy vanilla-JS frontend (kept as fallback)
-├── data/                 # Elo ratings, caches, backups
-└── ARCHITECTURE.md       # Full mathematical derivation
+│   ├── api.py                     # FastAPI app: init, middleware, router wiring
+│   ├── math_engine.py             # Elo, xG solver, Dixon-Coles, xP, pool optimiser
+│   ├── constants.py               # Team mappings, cache TTLs, score helpers
+│   ├── odds_engine.py             # The Odds API client & consensus odds parsing
+│   ├── odds_engine_apifootball.py # API-Football (api-sports.io) alternative engine
+│   ├── quota_store.py             # API request quota persistence
+│   ├── routes/                    # matches, predict, custom_bot, simulate
+│   └── services/                  # ESPN data, odds helpers, archive, Elo sync, Monte Carlo
+├── frontend-v2/                   # React 19 + Vite + Tailwind SPA (live frontend, served from dist/)
+├── frontend/                      # Legacy vanilla-JS frontend (kept as fallback)
+├── data/                          # Elo ratings, caches, backups
+└── ARCHITECTURE.md                # Full mathematical derivation
 ```
 
 ---

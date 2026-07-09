@@ -1,13 +1,11 @@
 pandas
-requests
-streamlit
-python-dotenv
-scipy
 numpy
-matplotlib
-filelock
+scipy
+requests
 fastapi
 uvicorn[standard]
 slowapi
 pymongo
 certifi
+python-dotenv
+pytest
