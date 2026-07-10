@@ -87,7 +87,7 @@ This project is developed **strictly for scientific, educational, and research p
 |---|---|
 | **Dashboard** | All tournament fixtures grouped by day with live probabilities, algo tips, and team form badges |
 | **Top Value Bets** | Fixtures ranked by Expected Points — highest xP tip first |
-| **Model Edge** | Where Elo diverges most from market consensus — paired probability bars for upcoming fixtures, plus a history tab grading past edge calls as hit / miss / close |
+| **Model Edge** | Where Elo diverges most from market consensus — visualised as paired probability bars |
 | **Team Form** | Per-team Elo trajectory across the tournament; compare up to 4 teams simultaneously |
 | **Groups** | All 12 group standings dynamically computed from the completed-match archive — no extra API call |
 | **Performance** | Full analytics: your SRF points, hit rate, You vs Algo head-to-head, bot scoreboard, Build-a-Bot, cumulative points race, and editable match history |
