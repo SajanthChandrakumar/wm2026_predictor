@@ -7,6 +7,7 @@ import logging
 import pandas as pd
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pymongo import MongoClient
 import certifi
@@ -60,6 +61,10 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
+# Compress JSON payloads and static assets (the matches/archive responses
+# are several hundred KB uncompressed).
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
 def _real_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
@@ -77,11 +82,14 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data:"
-    # Force browsers to revalidate JS/CSS/HTML every load (ETag → 304 when
-    # unchanged). Without this, unversioned ES-module sub-imports get cached
-    # indefinitely and code changes silently fail to reach the browser.
     path = request.url.path
-    if path == "/" or path.endswith((".js", ".css", ".html")):
+    if path.startswith("/assets/"):
+        # Vite emits content-hashed filenames under /assets/ — safe to cache
+        # forever; a new build changes the hash and busts the cache.
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif path == "/" or path.endswith((".js", ".css", ".html")):
+        # Everything unhashed (index.html, legacy frontend) must revalidate
+        # every load (ETag → 304), or code changes silently fail to arrive.
         response.headers["Cache-Control"] = "no-cache"
     return response
 
