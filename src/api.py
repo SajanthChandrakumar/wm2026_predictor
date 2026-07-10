@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 import json
 import logging
 
@@ -28,7 +27,7 @@ else:
 
 from src.math_engine import MathEngine
 from src.quota_store import read_quota
-from src.constants import TEAM_MAPPING, SCORES_CACHE_TTL, _is_ko_round
+from src.constants import TEAM_MAPPING
 from src.services.archive import load_archive_from_db, upsert_archive_entry
 from src.services.elo_sync import perform_elo_sync
 from src.routes.matches import init_router as matches_router
@@ -81,7 +80,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data:"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data:"
     path = request.url.path
     if path.startswith("/assets/"):
         # Vite emits content-hashed filenames under /assets/ — safe to cache
@@ -345,8 +344,6 @@ def sync_elo(request: Request, force: bool = False):
         logger.error(f"Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An error occurred processing your request")
 
-# v2 (React/Vite build) is the live frontend; legacy frontend/ stays in the
-# repo as fallback — flip the path back to '..', 'frontend' to roll back.
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend-v2', 'dist'))
 os.makedirs(frontend_dir, exist_ok=True)
 app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
