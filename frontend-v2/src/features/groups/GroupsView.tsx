@@ -4,6 +4,7 @@ import { useArchive } from '../../hooks/queries'
 import { flag, cn } from '../../lib/util'
 import { GlassCard } from '../../components/shared/GlassCard'
 import { PageTransition, PageHeader, staggerContainer, staggerItem } from '../../components/shared/PageTransition'
+import { CardGridSkeleton } from '../../components/shared/Skeleton'
 
 // 48 teams in 12 groups — standings computed live from archive results.
 const WC_GROUPS: Record<string, string[]> = {
@@ -81,11 +82,11 @@ export function GroupsView() {
   return (
     <PageTransition>
       <PageHeader title="Groups" subtitle="Live-Tabellen aus den bisherigen Resultaten — Top 2 qualifiziert, Platz 3 Playoff-Chance" />
-      {isLoading && <p className="text-fg-2">Computing Live Standings…</p>}
+      {isLoading && <CardGridSkeleton count={6} cols="md:grid-cols-2 xl:grid-cols-3" />}
 
       <motion.div
         variants={staggerContainer} initial="initial" animate="animate"
-        className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+        className={cn('grid gap-4 md:grid-cols-2 xl:grid-cols-3', isLoading && 'hidden')}
       >
         {Object.entries(WC_GROUPS).map(([group, teams]) => (
           <motion.div key={group} variants={staggerItem}>

@@ -5,6 +5,7 @@ import { useMatches } from '../../hooks/queries'
 import { flag, cn } from '../../lib/util'
 import { shortDate } from '../../lib/format'
 import { PageTransition, PageHeader, staggerContainer, staggerItem } from '../../components/shared/PageTransition'
+import { CardGridSkeleton } from '../../components/shared/Skeleton'
 import type { Match } from '../../lib/types'
 
 type EdgeGrade = 'hit' | 'miss' | 'close'
@@ -148,7 +149,7 @@ export function EdgeView() {
         )}
       </div>
 
-      {isLoading && <p className="text-fg-2">Lade Edge-Daten…</p>}
+      {isLoading && <CardGridSkeleton count={4} />}
 
       {!isLoading && activeCards.length === 0 && (
         <div className="glass rounded-xl p-8 text-center text-fg-2">

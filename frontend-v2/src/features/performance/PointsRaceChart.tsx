@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
-  CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
+import { cn } from '../../lib/util'
 import { HOUSE_BOTS, type CompletedMatch, type ScoreRow } from './usePerformanceData'
 
 /** Cumulative points per predictor over the played matches (oldest → newest). */
@@ -10,6 +11,8 @@ export function PointsRaceChart({ completed, extraBots }: {
   completed: CompletedMatch[]
   extraBots: ScoreRow[]
 }) {
+  const [hidden, setHidden] = useState<Set<string>>(new Set())
+
   const { rows, series } = useMemo(() => {
     const chrono = [...completed].sort((a, b) => a.sortDate.localeCompare(b.sortDate))
     const series = [
@@ -32,12 +35,48 @@ export function PointsRaceChart({ completed, extraBots }: {
 
   if (rows.length < 2) return null
 
+  const toggle = (key: string) => setHidden((prev) => {
+    const next = new Set(prev)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    return next
+  })
+
   // Thin out X-axis labels once there are many matches, so they don't overlap into a smudge.
   const tickInterval = rows.length > 24 ? Math.ceil(rows.length / 12) : rows.length > 12 ? 1 : 0
 
   return (
     <GlassCard>
-      <SectionTitle className="mb-4">Points Race</SectionTitle>
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <SectionTitle>Points Race</SectionTitle>
+        <span className="text-[11px] text-fg-3">Klick auf einen Namen zum Ein-/Ausblenden</span>
+      </div>
+
+      {/* Custom legend: toggle chips instead of Recharts' cramped one-liner */}
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {series.map((s) => {
+          const off = hidden.has(s.key)
+          return (
+            <button
+              key={s.key}
+              onClick={() => toggle(s.key)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition',
+                off
+                  ? 'border-line bg-surface text-fg-3 opacity-50'
+                  : 'border-line-2 bg-surface-2 text-fg',
+              )}
+            >
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ background: off ? 'var(--text-3)' : s.color }}
+              />
+              {s.key}
+            </button>
+          )
+        })}
+      </div>
+
       <div className="h-96">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 4, right: 16, bottom: 12, left: -4 }}>
@@ -61,15 +100,12 @@ export function PointsRaceChart({ completed, extraBots }: {
               }}
               labelStyle={{ color: 'var(--text-2)', fontWeight: 700 }}
             />
-            <Legend
-              wrapperStyle={{ fontSize: 12, paddingTop: 16, display: 'flex', flexWrap: 'wrap', gap: '4px 16px', justifyContent: 'center' }}
-              iconSize={10}
-            />
             {series.map((s) => (
               <Line
                 key={s.key} type="monotone" dataKey={s.key}
                 stroke={s.color} strokeWidth={s.key === 'Du' ? 3 : 2}
                 strokeDasharray={s.dash} dot={false} activeDot={{ r: 4 }}
+                hide={hidden.has(s.key)}
               />
             ))}
           </LineChart>
