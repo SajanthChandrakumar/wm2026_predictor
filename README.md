@@ -170,7 +170,6 @@ wm2026_predictor/
 │   ├── routes/                    # matches, predict, custom_bot, simulate
 │   └── services/                  # ESPN data, odds helpers, archive, Elo sync, Monte Carlo
 ├── frontend-v2/                   # React 19 + Vite + Tailwind SPA (live frontend, served from dist/)
-├── frontend/                      # Legacy vanilla-JS frontend (kept as fallback)
 ├── data/                          # Elo ratings, caches, backups
 └── ARCHITECTURE.md                # Full mathematical derivation
 ```
