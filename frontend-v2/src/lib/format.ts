@@ -26,8 +26,3 @@ export function shortDate(iso?: string | null): string {
     weekday: 'short', day: '2-digit', month: 'short', timeZone: TZ,
   })
 }
-
-export function numericDate(iso?: string | null): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', timeZone: TZ })
-}

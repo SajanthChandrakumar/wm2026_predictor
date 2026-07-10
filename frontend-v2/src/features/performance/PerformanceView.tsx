@@ -1,5 +1,6 @@
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
 import { PageTransition, PageHeader } from '../../components/shared/PageTransition'
+import { PerformanceSkeleton } from '../../components/shared/Skeleton'
 import { cn } from '../../lib/util'
 import { usePerformanceData } from './usePerformanceData'
 import { BotScoreboard } from './BotScoreboard'
@@ -14,7 +15,7 @@ export function PerformanceView() {
     return (
       <PageTransition>
         <PageHeader title="Algorithm Performance" subtitle="Prediction accuracy vs actual results" />
-        <p className="text-fg-2">Lade…</p>
+        <PerformanceSkeleton />
       </PageTransition>
     )
   }

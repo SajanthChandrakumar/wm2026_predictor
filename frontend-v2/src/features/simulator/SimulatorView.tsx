@@ -3,6 +3,7 @@ import { useKnockoutSimulation } from '../../hooks/queries'
 import { flag, cn } from '../../lib/util'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
 import { PageTransition, PageHeader, staggerContainer, staggerItem } from '../../components/shared/PageTransition'
+import { ChartSkeleton } from '../../components/shared/Skeleton'
 
 const COLUMNS: { key: 'reached_qf' | 'reached_sf' | 'reached_final' | 'champion'; label: string; color: string }[] = [
   { key: 'reached_qf', label: 'Viertelfinale', color: 'var(--blue)' },
@@ -21,7 +22,12 @@ export function SimulatorView() {
         subtitle="Monte-Carlo-Simulation ab dem Achtelfinale — reine Elo-Wahrscheinlichkeiten, keine Marktdaten (noch keine Quoten für hypothetische Spätrunden)"
       />
 
-      {isLoading && <p className="text-fg-2">Simuliere Turnierverläufe…</p>}
+      {isLoading && (
+        <div className="space-y-4">
+          <p className="text-fg-2">Simuliere Turnierverläufe…</p>
+          <ChartSkeleton />
+        </div>
+      )}
       {error && <p className="text-red-a">Fehler: {(error as Error).message}</p>}
 
       {data && (

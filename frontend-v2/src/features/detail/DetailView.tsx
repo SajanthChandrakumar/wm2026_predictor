@@ -7,6 +7,7 @@ import type { BotKey, Match } from '../../lib/types'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
 import { FormBadges } from '../../components/shared/Badges'
 import { PageTransition } from '../../components/shared/PageTransition'
+import { ChartSkeleton, CardGridSkeleton } from '../../components/shared/Skeleton'
 import { Switch } from '../../components/ui/Switch'
 import { ScoreHeatmap } from './ScoreHeatmap'
 
@@ -37,7 +38,16 @@ export function DetailView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match?.id, koPhase])
 
-  if (!matches) return <p className="text-fg-2">Lade…</p>
+  if (!matches) {
+    return (
+      <PageTransition>
+        <div className="space-y-4">
+          <ChartSkeleton />
+          <CardGridSkeleton count={2} />
+        </div>
+      </PageTransition>
+    )
+  }
   if (!match) return <p className="text-red-a">Match nicht gefunden.</p>
 
   const calc = predict.data

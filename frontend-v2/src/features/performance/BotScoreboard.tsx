@@ -44,7 +44,7 @@ export function BotScoreboard({ totals, botStats, extraBots }: {
             <tr className="text-[10px] font-bold uppercase tracking-wider text-fg-3">
               <th className="px-5 py-2 text-left">Bot</th>
               <th className="px-2 py-2 text-right">Pts</th>
-              <th className="px-2 py-2 text-right">Getippt</th>
+              <th className="px-2 py-2 text-right max-sm:hidden">Getippt</th>
               <th className="px-2 py-2 text-right">Ø/Spiel</th>
               <th className="px-5 py-2 text-right">Tendenz</th>
             </tr>
@@ -57,7 +57,7 @@ export function BotScoreboard({ totals, botStats, extraBots }: {
                   <span className={cn('font-bold')} style={{ color: r.color }}>{r.label}</span>
                 </td>
                 <td className="display-num px-2 py-2.5 text-right text-base" style={{ color: r.color }}>{r.pts}</td>
-                <td className="px-2 py-2.5 text-right tabular-nums text-fg-2">{r.tipped}</td>
+                <td className="px-2 py-2.5 text-right tabular-nums text-fg-2 max-sm:hidden">{r.tipped}</td>
                 <td className="px-2 py-2.5 text-right tabular-nums text-fg-2">
                   {r.tipped > 0 ? (r.pts / r.tipped).toFixed(2) : '—'}
                 </td>
