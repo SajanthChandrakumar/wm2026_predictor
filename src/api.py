@@ -146,6 +146,24 @@ def get_quota():
     return {"odds": read_quota("odds"), "football": read_quota("football")}
 
 
+@app.get("/api/bonus_questions")
+def bonus_questions():
+    """SRF Tippspiel bonus questions, graded against the real tournament outcome."""
+    actual_results = {
+        "champion": "Spanien",
+        "draws_00": 8,
+        "top_scorer_goals": 10,
+        "switzerland_goals": 10,
+        "switzerland_round": "Viertelfinal",
+    }
+    try:
+        math_engine.reload_elo_data()
+        return math_engine.compute_bonus_predictions(actual_results)
+    except Exception as e:
+        logger.error(f"Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred processing your request")
+
+
 @app.post("/api/archive/user_tip")
 @limiter.limit("30/minute")
 def set_user_tip(request: Request, payload: dict):
