@@ -17,6 +17,7 @@
 A full-stack quantitative prediction engine built for the [SRF Tippspiel](https://wmtippspiel.srf.ch) — a competitive closed prediction pool during the FIFA World Cup 2026. The system reverse-engineers bookmaker odds into Expected Goals, applies a Dixon-Coles–corrected bivariate Poisson model, blends in a live Elo rating system, and computes the mathematically optimal tip for each match.
 
 > See [ARCHITECTURE.md](ARCHITECTURE.md) for the full mathematical derivation.
+> See [ANALYSIS.md](ANALYSIS.md) for the post-tournament performance analysis and global ranking.
 
 ---
 
