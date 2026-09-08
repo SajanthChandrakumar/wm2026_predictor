@@ -42,7 +42,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
         if not force and _st_doc and time.time() - _st_doc.get("timestamp", 0) < SCORES_CACHE_TTL:
             print("Standings: using cache (< 30 min old)")
         else:
-            groups = espn_data.get_standings_groups()
+            groups = espn_data.get_standings_groups(competition=competition)
             if groups:
                 cache_collection.update_one(
                     {"_id": cache_document_id("standings_cache")},
@@ -75,7 +75,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
                 print("Elo sync: force=true — bypassing scores cache")
             # Source: ESPN scoreboard (public, no quota). API-Football dropped
             # WC access on this tier, so its `get_completed_scores` returns 0.
-            completed_matches = espn_data.get_completed_scores(days_from=30)
+            completed_matches = espn_data.get_completed_scores(days_from=30, competition=competition)
             completed_matches = _remap_to_archive_ids(completed_matches, load_archive_from_db(archive_collection))
             print(f"Elo sync: ESPN returned {len(completed_matches)} completed fixtures")
             try:
@@ -225,7 +225,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
             try:
                 from src.services.archive import _canon_team
                 name_ct = {}
-                for f in espn_data.get_scoreboard():
+                for f in espn_data.get_scoreboard(competition=competition):
                     if f.get("commence_time"):
                         name_ct[(_canon_team(f["home_team"]), _canon_team(f["away_team"]))] = f["commence_time"]
                 for mid, entry in archive.items():

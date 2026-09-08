@@ -40,11 +40,14 @@ def _synth_bookmakers(espn_odds: dict, home_team: str, away_team: str) -> list:
     return [{"key": "espn_draftkings", "title": "DraftKings (ESPN)", "markets": markets}]
 
 
-def _build_odds_api_lookup(odds_engine) -> dict:
+def _build_odds_api_lookup(odds_engine, competition=None) -> dict:
     """Fetch The Odds API once (h2h+totals) → {(canon_home,canon_away,date): bookmakers}.
     Best-effort: returns {} on any failure so ESPN odds are used instead."""
     try:
-        games = odds_engine.get_world_cup_odds(market="h2h,totals")
+        if hasattr(odds_engine, "get_competition_odds"):
+            games = odds_engine.get_competition_odds(competition, market="h2h,totals")
+        else:
+            games = odds_engine.get_world_cup_odds(market="h2h,totals")
     except Exception as e:
         print(f"Odds API fetch failed, using ESPN odds only: {e}")
         return {}
@@ -161,6 +164,14 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
         cache_store = collection_for(cache_collection, comp)
         archive_store = collection_for(archive_collection, comp)
         cache_id = competition_document_id(comp, "matches_cache")
+        # Public refresh flags are intentionally cache-only. Provider credits
+        # and writes belong to the authenticated maintenance scheduler.
+        if force:
+            try:
+                cached = find_competition_document(cache_store, comp, "matches_cache")
+                return (cached or {}).get("data") or []
+            except Exception:
+                return []
         # ── Fast path: serve from MongoDB cache without any expensive work ──
         if not force:
             try:
@@ -192,7 +203,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
 
         # Fixture skeleton comes from ESPN (only source with played + upcoming).
         try:
-            fixtures = espn_data.get_scoreboard()
+            fixtures = espn_data.get_scoreboard(competition=comp)
         except Exception as e:
             try:
                 cached = find_competition_document(cache_store, comp, "matches_cache")
@@ -207,7 +218,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
             raise HTTPException(status_code=503, detail=f"Fixture source unavailable: {e}")
 
         # Multi-bookmaker odds for upcoming games from The Odds API (best-effort).
-        odds_lookup = _build_odds_api_lookup(odds_engine)
+        odds_lookup = _build_odds_api_lookup(odds_engine, comp)
         id_index = build_archive_id_index(archive)
 
         results = []

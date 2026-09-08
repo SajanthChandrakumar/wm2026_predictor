@@ -7,11 +7,15 @@ already consumes. ESPN is the only source that returns completed fixtures
 (The Odds API drops games once they kick off), so it is the fixture
 skeleton; odds are layered on top from The Odds API where available.
 """
+import os
 import time
 import requests
 from datetime import datetime, timedelta, timezone
 
-SCOREBOARD_ENDPOINT = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard"
+from src.competitions import get_competition
+
+ESPN_BASE_URL = os.getenv("ESPN_BASE_URL", "https://site.api.espn.com/apis/site/v2")
+SCOREBOARD_ENDPOINT = f"{ESPN_BASE_URL}/sports/soccer/fifa.world/scoreboard"
 STANDINGS_ENDPOINT = "https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings"
 
 # ESPN uses a few names that differ from what /api/matches / TEAM_MAPPING settled on.
@@ -53,12 +57,45 @@ def _american_to_decimal(american) -> float | None:
     return 1 + (a / 100.0) if a > 0 else 1 + (100.0 / abs(a))
 
 
-def _fetch_range(start_date: str, end_date: str) -> list[dict]:
-    key = f"{start_date}-{end_date}"
-    cached = _scoreboard_cache.get(key)
+def _scoreboard_endpoint(competition=None) -> str:
+    comp = get_competition(competition)
+    if comp.id == "wc2026" and "ESPN_SCOREBOARD_URL_TEMPLATE" not in os.environ:
+        return SCOREBOARD_ENDPOINT
+    env_name = f"ESPN_{comp.id.upper()}_SLUG"
+    slug = os.getenv(env_name, comp.espn_slug)
+    template = os.getenv(
+        "ESPN_SCOREBOARD_URL_TEMPLATE",
+        f"{ESPN_BASE_URL}/sports/soccer/{{slug}}/scoreboard",
+    )
+    return template.format(slug=slug, competition=comp.id)
+
+
+def _standings_endpoint(competition=None) -> str:
+    comp = get_competition(competition)
+    if comp.id == "wc2026" and "ESPN_STANDINGS_URL_TEMPLATE" not in os.environ:
+        return STANDINGS_ENDPOINT
+    template = os.getenv(
+        "ESPN_STANDINGS_URL_TEMPLATE",
+        f"https://site.api.espn.com/apis/v2/sports/soccer/{{slug}}/standings",
+    )
+    slug = os.getenv(f"ESPN_{comp.id.upper()}_SLUG", comp.espn_slug)
+    return template.format(slug=slug, competition=comp.id)
+
+
+def _fetch_range(
+    start_date: str,
+    end_date: str,
+    *,
+    competition=None,
+    request_get=None,
+    use_cache: bool = True,
+) -> list[dict]:
+    endpoint = _scoreboard_endpoint(competition)
+    key = f"{endpoint}|{start_date}-{end_date}"
+    cached = _scoreboard_cache.get(key) if use_cache else None
     if cached and time.time() - cached[0] < _SCOREBOARD_TTL:
         return cached[1]
-    resp = requests.get(SCOREBOARD_ENDPOINT, params={"dates": key}, timeout=10)
+    resp = (request_get or requests.get)(endpoint, params={"dates": f"{start_date}-{end_date}"}, timeout=10)
     resp.raise_for_status()
     events = resp.json().get("events", []) or []
     _scoreboard_cache[key] = (time.time(), events)
@@ -93,19 +130,49 @@ def _extract_espn_odds(comp: dict) -> dict | None:
     return out
 
 
-def get_scoreboard(days_back: int = 30, days_forward: int = 75) -> list[dict]:
+def get_scoreboard(
+    days_back: int = 30,
+    days_forward: int = 75,
+    *,
+    competition=None,
+    now: datetime | None = None,
+    chunk_days: int = 7,
+    request_get=None,
+    use_cache: bool = True,
+) -> list[dict]:
     """
     ALL WC events (played + upcoming) normalized to fixture dicts:
       {id, home_team, away_team, commence_time, round, completed,
        actual_score|None, espn_odds|None}
     """
-    today = datetime.now(timezone.utc).date()
+    if chunk_days < 1:
+        raise ValueError("chunk_days must be positive")
+    today = (now or datetime.now(timezone.utc)).date()
     from_dt = today - timedelta(days=days_back)
     to_dt = today + timedelta(days=days_forward)
-    events = _fetch_range(from_dt.strftime("%Y%m%d"), to_dt.strftime("%Y%m%d"))
+    events_by_id = {}
+    resolved_competition = get_competition(competition)
+    # Preserve the existing single-window WC behavior. UCL windows are
+    # deliberately bounded because its season spans a much wider range.
+    effective_chunk_days = chunk_days if resolved_competition.id == "ucl2026" else days_back + days_forward + 1
+    cursor = from_dt
+    while cursor <= to_dt:
+        chunk_end = min(cursor + timedelta(days=effective_chunk_days), to_dt)
+        events = _fetch_range(
+            cursor.strftime("%Y%m%d"),
+            chunk_end.strftime("%Y%m%d"),
+            competition=competition,
+            request_get=request_get,
+            use_cache=use_cache,
+        )
+        for event in events:
+            event_id = str(event.get("id", ""))
+            if event_id:
+                events_by_id[event_id] = event
+        cursor = chunk_end + timedelta(days=1)
 
     out = []
-    for e in events:
+    for e in events_by_id.values():
         comp = (e.get("competitions") or [{}])[0]
         status_type = (comp.get("status") or {}).get("type") or {}
         completed = bool(status_type.get("completed"))
@@ -148,13 +215,13 @@ def get_scoreboard(days_back: int = 30, days_forward: int = 75) -> list[dict]:
     return out
 
 
-def get_completed_scores(days_from: int = 30) -> list[dict]:
+def get_completed_scores(days_from: int = 30, *, competition=None) -> list[dict]:
     """
     Completed fixtures in the legacy Odds-API scores shape consumed by
     perform_elo_sync / math_engine.update_elo_from_api_scores.
     """
     out = []
-    for f in get_scoreboard(days_back=days_from, days_forward=0):
+    for f in get_scoreboard(days_back=days_from, days_forward=0, competition=competition):
         if not f["completed"] or not f["actual_score"]:
             continue
         home_name, away_name = f["home_team"], f["away_team"]
@@ -174,9 +241,9 @@ def get_completed_scores(days_from: int = 30) -> list[dict]:
     return out
 
 
-def get_standings_groups() -> list[dict]:
+def get_standings_groups(*, competition=None) -> list[dict]:
     """WC group tables, pre-shaped for the standings_cache doc / Groups view."""
-    resp = requests.get(STANDINGS_ENDPOINT, params={"season": 2026}, timeout=10)
+    resp = requests.get(_standings_endpoint(competition), params={"season": 2026}, timeout=10)
     resp.raise_for_status()
     children = resp.json().get("children", []) or []
 

@@ -14,6 +14,8 @@ import requests
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
+from src.competitions import get_competition
+
 try:
     from src.quota_store import write_quota
 except ImportError:
@@ -25,6 +27,7 @@ load_dotenv()
 class OddsApiEngine:
     BASE_URL = "https://v3.football.api-sports.io"
     WC_LEAGUE_ID = 1
+    UCL_LEAGUE_ID = int(os.getenv("ODDS_API_FOOTBALL_UCL_LEAGUE_ID", "2"))
     SEASON = 2026
 
     def __init__(self):
@@ -54,6 +57,19 @@ class OddsApiEngine:
         write_quota("football", {"remaining": remaining, "used": used, "limit": limit})
 
     # ── Public API (matches src.odds_engine.OddsApiEngine signatures) ────────
+
+    def get_competition_odds(self, competition=None, market: str = "h2h,totals") -> list[dict]:
+        comp = get_competition(competition)
+        if comp.id == "wc2026":
+            return self.get_world_cup_odds(market=market)
+        old_league, old_season = self.WC_LEAGUE_ID, self.SEASON
+        self.WC_LEAGUE_ID = self.UCL_LEAGUE_ID
+        try:
+            return self.get_world_cup_odds(market=market)
+        finally:
+            self.WC_LEAGUE_ID, self.SEASON = old_league, old_season
+
+    get_odds = get_competition_odds
 
     def get_world_cup_odds(self, market: str = "h2h") -> list[dict]:
         """

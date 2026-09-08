@@ -42,6 +42,7 @@ from src.routes.matches import init_router as matches_router
 from src.routes.predict import init_router as predict_router
 from src.routes.custom_bot import init_router as custom_bot_router
 from src.routes.simulate import init_router as simulate_router
+from src.routes.maintenance import init_router as maintenance_router
 
 app = FastAPI(title="WM 2026 Predictor API")
 
@@ -145,6 +146,7 @@ app.include_router(matches_router(math_engine, global_odds_engine, cache_collect
 app.include_router(predict_router(math_engine, global_odds_engine, cache_collections, limiter))
 app.include_router(custom_bot_router(math_engine, archive_collections, custom_bot_collections, limiter))
 app.include_router(simulate_router(math_engine, cache_collections))
+app.include_router(maintenance_router(cache_collections, global_odds_engine))
 
 # ── Small endpoints (not worth extracting) ───────────────────
 
