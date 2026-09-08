@@ -28,6 +28,13 @@ else:
 from src.math_engine import MathEngine
 from src.quota_store import read_quota
 from src.constants import TEAM_MAPPING, SCORES_CACHE_TTL, _is_ko_round
+from src.competitions import (
+    COMPETITIONS,
+    collection_for,
+    find_competition_document,
+    list_competitions,
+    require_competition,
+)
 from src.services.archive import load_archive_from_db, upsert_archive_entry
 from src.services.elo_sync import perform_elo_sync
 from src.routes.matches import init_router as matches_router
@@ -49,6 +56,18 @@ _db = _mongo_client["wm2026_db"]
 archive_collection = _db["archive"]
 cache_collection = _db["cache"]
 custom_bot_collection = _db["custom_bot"]
+archive_collections = {
+    competition.id: _db[competition.archive_collection]
+    for competition in COMPETITIONS.values()
+}
+cache_collections = {
+    competition.id: _db[competition.cache_collection]
+    for competition in COMPETITIONS.values()
+}
+custom_bot_collections = {
+    competition.id: _db[competition.custom_bot_collection]
+    for competition in COMPETITIONS.values()
+}
 
 # ── CORS ─────────────────────────────────────────────────────
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
@@ -121,10 +140,10 @@ global_odds_engine = OddsApiEngine()
 scores_cache_path = os.path.join(_data_dir, 'scores_cache.json')
 
 # ── Wire routers ─────────────────────────────────────────────
-app.include_router(matches_router(math_engine, global_odds_engine, cache_collection, archive_collection))
-app.include_router(predict_router(math_engine, global_odds_engine, cache_collection, limiter))
-app.include_router(custom_bot_router(math_engine, archive_collection, custom_bot_collection, limiter))
-app.include_router(simulate_router(math_engine, cache_collection))
+app.include_router(matches_router(math_engine, global_odds_engine, cache_collections, archive_collections))
+app.include_router(predict_router(math_engine, global_odds_engine, cache_collections, limiter))
+app.include_router(custom_bot_router(math_engine, archive_collections, custom_bot_collections, limiter))
+app.include_router(simulate_router(math_engine, cache_collections))
 
 # ── Small endpoints (not worth extracting) ───────────────────
 
@@ -134,14 +153,22 @@ def ping():
     return {"ok": True}
 
 
+@app.get("/api/competitions")
+def get_competitions():
+    return list_competitions()
+
+
 @app.get("/api/quota")
-def get_quota():
+def get_quota(competition: str | None = None):
+    require_competition(competition)
     return {"odds": read_quota("odds"), "football": read_quota("football")}
 
 
 @app.post("/api/archive/user_tip")
 @limiter.limit("30/minute")
-def set_user_tip(request: Request, payload: dict):
+def set_user_tip(request: Request, payload: dict, competition: str | None = None):
+    comp = require_competition(competition or payload.get("competition"))
+    archive_store = collection_for(archive_collections, comp)
     match_id  = payload.get("match_id")
     user_tip  = payload.get("user_tip", "").strip()
 
@@ -152,7 +179,7 @@ def set_user_tip(request: Request, payload: dict):
     if len(parts) != 2 or not all(p.strip().isdigit() for p in parts):
         raise HTTPException(status_code=400, detail="user_tip must be in format H:A (e.g. 2:1)")
 
-    doc = archive_collection.find_one({"_id": match_id})
+    doc = archive_store.find_one({"_id": match_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Match not in archive")
 
@@ -167,17 +194,20 @@ def set_user_tip(request: Request, payload: dict):
     else:
         pts = None
 
-    upsert_archive_entry(archive_collection, match_id, entry)
+    upsert_archive_entry(archive_store, match_id, entry)
     return {"ok": True, "points_earned": pts}
 
 @app.get("/api/archive")
-def get_archive():
-    return load_archive_from_db(archive_collection)
+def get_archive(competition: str | None = None):
+    comp = require_competition(competition)
+    return load_archive_from_db(collection_for(archive_collections, comp))
 
 @app.get("/api/standings")
-def get_standings():
+def get_standings(competition: str | None = None):
+    comp = require_competition(competition)
+    cache_store = collection_for(cache_collections, comp)
     try:
-        doc = cache_collection.find_one({"_id": "standings_cache"})
+        doc = find_competition_document(cache_store, comp, "standings_cache")
         if doc and doc.get("data"):
             return doc["data"]
     except Exception:
@@ -185,13 +215,17 @@ def get_standings():
     return []
 
 @app.get("/api/elo_history")
-def get_elo_history():
+def get_elo_history(competition: str | None = None):
+    comp = require_competition(competition)
+    cache_store = collection_for(cache_collections, comp)
     try:
-        doc = cache_collection.find_one({"_id": "elo_history"})
+        doc = find_competition_document(cache_store, comp, "elo_history")
         if doc and doc.get("data"):
             return doc["data"]
     except Exception:
         pass
+    if comp.id != "wc2026":
+        return {}
     history_path = os.path.join(_data_dir, 'elo_history.json')
     if os.path.exists(history_path):
         try:
@@ -202,9 +236,30 @@ def get_elo_history():
     return {}
 
 @app.get("/api/elo_ratings")
-def get_elo_ratings():
+def get_elo_ratings(competition: str | None = None):
+    comp = require_competition(competition)
+    cache_store = collection_for(cache_collections, comp)
     csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_ratings.csv')
     out = {}
+    cached_rows = None
+    try:
+        cached_doc = find_competition_document(cache_store, comp, "elo_ratings")
+        cached_rows = (cached_doc or {}).get("rows")
+    except Exception:
+        cached_rows = None
+    rows = cached_rows
+    if rows is not None:
+        for row in rows:
+            try:
+                out[row['team_name']] = {
+                    'team_code': row.get('team_code', ''),
+                    'elo': float(row['elo_rating']),
+                }
+            except (ValueError, KeyError, TypeError):
+                continue
+        return out
+    if comp.id != "wc2026":
+        return out
     try:
         import csv as _csv
         with open(csv_path, 'r', encoding='utf-8') as f:
@@ -221,8 +276,10 @@ def get_elo_ratings():
     return out
 
 @app.get("/api/recalculate_points")
-def recalculate_all_points():
-    archive = load_archive_from_db(archive_collection)
+def recalculate_all_points(competition: str | None = None):
+    comp = require_competition(competition)
+    archive_store = collection_for(archive_collections, comp)
+    archive = load_archive_from_db(archive_store)
     updated = 0
     for match_id, entry in archive.items():
         if entry.get("post_match_result", {}).get("status") == "completed":
@@ -245,19 +302,21 @@ def recalculate_all_points():
                             for bot, info in bots.items() if info.get("tip")
                         }
 
-                    upsert_archive_entry(archive_collection, match_id, entry)
+                    upsert_archive_entry(archive_store, match_id, entry)
 
     return {"status": "success", "recalculated": updated}
 
 
 @app.get("/api/rebuild_honest_tips")
-def rebuild_honest_tips():
+def rebuild_honest_tips(competition: str | None = None):
     """One-off repair: recompute every completed match's algo tip from its
     pre_match_snapshot (odds + Elo captured BEFORE kickoff) using the exact
     dashboard pipeline. Removes any hindsight tips that leaked into the
     archive, then regrades algo_points from the honest tip."""
     import numpy as np
-    archive = load_archive_from_db(archive_collection)
+    comp = require_competition(competition)
+    archive_store = collection_for(archive_collections, comp)
+    archive = load_archive_from_db(archive_store)
     rebuilt = skipped = 0
     for match_id, entry in archive.items():
         if entry.get("post_match_result", {}).get("status") != "completed":
@@ -310,7 +369,7 @@ def rebuild_honest_tips():
                 entry["post_match_result"]["algo_points"] = \
                     MathEngine.calculate_actual_points(tip, actual, is_ko)
 
-            upsert_archive_entry(archive_collection, match_id, entry)
+            upsert_archive_entry(archive_store, match_id, entry)
             rebuilt += 1
         except Exception as e:
             logger.warning(f"rebuild_honest_tips failed for {match_id}: {e}")
@@ -321,17 +380,21 @@ def rebuild_honest_tips():
 
 @app.get("/api/sync_elo")
 @limiter.limit("5/hour")
-def sync_elo(request: Request, force: bool = False):
+def sync_elo(request: Request, force: bool = False, competition: str | None = None):
+    comp = require_competition(competition)
+    archive_store = collection_for(archive_collections, comp)
+    cache_store = collection_for(cache_collections, comp)
     try:
         return perform_elo_sync(
             math_engine=math_engine,
             odds_engine=global_odds_engine,
-            cache_collection=cache_collection,
-            archive_collection=archive_collection,
+            cache_collection=cache_store,
+            archive_collection=archive_store,
             data_dir=_data_dir,
             scores_cache_path=scores_cache_path,
             MathEngine=MathEngine,
             force=force,
+            competition=comp,
         )
     except Exception as e:
         logger.error(f"Error: {e}", exc_info=True)

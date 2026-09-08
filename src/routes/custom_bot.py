@@ -2,6 +2,12 @@ import logging
 
 from fastapi import APIRouter, Request
 from src.math_engine import MathEngine
+from src.competitions import (
+    collection_for,
+    competition_document_id,
+    find_competition_document,
+    require_competition,
+)
 from src.services.archive import load_archive_from_db
 
 logger = logging.getLogger(__name__)
@@ -28,9 +34,11 @@ def init_router(math_engine, archive_collection, custom_bot_collection, limiter)
 
     @router.post("/custom_bot/simulate")
     @limiter.limit("60/minute")
-    def simulate_custom_bot(request: Request, payload: dict):
+    def simulate_custom_bot(request: Request, payload: dict, competition: str | None = None):
+        comp = require_competition(competition or payload.get("competition"))
+        archive_store = collection_for(archive_collection, comp)
         params = _clean_bot_params(payload.get("params") or {})
-        archive = load_archive_from_db(archive_collection)
+        archive = load_archive_from_db(archive_store)
         math_engine.reload_elo_data(archive=archive)
 
         completed = []
@@ -90,20 +98,25 @@ def init_router(math_engine, archive_collection, custom_bot_collection, limiter)
         }
 
     @router.get("/custom_bot")
-    def get_custom_bot():
-        doc = custom_bot_collection.find_one({"_id": _CUSTOM_BOT_ID})
+    def get_custom_bot(competition: str | None = None):
+        comp = require_competition(competition)
+        bot_store = collection_for(custom_bot_collection, comp)
+        doc = find_competition_document(bot_store, comp, _CUSTOM_BOT_ID)
         if not doc:
             return {"exists": False}
         return {"exists": True, "name": doc.get("name"), "params": doc.get("params", {})}
 
     @router.post("/custom_bot")
     @limiter.limit("30/minute")
-    def save_custom_bot(request: Request, payload: dict):
+    def save_custom_bot(request: Request, payload: dict, competition: str | None = None):
+        comp = require_competition(competition or payload.get("competition"))
+        bot_store = collection_for(custom_bot_collection, comp)
         name = (payload.get("name") or "Mein Bot").strip()[:40] or "Mein Bot"
         params = _clean_bot_params(payload.get("params") or {})
-        custom_bot_collection.replace_one(
-            {"_id": _CUSTOM_BOT_ID},
-            {"_id": _CUSTOM_BOT_ID, "name": name, "params": params},
+        bot_id = competition_document_id(comp, _CUSTOM_BOT_ID)
+        bot_store.replace_one(
+            {"_id": bot_id},
+            {"_id": bot_id, "name": name, "params": params, "competition": comp.id},
             upsert=True,
         )
         return {"ok": True, "name": name, "params": params}

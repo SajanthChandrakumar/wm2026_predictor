@@ -4,6 +4,7 @@ import time
 import logging
 
 from src.constants import DISPLAY_MAPPING, SCORES_CACHE_TTL, _is_ko_round
+from src.competitions import competition_document_id, find_competition_document, get_competition
 from src.services.archive import (
     load_archive_from_db, upsert_archive_entry,
     build_archive_id_index, resolve_archive_id,
@@ -29,20 +30,22 @@ def _remap_to_archive_ids(scores: list, archive: dict) -> list:
     return scores
 
 
-def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collection, data_dir, scores_cache_path, MathEngine, force: bool = False) -> dict:
+def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collection, data_dir, scores_cache_path, MathEngine, force: bool = False, competition=None) -> dict:
     print("Elo sync triggered...")
+    competition = get_competition(competition)
+    cache_document_id = lambda key: competition_document_id(competition, key)
     processed_json_path = os.path.join(data_dir, 'processed_matches.json')
 
     # Fetch and cache group standings from ESPN — reuse if < 30 min old
     try:
-        _st_doc = cache_collection.find_one({"_id": "standings_cache"})
+        _st_doc = find_competition_document(cache_collection, competition, "standings_cache")
         if not force and _st_doc and time.time() - _st_doc.get("timestamp", 0) < SCORES_CACHE_TTL:
             print("Standings: using cache (< 30 min old)")
         else:
             groups = espn_data.get_standings_groups()
             if groups:
                 cache_collection.update_one(
-                    {"_id": "standings_cache"},
+                    {"_id": cache_document_id("standings_cache")},
                     {"$set": {"timestamp": time.time(), "data": groups}},
                     upsert=True,
                 )
@@ -53,7 +56,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
     try:
         scores_cache = {}
         try:
-            _sc_doc = cache_collection.find_one({"_id": "scores_cache"})
+            _sc_doc = find_competition_document(cache_collection, competition, "scores_cache")
             if _sc_doc:
                 scores_cache = {"timestamp": _sc_doc.get("timestamp", 0), "data": _sc_doc.get("data", [])}
         except Exception:
@@ -77,7 +80,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
             print(f"Elo sync: ESPN returned {len(completed_matches)} completed fixtures")
             try:
                 cache_collection.update_one(
-                    {"_id": "scores_cache"},
+                    {"_id": cache_document_id("scores_cache")},
                     {"$set": {"timestamp": time.time(), "data": completed_matches}},
                     upsert=True,
                 )
@@ -94,7 +97,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
 
             try:
                 cache_collection.update_one(
-                    {"_id": "elo_ratings"},
+                    {"_id": cache_document_id("elo_ratings")},
                     {"$set": {"rows": math_engine.elo_df.to_dict("records")}},
                     upsert=True,
                 )
@@ -102,7 +105,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
                     with open(processed_json_path, 'r', encoding='utf-8') as pf:
                         processed_ids = json.load(pf)
                     cache_collection.update_one(
-                        {"_id": "processed_match_ids"},
+                        {"_id": cache_document_id("processed_match_ids")},
                         {"$set": {"ids": processed_ids}},
                         upsert=True,
                     )
@@ -111,7 +114,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
                     with open(history_path, 'r', encoding='utf-8') as hf:
                         history_data = json.load(hf)
                     cache_collection.update_one(
-                        {"_id": "elo_history"},
+                        {"_id": cache_document_id("elo_history")},
                         {"$set": {"data": history_data}},
                         upsert=True,
                     )
@@ -202,7 +205,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
             # Backfill commence_time
             ct_map = {m.get('id'): m.get('commence_time') for m in completed_matches}
             try:
-                mc = cache_collection.find_one({"_id": "matches_cache"})
+                mc = find_competition_document(cache_collection, competition, "matches_cache")
                 if mc and mc.get("data"):
                     for mm in mc["data"]:
                         mid = mm.get("id") or mm.get("raw_match", {}).get("id")
@@ -239,7 +242,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
             # Backfill is_ko_phase
             round_map = {m.get("id"): m.get("round", "") for m in completed_matches if m.get("round")}
             try:
-                mc = cache_collection.find_one({"_id": "matches_cache"})
+                mc = find_competition_document(cache_collection, competition, "matches_cache")
                 if mc and mc.get("data"):
                     for mm in mc["data"]:
                         mid = mm.get("id") or mm.get("raw_match", {}).get("id")

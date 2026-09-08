@@ -6,6 +6,12 @@ import numpy as np
 from fastapi import APIRouter, HTTPException
 
 from src.constants import TEAM_MAPPING, DISPLAY_MAPPING, _is_ko_round
+from src.competitions import (
+    collection_for,
+    competition_document_id,
+    find_competition_document,
+    require_competition,
+)
 from src.services.odds_helpers import extract_odds, dynamic_ttl
 from src.services.archive import (
     load_archive_from_db, upsert_archive_entry,
@@ -150,11 +156,15 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
     router = APIRouter(prefix="/api")
 
     @router.get("/matches")
-    def get_matches(force: bool = False):
+    def get_matches(force: bool = False, competition: str | None = None):
+        comp = require_competition(competition)
+        cache_store = collection_for(cache_collection, comp)
+        archive_store = collection_for(archive_collection, comp)
+        cache_id = competition_document_id(comp, "matches_cache")
         # ── Fast path: serve from MongoDB cache without any expensive work ──
         if not force:
             try:
-                cached = cache_collection.find_one({"_id": "matches_cache"})
+                cached = find_competition_document(cache_store, comp, "matches_cache")
                 if cached:
                     timestamp = cached.get("timestamp", 0)
                     data = cached.get("data")
@@ -168,16 +178,16 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                             ]
                             # Elo reload is cheap here thanks to the debounce guard.
                             math_engine.reload_elo_data()
-                            archive = load_archive_from_db(archive_collection)
+                            archive = load_archive_from_db(archive_store)
                             return _sync_archive_tips(
                                 _enrich_edge(data, math_engine, odds_engine),
-                                archive, archive_collection
+                                archive, archive_store
                             )
             except Exception:
                 pass
 
         # ── Slow path: cache miss or force refresh ──
-        archive = load_archive_from_db(archive_collection)
+        archive = load_archive_from_db(archive_store)
         math_engine.reload_elo_data(archive=archive, force=True)
 
         # Fixture skeleton comes from ESPN (only source with played + upcoming).
@@ -185,12 +195,12 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
             fixtures = espn_data.get_scoreboard()
         except Exception as e:
             try:
-                cached = cache_collection.find_one({"_id": "matches_cache"})
+                cached = find_competition_document(cache_store, comp, "matches_cache")
                 if cached and cached.get("data"):
                     print(f"ESPN unavailable, serving stale cache: {e}")
                     return _sync_archive_tips(
                         _enrich_edge(cached["data"], math_engine, odds_engine),
-                        archive, archive_collection
+                        archive, archive_store
                     )
             except Exception:
                 pass
@@ -319,7 +329,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
         try:
             existing_matches = {}
             try:
-                cached = cache_collection.find_one({"_id": "matches_cache"})
+                cached = find_competition_document(cache_store, comp, "matches_cache")
                 if cached:
                     existing_matches = {m["id"]: m for m in cached.get("data", [])}
             except Exception:
@@ -362,8 +372,8 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                          or espn_data._is_placeholder(m.get("away_team", "")))),
                 key=lambda m: m.get("raw_match", {}).get("commence_time", ""),
             )
-            cache_collection.update_one(
-                {"_id": "matches_cache"},
+            cache_store.update_one(
+                {"_id": cache_id},
                 {"$set": {"timestamp": time.time(), "data": merged}},
                 upsert=True
             )
@@ -452,7 +462,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                     changed_entries[r["id"]] = archive[r["id"]]
 
             for mid, entry in changed_entries.items():
-                upsert_archive_entry(archive_collection, mid, entry)
+                upsert_archive_entry(archive_store, mid, entry)
         except Exception as e:
             print(f"Archive logging failed: {e}")
 
@@ -460,6 +470,6 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
             arc = archive.get(r["id"], {})
             r["bots"] = arc.get("prediction", {}).get("bots", {})
 
-        return _sync_archive_tips(results, archive, archive_collection)
+        return _sync_archive_tips(results, archive, archive_store)
 
     return router

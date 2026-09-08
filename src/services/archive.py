@@ -8,9 +8,11 @@ logger = logging.getLogger(__name__)
 # ── In-process archive cache ─────────────────────────────────────────────────
 # Avoids a full MongoDB collection scan on every /api/matches cache-hit.
 # Invalidated explicitly after any write (upsert_archive_entry) so reads
-# always see the latest user tips and match results within 2 minutes.
+# always see the latest user tips and match results within 2 minutes. The
+# cache is keyed by collection identity/name so WC and UCL snapshots cannot
+# leak into one another.
 _archive_mem: dict = {}
-_archive_mem_ts: float = 0.0
+_archive_mem_ts: dict = {}
 _ARCHIVE_MEM_TTL = 120  # seconds
 
 
@@ -49,29 +51,52 @@ def resolve_archive_id(index, home: str, away: str, date: str):
     return dated.get((hc, ac, d)) or undated.get((hc, ac))
 
 
+def _archive_cache_key(archive_collection) -> str:
+    """Use the Mongo collection name when available, otherwise object identity."""
+    for attr in ("full_name", "name"):
+        value = getattr(archive_collection, attr, None)
+        if value:
+            return str(value)
+    return f"collection:{id(archive_collection)}"
+
+
 def load_archive_from_db(archive_collection, force: bool = False) -> dict:
     global _archive_mem, _archive_mem_ts
+    if not isinstance(_archive_mem, dict):
+        _archive_mem = {}
+    if not isinstance(_archive_mem_ts, dict):
+        _archive_mem_ts = {}
+    cache_key = _archive_cache_key(archive_collection)
     now = time.time()
-    if not force and _archive_mem and (now - _archive_mem_ts) < _ARCHIVE_MEM_TTL:
-        return _archive_mem  # serve from RAM — no MongoDB round-trip
+    if (
+        not force
+        and cache_key in _archive_mem
+        and (now - _archive_mem_ts.get(cache_key, 0.0)) < _ARCHIVE_MEM_TTL
+    ):
+        return _archive_mem[cache_key]  # serve from RAM — no MongoDB round-trip
     result = {}
     try:
         for doc in archive_collection.find():
             mid = doc["_id"]
             result[mid] = {k: v for k, v in doc.items() if k != "_id"}
-        _archive_mem = result
-        _archive_mem_ts = now
+        _archive_mem[cache_key] = result
+        _archive_mem_ts[cache_key] = now
     except Exception as e:
         logger.error(f"Failed to load archive from MongoDB: {e}")
-        if _archive_mem:  # return stale cache on error rather than empty dict
-            return _archive_mem
+        if cache_key in _archive_mem:  # return stale cache on error rather than empty dict
+            return _archive_mem[cache_key]
     return result
 
 
-def invalidate_archive_mem_cache() -> None:
+def invalidate_archive_mem_cache(archive_collection=None) -> None:
     """Call after any write so the next read fetches fresh data from MongoDB."""
     global _archive_mem_ts
-    _archive_mem_ts = 0.0
+    if not isinstance(_archive_mem_ts, dict):
+        _archive_mem_ts = {}
+    if archive_collection is None:
+        _archive_mem_ts = {key: 0.0 for key in _archive_mem_ts}
+        return
+    _archive_mem_ts[_archive_cache_key(archive_collection)] = 0.0
 
 
 def upsert_archive_entry(archive_collection, match_id: str, entry: dict) -> None:
@@ -80,4 +105,4 @@ def upsert_archive_entry(archive_collection, match_id: str, entry: dict) -> None
         {"_id": match_id, **entry},
         upsert=True
     )
-    invalidate_archive_mem_cache()  # next read will re-fetch from MongoDB
+    invalidate_archive_mem_cache(archive_collection)  # next read will re-fetch from MongoDB

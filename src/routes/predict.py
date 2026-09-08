@@ -4,6 +4,7 @@ import numpy as np
 from fastapi import APIRouter, Request, HTTPException
 
 from src.constants import TEAM_MAPPING, TOTALS_CACHE_TTL
+from src.competitions import collection_for, find_competition_document, require_competition
 from src.services.odds_helpers import extract_odds, fetch_or_cache_totals
 from src.math_engine import MathEngine
 
@@ -15,7 +16,9 @@ def init_router(math_engine, odds_engine, cache_collection, limiter):
 
     @router.post("/predict")
     @limiter.limit("20/minute")
-    def predict_match(request: Request, payload: dict):
+    def predict_match(request: Request, payload: dict, competition: str | None = None):
+        comp = require_competition(competition or payload.get("competition"))
+        cache_store = collection_for(cache_collection, comp)
         math_engine.reload_elo_data()
         match_data = payload.get("match")
         is_ko = payload.get("is_ko", False)
@@ -28,7 +31,15 @@ def init_router(math_engine, odds_engine, cache_collection, limiter):
             # Totals already ride along in raw_match.bookmakers from /api/matches
             # (Odds API h2h+totals or ESPN). Only serve from cache — never fire a
             # live per-event call keyed by an ESPN/archive id the Odds API won't know.
-            match_data = fetch_or_cache_totals(event_id, match_data, odds_engine, cache_collection, TOTALS_CACHE_TTL, fetch_if_missing=False)
+            match_data = fetch_or_cache_totals(
+                event_id,
+                match_data,
+                odds_engine,
+                cache_store,
+                TOTALS_CACHE_TTL,
+                fetch_if_missing=False,
+                competition=comp,
+            )
 
             math_engine.ensure_teams_exist(
                 TEAM_MAPPING.get(match_data.get("home_team"), match_data.get("home_team")),
@@ -40,7 +51,7 @@ def init_router(math_engine, odds_engine, cache_collection, limiter):
                 # ESPN-sourced raw_match entries carry no bookmakers — fall back
                 # to the aggregated odds stored alongside the match in the cache.
                 odds = None
-                cached = cache_collection.find_one({"_id": "matches_cache"})
+                cached = find_competition_document(cache_store, comp, "matches_cache")
                 for m in (cached or {}).get("data", []):
                     if m.get("id") == event_id and m.get("odds", {}).get("home"):
                         odds = m["odds"]

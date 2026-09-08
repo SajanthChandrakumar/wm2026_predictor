@@ -2,6 +2,8 @@ import time
 import statistics
 from datetime import datetime
 
+from src.competitions import competition_document_id, find_competition_document, get_competition
+
 
 def extract_odds(match):
     home_team = match.get("home_team")
@@ -54,11 +56,21 @@ def dynamic_ttl(matches: list) -> int:
     return 900
 
 
-def fetch_or_cache_totals(event_id: str, raw_match: dict, odds_engine, cache_collection, ttl: int = 3600, fetch_if_missing: bool = True) -> dict:
-    cache_key = f"totals_{event_id}"
+def fetch_or_cache_totals(
+    event_id: str,
+    raw_match: dict,
+    odds_engine,
+    cache_collection,
+    ttl: int = 3600,
+    fetch_if_missing: bool = True,
+    competition=None,
+) -> dict:
+    comp = get_competition(competition)
+    logical_key = f"totals_{event_id}"
+    cache_key = competition_document_id(comp, logical_key)
     entry = {}
     try:
-        doc = cache_collection.find_one({"_id": cache_key})
+        doc = find_competition_document(cache_collection, comp, logical_key)
         if doc:
             entry = doc
     except Exception:
