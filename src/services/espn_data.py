@@ -157,7 +157,7 @@ def get_scoreboard(
     effective_chunk_days = chunk_days if resolved_competition.id == "ucl2026" else days_back + days_forward + 1
     cursor = from_dt
     while cursor <= to_dt:
-        chunk_end = min(cursor + timedelta(days=effective_chunk_days), to_dt)
+        chunk_end = min(cursor + timedelta(days=effective_chunk_days - 1), to_dt)
         events = _fetch_range(
             cursor.strftime("%Y%m%d"),
             chunk_end.strftime("%Y%m%d"),

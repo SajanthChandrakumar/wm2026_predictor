@@ -7,6 +7,7 @@ import os
 
 from fastapi import APIRouter, HTTPException, Request
 
+from src.competitions import require_competition
 from src.services.maintenance import run_maintenance
 
 
@@ -20,6 +21,7 @@ def init_router(cache_collections, odds_provider, *, cron_secret: str | None = N
         presented = authorization[7:] if authorization.startswith("Bearer ") else ""
         if not configured_secret or not hmac.compare_digest(presented, configured_secret):
             raise HTTPException(status_code=401, detail="Unauthorized")
+        require_competition(competition)
         return run_maintenance(
             cache_collections,
             odds_provider,

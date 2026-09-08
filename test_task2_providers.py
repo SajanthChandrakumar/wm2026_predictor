@@ -18,6 +18,8 @@ from src.services.ucl_providers import (
     ingest_clubelo,
 )
 from src.odds_engine import OddsApiEngine
+from src.odds_engine_apifootball import OddsApiEngine as ApiFootballOddsEngine
+from src.routes.matches import build_elo_snapshot
 
 
 class DuplicateKeyError(Exception):
@@ -68,6 +70,21 @@ class MemoryCollection:
 
     def delete_one(self, query):
         self.documents.pop(query.get("_id"), None)
+
+
+class MongoRejectsImmutableId(MemoryCollection):
+    def update_one(self, query, update, upsert=False):
+        if any(field == "_id" or field.endswith("._id") for field in update.get("$set", {})):
+            raise AssertionError("Mongo rejects _id in $set")
+        super().update_one(query, update, upsert=upsert)
+
+
+class OwnershipAwareCollection(MongoRejectsImmutableId):
+    def delete_one(self, query):
+        key = query.get("_id")
+        document = self.documents.get(key)
+        if document and all(document.get(field) == value for field, value in query.items()):
+            self.documents.pop(key, None)
 
 
 def _event(event_id, date):
@@ -121,6 +138,8 @@ def test_ucl_espn_windows_are_bounded_and_deduplicated(monkeypatch):
 
     assert {event["id"] for event in events} == {"same", "other"}
     assert len(calls) == 2
+    assert calls[0][1]["dates"] == "20260901-20260907"
+    assert calls[1][1]["dates"] == "20260908-20260911"
     assert all((int(call[1]["dates"][8:]) - int(call[1]["dates"][:8])) <= 7 for call in calls)
     assert all("uefa.champions" in call[0] for call in calls)
 
@@ -155,6 +174,22 @@ def test_clubelo_cache_contract_preserves_alias_and_provenance(monkeypatch):
     assert cache.find_one({"_id": competition_document_id("ucl2026", "clubelo_ratings")})["etag"] == '"ucl"'
 
 
+def test_clubelo_persistence_never_sets_immutable_mongo_id(monkeypatch):
+    html = "<table><tr><td>1</td><td>Arsenal</td><td>1840</td></tr></table>"
+
+    class Response:
+        text = html
+        headers = {}
+
+        def raise_for_status(self):
+            return None
+
+    cache = MongoRejectsImmutableId()
+    document = ingest_clubelo(cache, competition="ucl2026", request_get=lambda *a, **k: Response())
+    assert document["status"] == "fresh"
+    assert cache.find_one({"_id": competition_document_id("ucl2026", "elo_ratings")})["rows"]
+
+
 def test_clubelo_failure_is_truthful_and_does_not_create_ratings(monkeypatch):
     cache = MemoryCollection()
 
@@ -175,6 +210,15 @@ def test_source_modes_are_explicit_when_provider_is_missing():
     unavailable = compose_match_sources(None, None)
     assert unavailable["source_mode"] == "unavailable"
     assert unavailable["status"] == "unavailable"
+
+
+def test_failed_or_empty_elo_is_not_a_present_source():
+    result = compose_match_sources(
+        {"home": 2.0, "draw": 3.2, "away": 4.0},
+        {"status": "failed", "rows": [], "source": "clubelo"},
+    )
+    assert result["source_mode"] == "odds-only"
+    assert result["source"] == "odds_api"
 
 
 def test_odds_provider_uses_configurable_competition_identifier(monkeypatch):
@@ -253,7 +297,12 @@ def test_maintenance_missed_buckets_are_not_backfilled_and_bulk_call_is_capped()
     assert result["buckets"] == ["t24h", "t6h", "t75m", "t30m", "t15m"]
     state = cache.find_one({"_id": competition_document_id("ucl2026", "odds_bucket_state")})
     assert state["events"]["e1"]["t15m"]["status"] == "unavailable"
-    assert state["events"]["e1"]["t24h"]["status"] == "missed"
+    assert state["events"]["e1"]["t24h"]["status"] == "unavailable"
+    assert state["events"]["e1"]["t24h"]["error"] == "missed"
+    assert all(
+        state["events"]["e1"][bucket]["status"] in {"fresh", "stale", "unavailable", "failed"}
+        for bucket in state["events"]["e1"]
+    )
     assert [doc["bucket"] for doc in cache.inserts if "odds_snapshot" in doc["_id"]] == ["t15m"]
     again = run_maintenance(cache, provider, competition="ucl2026", now=now + timedelta(minutes=1))
     assert provider.calls == 1
@@ -315,6 +364,22 @@ def test_provider_failure_marks_bucket_failed_without_fabricating_odds():
     assert not [doc for doc in cache.documents.values() if "snapshot" in doc.get("_id", "")]
 
 
+def test_captured_bucket_uses_fresh_status():
+    kickoff = datetime(2026, 9, 10, 18, tzinfo=timezone.utc)
+    cache = MemoryCollection([{
+        "_id": competition_document_id("ucl2026", "matches_cache"),
+        "data": [{"id": "e1", "commence_time": kickoff.isoformat()}],
+    }])
+
+    class Provider:
+        def get_competition_odds(self, *args, **kwargs):
+            return [{"id": "e1", "odds": {"home": 2.0, "draw": 3.0, "away": 4.0}}]
+
+    run_maintenance(cache, Provider(), competition="ucl2026", now=kickoff - timedelta(minutes=14))
+    state = cache.find_one({"_id": competition_document_id("ucl2026", "odds_bucket_state")})
+    assert state["events"]["e1"]["t15m"]["status"] == "fresh"
+
+
 def test_live_maintenance_lease_is_a_unique_no_provider_claim():
     kickoff = datetime(2026, 9, 10, 18, tzinfo=timezone.utc)
     now = kickoff - timedelta(minutes=14)
@@ -339,6 +404,31 @@ def test_live_maintenance_lease_is_a_unique_no_provider_claim():
     assert provider.calls == 0
 
 
+def test_expired_lease_replacement_does_not_delete_a_new_owner_lease():
+    kickoff = datetime(2026, 9, 10, 18, tzinfo=timezone.utc)
+    now = kickoff - timedelta(minutes=14)
+    lease_id = competition_document_id("ucl2026", "maintenance_lease")
+    cache = OwnershipAwareCollection([{
+        "_id": competition_document_id("ucl2026", "matches_cache"),
+        "data": [{"id": "e1", "commence_time": kickoff.isoformat()}],
+    }, {
+        "_id": lease_id,
+        "lease_until": (now - timedelta(minutes=1)).isoformat(),
+        "lease_token": "expired-owner",
+    }])
+
+    class Provider:
+        def get_competition_odds(self, *args, **kwargs):
+            cache.update_one(
+                {"_id": lease_id},
+                {"$set": {"lease_token": "renewed-owner", "lease_until": (now + timedelta(minutes=5)).isoformat()}},
+            )
+            return []
+
+    run_maintenance(cache, Provider(), competition="ucl2026", now=now)
+    assert cache.find_one({"_id": lease_id})["lease_token"] == "renewed-owner"
+
+
 def test_public_match_force_is_cache_only():
     cache = MemoryCollection([{
         "_id": competition_document_id("ucl2026", "matches_cache"),
@@ -358,6 +448,46 @@ def test_public_match_force_is_cache_only():
     router = matches_router(Engine(), Provider(), {"ucl2026": cache}, {"ucl2026": MemoryCollection()})
     result = router.routes[0].endpoint(force=True, competition="ucl2026")
     assert result == [{"id": "cached"}]
+
+
+def test_force_maintenance_validates_competition_before_noop():
+    with pytest.raises(ValueError, match="Unknown competition"):
+        run_maintenance({}, object(), competition="bad", force=True)
+
+
+def test_maintenance_route_returns_http_400_for_unknown_competition():
+    endpoint = init_router({"ucl2026": MemoryCollection()}, object(), cron_secret="test-secret").routes[0].endpoint
+    scope = {
+        "type": "http", "method": "POST", "path": "/api/internal/maintenance", "headers": [(b"authorization", b"Bearer test-secret")],
+        "query_string": b"", "scheme": "http", "server": ("test", 80), "client": ("test", 1), "root_path": "", "http_version": "1.1",
+    }
+    with pytest.raises(Exception) as exc_info:
+        endpoint(Request(scope), competition="bad")
+    assert getattr(exc_info.value, "status_code", None) == 400
+
+
+def test_ucl_unknown_clubs_have_no_synthetic_elo_snapshot():
+    class Engine:
+        elo_df = type("Frame", (), {"team_name": []})()
+
+    assert build_elo_snapshot(Engine(), "Unknown Home", "Unknown Away", "ucl2026") is None
+
+
+def test_api_football_ucl_quotes_use_ucl_sport_key(monkeypatch):
+    fixture = {
+        "fixture": {"id": 1, "date": "2026-09-10T18:00:00Z"},
+        "teams": {"home": {"name": "Arsenal"}, "away": {"name": "Bayern Munich"}},
+        "league": {"round": "League Phase"},
+    }
+    odd = {
+        "fixture": {"id": 1},
+        "bookmakers": [{"id": 1, "name": "Book", "bets": [{"id": 1, "values": [
+            {"value": "Home", "odd": "2.0"}, {"value": "Draw", "odd": "3.0"}, {"value": "Away", "odd": "4.0"}
+        ]}]}],
+    }
+    engine = object.__new__(ApiFootballOddsEngine)
+    engine._request = lambda path, params: {"response": [fixture] if path == "/fixtures" else [odd]}
+    assert engine.get_competition_odds("ucl2026")[0]["sport_key"] == "soccer_uefa_champs_league"
 
 
 def test_maintenance_route_requires_bearer_secret_and_supports_idempotency():

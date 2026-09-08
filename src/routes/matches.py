@@ -10,6 +10,7 @@ from src.competitions import (
     collection_for,
     competition_document_id,
     find_competition_document,
+    get_competition,
     require_competition,
 )
 from src.services.odds_helpers import extract_odds, dynamic_ttl
@@ -76,6 +77,26 @@ def _match_odds_api(lookup: dict, home: str, away: str, date: str):
     except Exception:
         pass
     return None
+
+
+def build_elo_snapshot(math_engine, home_team: str, away_team: str, competition=None) -> dict | None:
+    """Return known ratings, retaining WC's legacy default only for WC."""
+    comp = get_competition(competition)
+    frame = getattr(math_engine, "elo_df", None)
+    rows = getattr(frame, "loc", None)
+    if rows is None:
+        return {"home_rating": 1500.0, "away_rating": 1500.0} if comp.id == "wc2026" else None
+    values = []
+    for team in (home_team, away_team):
+        normalized = TEAM_MAPPING.get(team, team)
+        try:
+            selected = frame.loc[frame["team_name"] == normalized, "elo_rating"]
+            values.append(float(selected.values[0]) if not selected.empty else None)
+        except (KeyError, IndexError, TypeError, ValueError):
+            values.append(None)
+    if any(value is None for value in values):
+        return {"home_rating": 1500.0, "away_rating": 1500.0} if comp.id == "wc2026" else None
+    return {"home_rating": values[0], "away_rating": values[1]}
 
 
 def _sync_archive_tips(matches, archive, archive_collection):
@@ -266,16 +287,25 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                 max_xp = float((arc.get("prediction") or {}).get("max_xp") or 0.0)
             elif odds:
                 try:
-                    math_engine.ensure_teams_exist(
-                        TEAM_MAPPING.get(home_raw, home_raw),
-                        TEAM_MAPPING.get(away_raw, away_raw),
-                    )
+                    elo_state = build_elo_snapshot(math_engine, home_raw, away_raw, comp)
+                    if comp.id == "wc2026":
+                        math_engine.ensure_teams_exist(
+                            TEAM_MAPPING.get(home_raw, home_raw),
+                            TEAM_MAPPING.get(away_raw, away_raw),
+                        )
                     true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
 
-                    elo_home_share, elo_away_share = math_engine.get_match_elo_probabilities(home_raw, away_raw)
+                    if elo_state:
+                        elo_home_share, elo_away_share = math_engine.get_match_elo_probabilities(home_raw, away_raw)
+                    else:
+                        elo_home_share = elo_away_share = None
                     win_loss_pool = true_probs["home"] + true_probs["away"]
-                    prob_home = (true_probs["home"] / win_loss_pool * 0.7 + elo_home_share * 0.3) * win_loss_pool
-                    prob_away = (true_probs["away"] / win_loss_pool * 0.7 + elo_away_share * 0.3) * win_loss_pool
+                    if elo_state:
+                        prob_home = (true_probs["home"] / win_loss_pool * 0.7 + elo_home_share * 0.3) * win_loss_pool
+                        prob_away = (true_probs["away"] / win_loss_pool * 0.7 + elo_away_share * 0.3) * win_loss_pool
+                    else:
+                        prob_home = true_probs["home"]
+                        prob_away = true_probs["away"]
                     prob_draw = true_probs["draw"]
 
                     if "over25" in odds and "under25" in odds:
@@ -305,7 +335,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                         max_xp = float(df_xp.iloc[0]["xP"])
 
                     market_home_share = (true_probs["home"] / win_loss_pool) if win_loss_pool > 0 else 0.5
-                    edge_home = elo_home_share - market_home_share
+                    edge_home = elo_home_share - market_home_share if elo_home_share is not None else None
 
                     if top_tip != "N/A":
                         _bot_inputs[match_id] = {
@@ -416,12 +446,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                         print(f"Bot tips failed for {r['id']}: {e}")
 
                 if r["id"] not in archive:
-                    home_norm = TEAM_MAPPING.get(r["home_team"], r["home_team"])
-                    away_norm = TEAM_MAPPING.get(r["away_team"], r["away_team"])
-                    elo_rows_home = math_engine.elo_df.loc[math_engine.elo_df['team_name'] == home_norm, 'elo_rating']
-                    elo_rows_away = math_engine.elo_df.loc[math_engine.elo_df['team_name'] == away_norm, 'elo_rating']
-                    elo_home_val = float(elo_rows_home.values[0]) if not elo_rows_home.empty else 1500.0
-                    elo_away_val = float(elo_rows_away.values[0]) if not elo_rows_away.empty else 1500.0
+                    elo_state = build_elo_snapshot(math_engine, r["home_team"], r["away_team"], comp)
 
                     new_entry = {
                         "metadata": {
@@ -436,10 +461,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                         "pre_match_snapshot": {
                             "timestamp_recorded": datetime.now(timezone.utc).isoformat(),
                             "odds": r["odds"],
-                            "elo_state": {
-                                "home_rating": elo_home_val,
-                                "away_rating": elo_away_val
-                            }
+                            "elo_state": elo_state,
                         },
                         "prediction": {
                             "top_tip": r["top_tip"],

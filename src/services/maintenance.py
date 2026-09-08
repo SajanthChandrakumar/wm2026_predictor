@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 from src.competitions import collection_for, competition_document_id, find_competition_document, get_competition
 from src.services.snapshots import append_odds_snapshot, bucket_state, due_buckets, mark_bucket, parse_time
@@ -26,13 +27,19 @@ def run_maintenance(
     spend provider credits or write a snapshot; only the authenticated route
     should invoke normal maintenance.
     """
+    comp = get_competition(competition)
     if force:
         return {"status": "noop", "reason": "force_disabled", "provider_calls": 0, "mutated": False}
-    comp = get_competition(competition)
     cache_collection = collection_for(cache_collections, comp)
     current = parse_time(now or datetime.now(timezone.utc))
     lease_id = competition_document_id(comp, "maintenance_lease")
-    lease = {"_id": lease_id, "competition": comp.id, "lease_until": (current + timedelta(seconds=lease_seconds)).isoformat()}
+    lease_token = uuid4().hex
+    lease = {
+        "_id": lease_id,
+        "competition": comp.id,
+        "lease_until": (current + timedelta(seconds=lease_seconds)).isoformat(),
+        "lease_token": lease_token,
+    }
     try:
         cache_collection.insert_one(lease)
     except Exception:
@@ -47,7 +54,7 @@ def run_maintenance(
             return {"status": "skipped", "reason": "lease_held", "provider_calls": 0, "mutated": False, "buckets": []}
         cache_collection.update_one(
             {"_id": lease_id, "lease_until": existing.get("lease_until")},
-            {"$set": lease},
+            {"$set": {key: value for key, value in lease.items() if key != "_id"}},
             upsert=False,
         )
 
@@ -72,7 +79,7 @@ def run_maintenance(
         except Exception as exc:
             for event_id, (fixture, due) in due_by_event.items():
                 for bucket in due[:-1]:
-                    mark_bucket(cache_collection, comp, event_id, bucket, status="missed")
+                    mark_bucket(cache_collection, comp, event_id, bucket, status="unavailable", error="missed")
                 mark_bucket(cache_collection, comp, event_id, due[-1], status="failed", error=str(exc))
             return {
                 "status": "failed",
@@ -87,7 +94,7 @@ def run_maintenance(
             # Missing historical windows become explicit missed buckets; only
             # the current (closest-to-kickoff) observation is recorded.
             for bucket in due[:-1]:
-                mark_bucket(cache_collection, comp, event_id, bucket, status="missed")
+                mark_bucket(cache_collection, comp, event_id, bucket, status="unavailable", error="missed")
             match = lookup.get(event_id) or _match_by_names(lookup, fixture)
             observed_bucket = due[-1]
             if match is None:
@@ -100,7 +107,7 @@ def run_maintenance(
                 odds = match.get("odds") or _extract_odds(match)
                 snapshot_status = "fresh" if odds else "unavailable"
                 append_odds_snapshot(cache_collection, comp, event_id, observed_bucket, current, odds, status=snapshot_status)
-                mark_bucket(cache_collection, comp, event_id, observed_bucket, status="captured" if odds else "unavailable", observed_at=current)
+                mark_bucket(cache_collection, comp, event_id, observed_bucket, status="fresh" if odds else "unavailable", observed_at=current)
         return {
             "status": "success",
             "provider_calls": 1,
@@ -109,7 +116,7 @@ def run_maintenance(
             "events": len(due_by_event),
         }
     finally:
-        cache_collection.delete_one({"_id": lease_id})
+        cache_collection.delete_one({"_id": lease_id, "lease_token": lease_token})
 
 
 def _fixtures(cache_collection, competition) -> list[dict]:

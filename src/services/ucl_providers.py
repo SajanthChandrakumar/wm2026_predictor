@@ -141,20 +141,26 @@ def ingest_clubelo(
             },
             "etag": _header(response, "etag"),
         }
-        cache_collection.update_one({"_id": cache_id}, {"$set": document}, upsert=True)
+        cache_collection.update_one(
+            {"_id": cache_id},
+            {
+                "$set": {key: value for key, value in document.items() if key != "_id"},
+                "$setOnInsert": {"_id": cache_id},
+            },
+            upsert=True,
+        )
         # Keep the existing read-only Elo endpoint compatible while retaining
         # the provider-specific document as the provenance contract.
         cache_collection.update_one(
             {"_id": competition_document_id(comp, "elo_ratings")},
             {"$set": {
-                "_id": competition_document_id(comp, "elo_ratings"),
                 "competition": comp.id,
                 "status": document["status"],
                 "source": document["source"],
                 "observed_at": document["observed_at"],
                 "rows": rows,
                 "provenance": document["provenance"],
-            }},
+            }, "$setOnInsert": {"_id": competition_document_id(comp, "elo_ratings")}},
             upsert=True,
         )
         return document
@@ -200,8 +206,8 @@ def compose_match_sources(
     errors: dict | None = None,
 ) -> dict:
     """Combine source payloads without filling missing data with defaults."""
-    has_odds = bool(odds)
-    has_elo = bool(elo)
+    has_odds = _source_available(odds)
+    has_elo = _source_available(elo)
     if has_odds and has_elo:
         mode = "odds+elo"
     elif has_odds:
@@ -210,11 +216,15 @@ def compose_match_sources(
         mode = "elo-only"
     else:
         mode = "unavailable"
+    source_statuses = [
+        _source_status(odds, odds_status) if has_odds else None,
+        _source_status(elo, elo_status) if has_elo else None,
+    ]
     if mode == "unavailable":
         status = "unavailable"
-    elif "failed" in (odds_status, elo_status):
-        status = "failed" if not (has_odds or has_elo) else "stale"
-    elif "stale" in (odds_status, elo_status):
+    elif "failed" in source_statuses:
+        status = "failed"
+    elif "stale" in source_statuses:
         status = "stale"
     else:
         status = "fresh"
@@ -231,9 +241,30 @@ def compose_match_sources(
             "elo": {"source": "clubelo", "status": elo_status, "observed_at": observed_at},
         },
     }
-    if errors:
-        result["errors"] = errors
+    source_errors = dict(errors or {})
+    for name, payload in (("odds", odds), ("elo", elo)):
+        if isinstance(payload, dict) and payload.get("error"):
+            source_errors.setdefault(name, payload["error"])
+    if source_errors:
+        result["errors"] = source_errors
     return result
+
+
+def _source_available(payload) -> bool:
+    if not isinstance(payload, dict) or not payload:
+        return False
+    status = payload.get("status")
+    if status in {"failed", "unavailable"}:
+        return False
+    if "rows" in payload:
+        return bool(payload.get("rows"))
+    if "odds" in payload:
+        return bool(payload.get("odds"))
+    return True
+
+
+def _source_status(payload, fallback: str) -> str:
+    return payload.get("status", fallback) if isinstance(payload, dict) else fallback
 
 
 # Names used by small integrations/readers can stay descriptive and stable.

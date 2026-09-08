@@ -118,3 +118,80 @@ Both completed successfully.
   made in tests.
 - The route is registered in `src/api.py`, whose existing application startup
   still requires the repository's normal Mongo/provider environment variables.
+
+## Review fixes: round 1
+
+### RED
+
+Added focused regressions in `test_task2_providers.py` using a Mongo-like
+collection that rejects `_id` in `$set`, plus tests for lease ownership,
+unknown UCL ratings, failed/empty Elo source modes, allowed bucket statuses,
+competition validation, API-Football sport keys, and inclusive ESPN windows.
+
+The pre-fix focused run failed during collection because the new regression
+imported the not-yet-added `build_elo_snapshot` contract:
+
+```text
+.venv/bin/python -m pytest test_task2_providers.py -q
+```
+
+```text
+ImportError: cannot import name 'build_elo_snapshot' from 'src.routes.matches'
+```
+
+### GREEN
+
+Focused command after the fixes:
+
+```text
+.venv/bin/python -m pytest test_task2_providers.py -q
+```
+
+Output:
+
+```text
+21 passed in 0.64s
+```
+
+### Fixes
+
+- ClubElo documents and expired lease replacements now use `$set` without
+  `_id`, with `$setOnInsert` for new documents.
+- Maintenance leases have a per-run token; cleanup deletes only the matching
+  token, so a renewed/replaced lease is preserved.
+- UCL match prediction skips `ensure_teams_exist`, does not synthesize 1500
+  ratings, and stores `elo_state: null` for odds-only snapshots. WC retains its
+  legacy default behavior.
+- Source availability now requires valid rows/odds and excludes failed or
+  empty ClubElo documents from source-mode selection.
+- Missed buckets are `unavailable` with `error: missed`; captured buckets are
+  `fresh`; no snapshot is created for missed buckets.
+- Competition IDs are validated before `force=true` no-op handling and route
+  boundaries return the established HTTP 400 for unknown IDs.
+- API-Football normalized UCL payloads now carry `soccer_uefa_champs_league`.
+- UCL ESPN chunks cover exactly seven inclusive calendar days.
+
+### Round-1 self-review
+
+- The Mongo rejecting double exercises both ClubElo persistence paths and
+  expired-lease replacement.
+- The ownership-aware lease double proves a renewed lease survives cleanup.
+- All persisted bucket statuses are in `fresh`, `stale`, `unavailable`, or
+  `failed`; missed state is represented only as an unavailable reason.
+- The focused suite uses captured/fake payloads only and makes no live calls.
+
+### Round-1 full verification
+
+Command (run once before commit):
+
+```text
+.venv/bin/python -m pytest -q
+```
+
+Output:
+
+```text
+........................................................................ [ 84%]
+.............                                                            [100%]
+85 passed in 2.88s
+```
