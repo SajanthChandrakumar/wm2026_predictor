@@ -3,6 +3,7 @@ import sys
 import time
 import json
 import logging
+from datetime import datetime, timezone
 
 import pandas as pd
 from fastapi import FastAPI, Request, HTTPException
@@ -38,11 +39,13 @@ from src.competitions import (
 )
 from src.services.archive import load_archive_from_db, upsert_archive_entry
 from src.services.elo_sync import perform_elo_sync
+from src.services.prediction import user_tip_is_open
 from src.routes.matches import init_router as matches_router
 from src.routes.predict import init_router as predict_router
 from src.routes.custom_bot import init_router as custom_bot_router
 from src.routes.simulate import init_router as simulate_router
 from src.routes.maintenance import init_router as maintenance_router
+from src.routes.pool import init_router as pool_router
 
 app = FastAPI(title="WM 2026 Predictor API")
 
@@ -77,7 +80,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT"],
     allow_headers=["Content-Type"],
 )
 
@@ -143,10 +146,11 @@ scores_cache_path = os.path.join(_data_dir, 'scores_cache.json')
 
 # ── Wire routers ─────────────────────────────────────────────
 app.include_router(matches_router(math_engine, global_odds_engine, cache_collections, archive_collections))
-app.include_router(predict_router(math_engine, global_odds_engine, cache_collections, limiter))
+app.include_router(predict_router(math_engine, global_odds_engine, cache_collections, limiter, archive_collections))
 app.include_router(custom_bot_router(math_engine, archive_collections, custom_bot_collections, limiter))
 app.include_router(simulate_router(math_engine, cache_collections))
 app.include_router(maintenance_router(cache_collections, global_odds_engine))
+app.include_router(pool_router(cache_collections, archive_collections))
 
 # ── Small endpoints (not worth extracting) ───────────────────
 
@@ -185,6 +189,10 @@ def set_user_tip(request: Request, payload: dict, competition: str | None = None
     doc = archive_store.find_one({"_id": match_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Match not in archive")
+
+    commence_time = (doc.get("metadata") or {}).get("commence_time")
+    if not user_tip_is_open(commence_time, datetime.now(timezone.utc)):
+        raise HTTPException(status_code=409, detail="User tips are closed at T-5")
 
     entry = {k: v for k, v in doc.items() if k != "_id"}
     entry["prediction"]["user_tip"] = user_tip

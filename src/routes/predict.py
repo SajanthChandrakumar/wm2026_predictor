@@ -1,12 +1,11 @@
 import logging
 
-import numpy as np
 from fastapi import APIRouter, Request, HTTPException
 
-from src.constants import TEAM_MAPPING, TOTALS_CACHE_TTL
+from src.constants import TOTALS_CACHE_TTL
 from src.competitions import collection_for, find_competition_document, require_competition
 from src.services.odds_helpers import extract_odds, fetch_or_cache_totals
-from src.math_engine import MathEngine
+from src.services.prediction import PredictionService, freeze_prediction
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +29,9 @@ def effective_is_ko(competition, payload: dict, match_data: dict) -> bool:
     return False
 
 
-def init_router(math_engine, odds_engine, cache_collection, limiter):
+def init_router(math_engine, odds_engine, cache_collection, limiter, archive_collection=None):
     router = APIRouter(prefix="/api")
+    prediction_service = PredictionService(math_engine)
 
     @router.post("/predict")
     @limiter.limit("20/minute")
@@ -61,10 +61,6 @@ def init_router(math_engine, odds_engine, cache_collection, limiter):
                 competition=comp,
             )
 
-            math_engine.ensure_teams_exist(
-                TEAM_MAPPING.get(match_data.get("home_team"), match_data.get("home_team")),
-                TEAM_MAPPING.get(match_data.get("away_team"), match_data.get("away_team")),
-            )
             try:
                 odds = extract_odds(match_data)
             except ValueError:
@@ -79,60 +75,62 @@ def init_router(math_engine, odds_engine, cache_collection, limiter):
                 if not odds:
                     raise
 
-            true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
-            b_prob_home = true_probs["home"]
-            b_prob_draw = true_probs["draw"]
-            b_prob_away = true_probs["away"]
-            if "over25" in odds and "under25" in odds:
-                raw_over = 1.0 / odds["over25"]
-                raw_under = 1.0 / odds["under25"]
-                prob_over25 = raw_over / (raw_over + raw_under)
-            else:
-                prob_over25 = None
-
-            elo_prob_home, elo_prob_away = math_engine.get_match_elo_probabilities(
-                match_data.get("home_team"),
-                match_data.get("away_team"),
+            elo_state = None
+            try:
+                from src.routes.matches import build_elo_snapshot
+                elo_state = build_elo_snapshot(
+                    math_engine,
+                    match_data.get("home_team"),
+                    match_data.get("away_team"),
+                    comp,
+                )
+            except Exception:
+                elo_state = None
+            context = dict(match_data.get("match_context") or match_data.get("metadata") or {})
+            context.setdefault("commence_time", match_data.get("commence_time") or (match_data.get("raw_match") or {}).get("commence_time"))
+            if comp.id == "wc2026":
+                context.setdefault("is_ko", is_ko)
+            result = prediction_service.predict(
+                odds=odds,
+                elo=elo_state,
+                competition=comp,
+                context=context,
+                field_counts=payload.get("tip_counts") or payload.get("field_tip_counts"),
+                user_points=payload.get("user_points", 0),
+                leader_points=payload.get("leader_points", 0),
+                remaining_srf_max_points=payload.get("remaining_srf_max_points", 1),
             )
-
-            win_loss_pool = b_prob_home + b_prob_away
-            blend_home = (b_prob_home / win_loss_pool * 0.7 + elo_prob_home * 0.3) * win_loss_pool
-            blend_away = (b_prob_away / win_loss_pool * 0.7 + elo_prob_away * 0.3) * win_loss_pool
-            prob_home = blend_home
-            prob_away = blend_away
-            prob_draw = b_prob_draw
-
-            xg_home, xg_away = math_engine.derive_xg_from_odds(
-                prob_home=prob_home, prob_draw=prob_draw, prob_away=prob_away, prob_over25=prob_over25
-            )
-
-            if is_ko:
-                base_matrix = math_engine.generate_exact_score_matrix(xg_home, xg_away, max_goals=10)
-                p_draw_90 = float(np.sum(np.diag(base_matrix.values)))
-                et_factor = 1 + p_draw_90 / 3
-                xg_home *= et_factor
-                xg_away *= et_factor
-
-            score_matrix = math_engine.generate_exact_score_matrix(xg_home, xg_away, max_goals=10)
-            xp_df = math_engine.calculate_expected_points(score_matrix, is_ko_phase=is_ko)
-
-            matrix_dict = {}
-            for row in score_matrix.index:
-                matrix_dict[row] = {}
-                for col in score_matrix.columns:
-                    matrix_dict[row][col] = score_matrix.loc[row, col]
-
-            max_prob = score_matrix.values.max()
-
-            return {
-                "xg_home": xg_home,
-                "xg_away": xg_away,
-                "matrix": matrix_dict,
-                "max_prob": max_prob,
-                "xp_tips": xp_df.to_dict(orient="records")
-            }
+            matrix = result.pop("score_matrix_df", None)
+            result["max_prob"] = float(matrix.to_numpy().max()) if matrix is not None else 0.0
+            return result
         except Exception as e:
             logger.error(f"Error: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail="An error occurred processing your request")
+
+    @router.post("/predict/freeze")
+    @router.post("/freeze")
+    def freeze_match(payload: dict, competition: str | None = None):
+        comp = require_competition(competition or payload.get("competition"))
+        if archive_collection is None:
+            raise HTTPException(status_code=503, detail="Archive storage unavailable")
+        archive_store = collection_for(archive_collection, comp)
+        cache_store = collection_for(cache_collection, comp)
+        match_id = payload.get("match_id")
+        if not match_id:
+            raise HTTPException(status_code=400, detail="match_id required")
+        try:
+            return freeze_prediction(
+                cache_store,
+                archive_store,
+                prediction_service,
+                str(match_id),
+                competition=comp,
+                field_counts=payload.get("tip_counts") or payload.get("field_tip_counts"),
+                user_points=payload.get("user_points", 0),
+                leader_points=payload.get("leader_points", 0),
+                remaining_srf_max_points=payload.get("remaining_srf_max_points", 1),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     return router

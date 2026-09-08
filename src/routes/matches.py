@@ -2,7 +2,7 @@ import time
 import logging
 from datetime import datetime, timezone, timedelta
 
-import numpy as np
+import pandas as pd
 from fastapi import APIRouter, HTTPException
 
 from src.constants import TEAM_MAPPING, DISPLAY_MAPPING, _is_ko_round
@@ -19,6 +19,7 @@ from src.services.archive import (
     build_archive_id_index, resolve_archive_id, _canon_team,
 )
 from src.services import espn_data
+from src.services.prediction import PredictionService, infer_stage
 from src.math_engine import MathEngine
 
 logger = logging.getLogger(__name__)
@@ -132,7 +133,9 @@ def _sync_archive_tips(matches, archive, archive_collection):
     return matches
 
 
-def _enrich_edge(matches, math_engine, odds_engine):
+def _enrich_edge(matches, math_engine, odds_engine, competition=None):
+    comp = get_competition(competition)
+    prediction_service = PredictionService(math_engine)
     for m in matches:
         # Always recompute — round-keyword logic may have changed since caching.
         m["is_ko_phase"] = _is_ko_round(m.get("raw_match", {}).get("round", ""))
@@ -164,9 +167,40 @@ def _enrich_edge(matches, math_engine, odds_engine):
         if not all(k in odds for k in ("home", "draw", "away")):
             continue
         try:
+            if comp.id == "ucl2026":
+                elo_state = build_elo_snapshot(math_engine, m.get("home_team"), m.get("away_team"), comp)
+                context = dict(m.get("match_context") or {})
+                context.setdefault("stage", m.get("stage") or infer_stage((m.get("raw_match") or {}).get("round")))
+                context.setdefault("leg", m.get("leg", "single"))
+                context.setdefault("first_leg_score", m.get("first_leg_score"))
+                context.setdefault("commence_time", m.get("commence_time") or (m.get("raw_match") or {}).get("commence_time"))
+                prediction = prediction_service.predict(
+                    odds=odds,
+                    elo=elo_state,
+                    competition=comp,
+                    context=context,
+                )
+                m.update({
+                    "model_tip": prediction.get("model_tip"),
+                    "top_tip": prediction.get("top_tip"),
+                    "pool_tip": prediction.get("pool_tip"),
+                    "pool_status": prediction.get("pool_status"),
+                    "source_mode": prediction.get("source_mode"),
+                    "model_version": prediction.get("model_version"),
+                    "input_provenance": prediction.get("input_provenance"),
+                    "xg_home": prediction.get("xg_home"),
+                    "xg_away": prediction.get("xg_away"),
+                })
+                if elo_state is None:
+                    continue
             true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
             pool = true_probs["home"] + true_probs["away"]
             market_home_share = (true_probs["home"] / pool) if pool > 0 else 0.5
+            elo_state = build_elo_snapshot(math_engine, m.get("home_team"), m.get("away_team"), comp)
+            # UCL has no synthetic 1500 fallback.  Without a known rating the
+            # edge is unavailable; odds-only predictions remain valid.
+            if comp.id == "ucl2026" and elo_state is None:
+                continue
             elo_home_share, _ = math_engine.get_match_elo_probabilities(m.get("home_team"), m.get("away_team"))
             m["elo_home_share"] = elo_home_share
             m["market_home_share"] = market_home_share
@@ -178,6 +212,7 @@ def _enrich_edge(matches, math_engine, odds_engine):
 
 def init_router(math_engine, odds_engine, cache_collection, archive_collection):
     router = APIRouter(prefix="/api")
+    prediction_service = PredictionService(math_engine)
 
     @router.get("/matches")
     def get_matches(force: bool = False, competition: str | None = None):
@@ -212,7 +247,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                             math_engine.reload_elo_data()
                             archive = load_archive_from_db(archive_store)
                             return _sync_archive_tips(
-                                _enrich_edge(data, math_engine, odds_engine),
+                                _enrich_edge(data, math_engine, odds_engine, comp),
                                 archive, archive_store
                             )
             except Exception:
@@ -231,7 +266,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                 if cached and cached.get("data"):
                     print(f"ESPN unavailable, serving stale cache: {e}")
                     return _sync_archive_tips(
-                        _enrich_edge(cached["data"], math_engine, odds_engine),
+                        _enrich_edge(cached["data"], math_engine, odds_engine, comp),
                         archive, archive_store
                     )
             except Exception:
@@ -270,6 +305,12 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
             odds = {}
             top_tip, max_xp = "N/A", 0.0
             elo_home_share = market_home_share = edge_home = None
+            prediction_result = {}
+            context = {
+                "stage": infer_stage(fx.get("round")) if fx.get("round") else ("playoff" if is_ko_detected else "league"),
+                "leg": "single",
+                "commence_time": date,
+            }
             try:
                 odds = extract_odds(raw_match)
             except ValueError:
@@ -293,56 +334,37 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                             TEAM_MAPPING.get(home_raw, home_raw),
                             TEAM_MAPPING.get(away_raw, away_raw),
                         )
-                    true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
-
+                    context = dict(fx.get("match_context") or {})
+                    context.setdefault("stage", fx.get("stage") or infer_stage(fx.get("round")) or ("playoff" if is_ko_detected else "league"))
+                    context.setdefault("leg", fx.get("leg", "single"))
+                    context.setdefault("tie_id", fx.get("tie_id"))
+                    context.setdefault("first_leg_score", fx.get("first_leg_score"))
+                    context.setdefault("commence_time", date)
+                    if comp.id == "wc2026":
+                        context.setdefault("is_ko", is_ko_detected)
+                    result = prediction_service.predict(
+                        odds=odds,
+                        elo=elo_state,
+                        competition=comp,
+                        context=context,
+                    )
+                    prediction_result = result
+                    top_tip = result.get("model_tip") or "N/A"
+                    max_xp = float(result.get("max_xp") or 0.0)
+                    probabilities = result.get("probabilities") or {}
+                    true_probs = result.get("base_probabilities") or probabilities
+                    elo_home_share = result.get("probabilities", {}).get("home") if elo_state else None
                     if elo_state:
                         elo_home_share, elo_away_share = math_engine.get_match_elo_probabilities(home_raw, away_raw)
-                    else:
-                        elo_home_share = elo_away_share = None
-                    win_loss_pool = true_probs["home"] + true_probs["away"]
-                    if elo_state:
-                        prob_home = (true_probs["home"] / win_loss_pool * 0.7 + elo_home_share * 0.3) * win_loss_pool
-                        prob_away = (true_probs["away"] / win_loss_pool * 0.7 + elo_away_share * 0.3) * win_loss_pool
-                    else:
-                        prob_home = true_probs["home"]
-                        prob_away = true_probs["away"]
-                    prob_draw = true_probs["draw"]
-
-                    if "over25" in odds and "under25" in odds:
-                        raw_over = 1.0 / odds["over25"]
-                        raw_under = 1.0 / odds["under25"]
-                        prob_over25 = raw_over / (raw_over + raw_under)
-                    else:
-                        prob_over25 = None
-
-                    is_ko = is_ko_detected
-                    xg_h, xg_a = math_engine.derive_xg_from_odds(
-                        prob_home, prob_draw, prob_away, prob_over25
-                    )
-
-                    if is_ko:
-                        base_matrix = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
-                        p_draw_90 = float(np.sum(np.diag(base_matrix.values)))
-                        et_factor = 1 + p_draw_90 / 3
-                        xg_h *= et_factor
-                        xg_a *= et_factor
-
-                    sm = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
-                    df_xp = math_engine.calculate_expected_points(sm, is_ko_phase=is_ko)
-
-                    if not df_xp.empty:
-                        top_tip = df_xp.iloc[0]["Tipp"]
-                        max_xp = float(df_xp.iloc[0]["xP"])
-
-                    market_home_share = (true_probs["home"] / win_loss_pool) if win_loss_pool > 0 else 0.5
-                    edge_home = elo_home_share - market_home_share if elo_home_share is not None else None
-
+                    win_loss_pool = (true_probs or {}).get("home", 0) + (true_probs or {}).get("away", 0)
+                    market_home_share = ((true_probs or {}).get("home", 0) / win_loss_pool) if win_loss_pool > 0 else None
+                    edge_home = elo_home_share - market_home_share if elo_home_share is not None and market_home_share is not None else None
                     if top_tip != "N/A":
                         _bot_inputs[match_id] = {
-                            "score_matrix": sm,
-                            "base_xp_df": df_xp,
+                            "score_matrix": result.get("score_matrix_df"),
+                            "base_xp_df": pd.DataFrame(result.get("xp_tips") or []),
                             "true_probs": true_probs,
-                            "prob_over25": prob_over25,
+                            "prob_over25": None,
                         }
                 except Exception:
                     top_tip, max_xp = "N/A", 0.0
@@ -356,6 +378,23 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                 "away_disp": DISPLAY_MAPPING.get(away_raw, away_raw),
                 "odds": odds,
                 "top_tip": top_tip,
+                "model_tip": prediction_result.get("model_tip") or (top_tip if top_tip != "N/A" else None),
+                "pool_tip": prediction_result.get("pool_tip"),
+                "pool_status": prediction_result.get("pool_status", "unavailable"),
+                "source_mode": prediction_result.get("source_mode", "unavailable"),
+                "model_version": prediction_result.get("model_version"),
+                "input_provenance": prediction_result.get("input_provenance", {}),
+                "xg_home": prediction_result.get("xg_home"),
+                "xg_away": prediction_result.get("xg_away"),
+                "matrix": prediction_result.get("matrix", {}),
+                "stage": prediction_result.get("stage", context.get("stage")),
+                "tie_id": prediction_result.get("tie_id", context.get("tie_id")),
+                "leg": prediction_result.get("leg", context.get("leg")),
+                "first_leg_score": prediction_result.get("first_leg_score", context.get("first_leg_score")),
+                "score_90": prediction_result.get("score_90", context.get("score_90")),
+                "score_aet": prediction_result.get("score_aet", context.get("score_aet")),
+                "shootout_winner": prediction_result.get("shootout_winner", context.get("shootout_winner")),
+                "extra_time_eligible": prediction_result.get("extra_time_eligible", context.get("extra_time_eligible", False)),
                 "max_xp": max_xp,
                 "elo_home_share": elo_home_share,
                 "market_home_share": market_home_share,
@@ -364,6 +403,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                 "actual_score": fx.get("actual_score"),
                 "completed": fx.get("completed", False),
                 "raw_match": raw_match,
+                "match_context": prediction_result.get("context", context),
             })
 
         # Cache update — merge with existing
@@ -457,14 +497,24 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                             "is_ko_phase": r.get("is_ko_phase", False),
                             "round": r.get("raw_match", {}).get("round", ""),
                             "commence_time": r.get("raw_match", {}).get("commence_time"),
+                            **{key: value for key, value in (r.get("match_context") or {}).items() if key in {
+                                "stage", "tie_id", "leg", "first_leg_score", "score_90", "score_aet",
+                                "shootout_winner", "extra_time_eligible",
+                            }},
                         },
                         "pre_match_snapshot": {
                             "timestamp_recorded": datetime.now(timezone.utc).isoformat(),
                             "odds": r["odds"],
                             "elo_state": elo_state,
+                            "source_mode": r.get("source_mode"),
+                            "model_version": r.get("model_version"),
+                            "input_provenance": r.get("input_provenance", {}),
                         },
                         "prediction": {
+                            "model_tip": r.get("model_tip") or r["top_tip"],
                             "top_tip": r["top_tip"],
+                            "pool_tip": r.get("pool_tip"),
+                            "pool_status": r.get("pool_status", "unavailable"),
                             "user_tip": None,
                             "max_xp": float(r["max_xp"]),
                             "bots": bots or {},

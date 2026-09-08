@@ -10,6 +10,7 @@ from src.services.archive import (
     build_archive_id_index, resolve_archive_id,
 )
 from src.services import espn_data
+from src.services.prediction import PredictionService
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ def _remap_to_archive_ids(scores: list, archive: dict) -> list:
 def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collection, data_dir, scores_cache_path, MathEngine, force: bool = False, competition=None) -> dict:
     print("Elo sync triggered...")
     competition = get_competition(competition)
+    prediction_service = PredictionService(math_engine)
     cache_document_id = lambda key: competition_document_id(competition, key)
     processed_json_path = os.path.join(data_dir, 'processed_matches.json')
 
@@ -295,13 +297,18 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
                 away = entry['metadata']['away_team']
                 is_ko_match = entry['metadata'].get('is_ko_phase', False)
 
-                bots = math_engine.reconstruct_bot_tips(
-                    home, away, str(mid), commence_time=ct_map.get(mid), is_ko=is_ko_match
+                reconstructed_prediction = prediction_service.reconstruct(
+                    home,
+                    away,
+                    commence_time=ct_map.get(mid),
+                    competition=competition,
+                    is_ko=is_ko_match,
                 )
-                if not bots:
+                if reconstructed_prediction.get("model_tip") is None:
                     continue
-                tip = bots["professor"]["tip"]
-                max_xp = bots["professor"].get("xp", 0)
+                bots = reconstructed_prediction.get("bots") or {}
+                tip = reconstructed_prediction.get("model_tip")
+                max_xp = reconstructed_prediction.get("max_xp", 0)
                 if not tip:
                     continue
 
