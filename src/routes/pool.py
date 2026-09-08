@@ -68,9 +68,17 @@ def init_router(cache_collections, archive_collections=None):
         if archive is not None:
             archived = archive.find_one({"_id": match_id}) or {}
             stored_prediction = archived.get("prediction") or {}
-            if stored_prediction.get("pool_tip") is not None:
-                document["pool_tip"] = stored_prediction.get("pool_tip")
-                document["pool_status"] = stored_prediction.get("pool_status", "available")
+            if stored_prediction:
+                archive.update_one(
+                    {"_id": match_id},
+                    {"$set": {
+                        "prediction.pool_tip": None,
+                        "prediction.pool_status": "unavailable",
+                        "prediction.pool_lambda": None,
+                        "prediction.pool_score": None,
+                    }},
+                    upsert=False,
+                )
         cache.update_one(
             {"_id": context_id},
             {"$set": {key: value for key, value in document.items() if key != "_id"}, "$setOnInsert": {"_id": context_id}},

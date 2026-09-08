@@ -133,10 +133,16 @@ def _sync_archive_tips(matches, archive, archive_collection):
     return matches
 
 
-def _enrich_edge(matches, math_engine, odds_engine, competition=None):
+def _enrich_edge(matches, math_engine, odds_engine, competition=None, pool_context_collection=None):
     comp = get_competition(competition)
     prediction_service = PredictionService(math_engine)
     for m in matches:
+        if comp.id == "ucl2026":
+            # Cached legacy edge values are not trusted until this pass proves
+            # that both explicit ratings are available.
+            m["edge_home"] = None
+            m["elo_home_share"] = None
+            m["market_home_share"] = None
         # Always recompute — round-keyword logic may have changed since caching.
         m["is_ko_phase"] = _is_ko_round(m.get("raw_match", {}).get("round", ""))
 
@@ -161,24 +167,33 @@ def _enrich_edge(matches, math_engine, odds_engine, competition=None):
             except Exception:
                 pass
 
-        if m.get("edge_home") is not None:
+        if comp.id != "ucl2026" and m.get("edge_home") is not None:
             continue
         odds = m.get("odds", {})
         if not all(k in odds for k in ("home", "draw", "away")):
             continue
         try:
             if comp.id == "ucl2026":
-                elo_state = build_elo_snapshot(math_engine, m.get("home_team"), m.get("away_team"), comp)
+                elo_state = m.get("elo_state") or build_elo_snapshot(math_engine, m.get("home_team"), m.get("away_team"), comp)
                 context = dict(m.get("match_context") or {})
                 context.setdefault("stage", m.get("stage") or infer_stage((m.get("raw_match") or {}).get("round")))
                 context.setdefault("leg", m.get("leg", "single"))
                 context.setdefault("first_leg_score", m.get("first_leg_score"))
                 context.setdefault("commence_time", m.get("commence_time") or (m.get("raw_match") or {}).get("commence_time"))
+                pool_document = {}
+                if pool_context_collection is not None:
+                    pool_document = find_competition_document(
+                        pool_context_collection, comp, f"pool_context:{m.get('id')}"
+                    ) or {}
                 prediction = prediction_service.predict(
                     odds=odds,
                     elo=elo_state,
                     competition=comp,
                     context=context,
+                    field_counts=pool_document.get("tip_counts"),
+                    user_points=pool_document.get("user_points", 0),
+                    leader_points=pool_document.get("leader_points", 0),
+                    remaining_srf_max_points=pool_document.get("remaining_srf_max_points", 1),
                 )
                 m.update({
                     "model_tip": prediction.get("model_tip"),
@@ -192,16 +207,24 @@ def _enrich_edge(matches, math_engine, odds_engine, competition=None):
                     "xg_away": prediction.get("xg_away"),
                 })
                 if elo_state is None:
+                    m["edge_home"] = None
+                    m["elo_home_share"] = None
+                    m["market_home_share"] = None
                     continue
             true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
             pool = true_probs["home"] + true_probs["away"]
             market_home_share = (true_probs["home"] / pool) if pool > 0 else 0.5
-            elo_state = build_elo_snapshot(math_engine, m.get("home_team"), m.get("away_team"), comp)
+            elo_state = m.get("elo_state") or build_elo_snapshot(math_engine, m.get("home_team"), m.get("away_team"), comp)
             # UCL has no synthetic 1500 fallback.  Without a known rating the
             # edge is unavailable; odds-only predictions remain valid.
             if comp.id == "ucl2026" and elo_state is None:
                 continue
-            elo_home_share, _ = math_engine.get_match_elo_probabilities(m.get("home_team"), m.get("away_team"))
+            if isinstance(elo_state, dict) and "home_rating" in elo_state and "away_rating" in elo_state:
+                elo_home_share = math_engine.get_elo_probability(
+                    float(elo_state["home_rating"]), float(elo_state["away_rating"])
+                )
+            else:
+                elo_home_share, _ = math_engine.get_match_elo_probabilities(m.get("home_team"), m.get("away_team"))
             m["elo_home_share"] = elo_home_share
             m["market_home_share"] = market_home_share
             m["edge_home"] = elo_home_share - market_home_share
@@ -247,7 +270,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                             math_engine.reload_elo_data()
                             archive = load_archive_from_db(archive_store)
                             return _sync_archive_tips(
-                                _enrich_edge(data, math_engine, odds_engine, comp),
+                                _enrich_edge(data, math_engine, odds_engine, comp, cache_store),
                                 archive, archive_store
                             )
             except Exception:
@@ -266,7 +289,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                 if cached and cached.get("data"):
                     print(f"ESPN unavailable, serving stale cache: {e}")
                     return _sync_archive_tips(
-                        _enrich_edge(cached["data"], math_engine, odds_engine, comp),
+                        _enrich_edge(cached["data"], math_engine, odds_engine, comp, cache_store),
                         archive, archive_store
                     )
             except Exception:
@@ -342,11 +365,18 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                     context.setdefault("commence_time", date)
                     if comp.id == "wc2026":
                         context.setdefault("is_ko", is_ko_detected)
+                    pool_document = find_competition_document(
+                        cache_store, comp, f"pool_context:{match_id}"
+                    ) or {}
                     result = prediction_service.predict(
                         odds=odds,
                         elo=elo_state,
                         competition=comp,
                         context=context,
+                        field_counts=pool_document.get("tip_counts"),
+                        user_points=pool_document.get("user_points", 0),
+                        leader_points=pool_document.get("leader_points", 0),
+                        remaining_srf_max_points=pool_document.get("remaining_srf_max_points", 1),
                     )
                     prediction_result = result
                     top_tip = result.get("model_tip") or "N/A"

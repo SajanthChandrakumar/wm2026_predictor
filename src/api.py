@@ -39,7 +39,7 @@ from src.competitions import (
 )
 from src.services.archive import load_archive_from_db, upsert_archive_entry
 from src.services.elo_sync import perform_elo_sync
-from src.services.prediction import user_tip_is_open
+from src.services.prediction import PredictionService, rebuild_prediction, user_tip_is_open
 from src.routes.matches import init_router as matches_router
 from src.routes.predict import init_router as predict_router
 from src.routes.custom_bot import init_router as custom_bot_router
@@ -141,6 +141,7 @@ except Exception as _e:
     logger.warning(f"Startup: MongoDB restore skipped — {_e}")
 
 math_engine = MathEngine(elo_csv_path, TEAM_MAPPING)
+prediction_service = PredictionService(math_engine)
 global_odds_engine = OddsApiEngine()
 scores_cache_path = os.path.join(_data_dir, 'scores_cache.json')
 
@@ -191,7 +192,7 @@ def set_user_tip(request: Request, payload: dict, competition: str | None = None
         raise HTTPException(status_code=404, detail="Match not in archive")
 
     commence_time = (doc.get("metadata") or {}).get("commence_time")
-    if not user_tip_is_open(commence_time, datetime.now(timezone.utc)):
+    if not user_tip_is_open(commence_time, datetime.now(timezone.utc), competition=comp):
         raise HTTPException(status_code=409, detail="User tips are closed at T-5")
 
     entry = {k: v for k, v in doc.items() if k != "_id"}
@@ -324,7 +325,6 @@ def rebuild_honest_tips(competition: str | None = None):
     pre_match_snapshot (odds + Elo captured BEFORE kickoff) using the exact
     dashboard pipeline. Removes any hindsight tips that leaked into the
     archive, then regrades algo_points from the honest tip."""
-    import numpy as np
     comp = require_competition(competition)
     archive_store = collection_for(archive_collections, comp)
     archive = load_archive_from_db(archive_store)
@@ -332,55 +332,12 @@ def rebuild_honest_tips(competition: str | None = None):
     for match_id, entry in archive.items():
         if entry.get("post_match_result", {}).get("status") != "completed":
             continue
-        snap = entry.get("pre_match_snapshot") or {}
-        odds = snap.get("odds") or {}
-        elo = snap.get("elo_state") or {}
-        if not all(k in odds for k in ("home", "draw", "away")) or \
-           "home_rating" not in elo or "away_rating" not in elo:
-            skipped += 1
-            continue
-
         try:
-            true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
-            # Same blend as the dashboard: no host bonus (odds already price it in).
-            elo_home_share = math_engine.get_elo_probability(elo["home_rating"], elo["away_rating"])
-            elo_away_share = 1.0 - elo_home_share
-            pool = true_probs["home"] + true_probs["away"]
-            prob_home = (true_probs["home"] / pool * 0.7 + elo_home_share * 0.3) * pool
-            prob_away = (true_probs["away"] / pool * 0.7 + elo_away_share * 0.3) * pool
-            prob_draw = true_probs["draw"]
-
-            if "over25" in odds and "under25" in odds:
-                raw_over, raw_under = 1.0 / odds["over25"], 1.0 / odds["under25"]
-                prob_over25 = raw_over / (raw_over + raw_under)
-            else:
-                prob_over25 = None
-
-            is_ko = entry.get("metadata", {}).get("is_ko_phase", False)
-            xg_h, xg_a = math_engine.derive_xg_from_odds(prob_home, prob_draw, prob_away, prob_over25)
-            if is_ko:
-                base = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
-                et_factor = 1 + float(np.sum(np.diag(base.values))) / 3
-                xg_h *= et_factor
-                xg_a *= et_factor
-            sm = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
-            df_xp = math_engine.calculate_expected_points(sm, is_ko_phase=is_ko)
-            if df_xp.empty:
+            rebuilt_entry = rebuild_prediction(prediction_service, entry, competition=comp)
+            if rebuilt_entry is None:
                 skipped += 1
                 continue
-
-            tip = df_xp.iloc[0]["Tipp"]
-            entry["prediction"]["top_tip"] = tip
-            entry["prediction"]["max_xp"] = float(df_xp.iloc[0]["xP"])
-            entry["prediction"]["algo_reconstructed"] = False
-            entry["prediction"]["tip_source"] = "pre_match_snapshot"
-
-            actual = entry.get("post_match_result", {}).get("actual_score")
-            if actual:
-                entry["post_match_result"]["algo_points"] = \
-                    MathEngine.calculate_actual_points(tip, actual, is_ko)
-
-            upsert_archive_entry(archive_store, match_id, entry)
+            upsert_archive_entry(archive_store, match_id, rebuilt_entry)
             rebuilt += 1
         except Exception as e:
             logger.warning(f"rebuild_honest_tips failed for {match_id}: {e}")

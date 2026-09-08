@@ -16,7 +16,12 @@ from src.services.prediction import (
     pool_tip_from_field,
     freeze_prediction,
     user_tip_is_open,
+    rebuild_prediction,
 )
+from src.routes.predict import init_router as predict_router
+from src.routes.pool import init_router as pool_router
+from src.routes.matches import _enrich_edge
+from src.services.ucl_providers import compose_match_sources
 
 
 class MemoryCollection:
@@ -37,6 +42,36 @@ class MemoryCollection:
         self.documents[query["_id"]] = dict(document)
         self.replacements += 1
 
+    def update_one(self, query, update, upsert=False):
+        key = query["_id"]
+        existing = self.documents.get(key, {"_id": key})
+        for field, expected in query.items():
+            if field == "_id":
+                continue
+            current = existing
+            for part in field.split("."):
+                if not isinstance(current, dict) or part not in current:
+                    current = None
+                    break
+                current = current[part]
+            if isinstance(expected, dict) and "$exists" in expected:
+                exists = current is not None
+                if exists != bool(expected["$exists"]):
+                    return type("UpdateResult", (), {"matched_count": 0, "modified_count": 0})()
+                continue
+            if current != expected:
+                return type("UpdateResult", (), {"matched_count": 0, "modified_count": 0})()
+        for field, value in update.get("$set", {}).items():
+            target = existing
+            parts = field.split(".")
+            for part in parts[:-1]:
+                target = target.setdefault(part, {})
+            target[parts[-1]] = value
+        if key not in self.documents:
+            existing.update(update.get("$setOnInsert", {}))
+        self.documents[key] = existing
+        return type("UpdateResult", (), {"matched_count": 1, "modified_count": 1})()
+
 
 def _matrix(cells, size=4):
     values = np.zeros((size, size), dtype=float)
@@ -47,6 +82,38 @@ def _matrix(cells, size=4):
 
 def _engine():
     return MathEngine("data/elo_ratings.csv")
+
+
+class NoopLimiter:
+    def limit(self, *_args, **_kwargs):
+        return lambda function: function
+
+
+class RaceArchive(MemoryCollection):
+    """Simulate a concurrent writer winning the freeze compare-and-set."""
+
+    def __init__(self, documents=()):
+        super().__init__(documents)
+        self.raced = False
+
+    def update_one(self, query, update, upsert=False):
+        if not self.raced and "prediction.frozen_at" in query:
+            self.raced = True
+            winner = dict(self.documents[query["_id"]])
+            winner["prediction"] = dict(winner.get("prediction") or {})
+            winner["prediction"].update({"user_tip": "1:1", "frozen_at": "winner"})
+            self.documents[query["_id"]] = winner
+            return type("UpdateResult", (), {"matched_count": 0, "modified_count": 0})()
+        return super().update_one(query, update, upsert=upsert)
+
+    def replace_one(self, *_args, **_kwargs):
+        raise AssertionError("freeze must use a conditional update, not replace_one")
+
+
+def _bookmakers(home="Bayern Munich", away="Arsenal"):
+    return [{"key": "book", "markets": [{"key": "h2h", "outcomes": [
+        {"name": home, "price": 2.0}, {"name": "Draw", "price": 3.2}, {"name": away, "price": 4.0},
+    ]}]}]
 
 
 def test_context_derives_second_leg_and_final_extra_time_rules():
@@ -182,9 +249,168 @@ def test_freeze_uses_latest_eligible_t15_snapshot_and_is_idempotent():
     assert archive.replacements == writes
 
 
+def test_freeze_uses_stored_archive_context_and_persists_it():
+    kickoff = datetime(2026, 9, 10, 18, tzinfo=timezone.utc)
+    cache = MemoryCollection([{
+        "_id": "ucl2026:odds_snapshot:m1:t15m:1", "event_id": "m1", "competition": "ucl2026",
+        "bucket": "t15m", "status": "fresh", "observed_at": (kickoff - timedelta(minutes=15)).isoformat(),
+        "odds": {"home": 2.0, "draw": 3.0, "away": 4.0},
+    }])
+    archive = MemoryCollection([{"_id": "m1", "metadata": {
+        "commence_time": kickoff.isoformat(), "stage": "final", "leg": "single", "score_90": "1:1",
+    }, "prediction": {}}])
+    frozen = freeze_prediction(cache, archive, PredictionService(_engine()), "m1", competition="ucl2026",
+                               now=kickoff - timedelta(minutes=10))
+    assert frozen["prediction"]["score_inputs"]["score_90"] == "1:1"
+    assert frozen["prediction"]["context"]["stage"] == "final"
+
+
 def test_user_tip_closes_at_t5_but_undated_legacy_entry_stays_open():
     kickoff = datetime(2026, 9, 10, 18, tzinfo=timezone.utc)
     assert user_tip_is_open(kickoff.isoformat(), kickoff - timedelta(minutes=6))
     assert not user_tip_is_open(kickoff.isoformat(), kickoff - timedelta(minutes=5))
     assert user_tip_is_open(None, kickoff)
     assert user_tip_is_open("not-a-time", kickoff)
+
+
+def test_prediction_maps_pool_tip_without_overwriting_source_status():
+    service = PredictionService(_engine())
+    result = service.predict(
+        odds={"home": 2.0, "draw": 3.2, "away": 4.0},
+        elo=None,
+        competition="ucl2026",
+        field_counts={"0:0": 3, "1:0": 1},
+        user_points=10,
+        leader_points=20,
+        remaining_srf_max_points=50,
+    )
+    assert result["status"] == "fresh"
+    assert result["pool_status"] == "available"
+    assert result["pool_tip"] is not None
+    assert result["lambda"] == pytest.approx(0.12)
+
+
+def test_freeze_compare_and_set_preserves_concurrent_user_tip():
+    kickoff = datetime(2026, 9, 10, 18, tzinfo=timezone.utc)
+    cache = MemoryCollection([
+        {"_id": "ucl2026:odds_snapshot:m1:t15m:1", "event_id": "m1", "competition": "ucl2026",
+         "bucket": "t15m", "status": "fresh", "observed_at": (kickoff - timedelta(minutes=15)).isoformat(),
+         "odds": {"home": 2.0, "draw": 3.0, "away": 4.0}},
+    ])
+    archive = RaceArchive([{"_id": "m1", "metadata": {"commence_time": kickoff.isoformat()}, "prediction": {}}])
+    frozen = freeze_prediction(cache, archive, PredictionService(_engine()), "m1", competition="ucl2026",
+                               now=kickoff - timedelta(minutes=10))
+    assert frozen["prediction"]["frozen_at"] == "winner"
+    assert frozen["prediction"]["user_tip"] == "1:1"
+    assert archive.documents["m1"]["prediction"]["user_tip"] == "1:1"
+
+
+def test_predict_accepts_top_level_context_and_pool_context():
+    cache = MemoryCollection([{
+        "_id": "ucl2026:pool_context:m1", "tip_counts": {"0:0": 2, "1:0": 1},
+        "user_points": 0, "leader_points": 10, "remaining_srf_max_points": 100,
+    }])
+    router = predict_router(_engine(), object(), {"ucl2026": cache}, NoopLimiter())
+    endpoint = next(route.endpoint for route in router.routes if route.path == "/api/predict")
+    result = endpoint(None, {
+        "competition": "ucl2026",
+        "stage": "final",
+        "leg": "single",
+        "tie_id": "final-1",
+        "match": {"id": "m1", "home_team": "Bayern Munich", "away_team": "Arsenal", "bookmakers": _bookmakers()},
+    }, competition="ucl2026")
+    assert result["context"]["stage"] == "final"
+    assert result["context"]["tie_id"] == "final-1"
+    assert result["pool_status"] == "available"
+    assert result["pool_tip"] is not None
+
+
+def test_pool_context_put_clears_stale_archived_pool_tip():
+    cache = MemoryCollection()
+    archive = MemoryCollection([{"_id": "m1", "prediction": {"pool_tip": "2:0", "pool_status": "available"}}])
+    router = pool_router({"ucl2026": cache}, {"ucl2026": archive})
+    endpoint = next(route.endpoint for route in router.routes if route.path == "/api/pool-context/{match_id}" and route.methods == {"PUT"})
+    endpoint("m1", {"tip_counts": {"1:1": 2}, "user_points": 4, "leader_points": 8, "remaining_srf_max_points": 30}, competition="ucl2026")
+    assert archive.documents["m1"]["prediction"]["pool_tip"] is None
+    assert archive.documents["m1"]["prediction"]["pool_status"] == "unavailable"
+
+
+def test_user_tip_missing_kickoff_is_only_permissive_for_legacy_wc():
+    now = datetime(2026, 9, 10, 18, tzinfo=timezone.utc)
+    assert user_tip_is_open(None, now, competition="wc2026")
+    assert not user_tip_is_open(None, now, competition="ucl2026")
+    assert not user_tip_is_open("not-a-time", now, competition="ucl2026")
+
+
+def test_first_leg_never_gets_final_draw_extra_time():
+    context = build_match_context({"stage": "final", "leg": "first", "first_leg_score": "0:0"}, competition="ucl2026")
+    assert not extra_time_eligible_for_score(context, 0, 0)
+
+
+def test_reconstruction_preserves_full_ucl_context_and_model_alias():
+    engine = _engine()
+    engine.elo_df = pd.DataFrame([
+        {"team_name": "Bayern Munich", "elo_rating": 1900.0},
+        {"team_name": "Arsenal", "elo_rating": 1800.0},
+    ])
+    result = PredictionService(engine).reconstruct(
+        "Bayern Munich", "Arsenal", competition="ucl2026",
+        context={"stage": "round_of_16", "tie_id": "t1", "leg": "second", "first_leg_score": "1:0"},
+    )
+    assert result["context"]["stage"] == "round_of_16"
+    assert result["context"]["leg"] == "second"
+    assert result["model_tip"] == result["top_tip"]
+
+
+def test_honest_rebuild_uses_shared_service_and_persists_model_alias():
+    service = PredictionService(_engine())
+    entry = {
+        "metadata": {"stage": "final", "leg": "single"},
+        "pre_match_snapshot": {
+            "odds": {"home": 2.0, "draw": 3.0, "away": 4.0},
+            "elo_state": {"home_rating": 1800, "away_rating": 1700},
+        },
+        "prediction": {"top_tip": "9:9"},
+        "post_match_result": {"status": "completed", "actual_score": "1:0"},
+    }
+    rebuilt = rebuild_prediction(service, entry, competition="wc2026")
+    assert rebuilt["prediction"]["model_tip"] == rebuilt["prediction"]["top_tip"]
+    assert rebuilt["prediction"]["source_mode"] == "odds+elo"
+
+
+def test_cached_ucl_edge_uses_pool_context_when_ratings_are_explicit():
+    engine = _engine()
+    engine.elo_df = pd.DataFrame([
+        {"team_name": "Bayern Munich", "elo_rating": 1900.0},
+        {"team_name": "Arsenal", "elo_rating": 1800.0},
+    ])
+    cache = MemoryCollection([{"_id": "ucl2026:pool_context:m1", "tip_counts": {"0:0": 2, "1:0": 1},
+                              "user_points": 0, "leader_points": 10, "remaining_srf_max_points": 100}])
+    match = {"id": "m1", "home_team": "Bayern Munich", "away_team": "Arsenal",
+             "odds": {"home": 2.0, "draw": 3.0, "away": 4.0}, "raw_match": {"round": "League Phase"}}
+    enriched = _enrich_edge([match], engine, object(), competition="ucl2026", pool_context_collection=cache)[0]
+    assert enriched["pool_status"] == "available"
+    assert enriched["pool_tip"] is not None
+
+
+def test_failed_source_status_is_preserved_in_prediction_provenance():
+    service = PredictionService(_engine())
+    result = service.predict(
+        odds={"status": "stale", "odds": {"home": 2.0, "draw": 3.2, "away": 4.0}},
+        elo=None,
+        competition="ucl2026",
+    )
+    assert result["status"] == "stale"
+    assert result["input_provenance"]["odds"]["status"] == "stale"
+
+
+def test_ucl_cached_edge_clears_legacy_edge_without_explicit_ratings():
+    engine = _engine()
+    engine.elo_df = pd.DataFrame([{"team_name": "Different Club", "elo_rating": 1800}])
+
+    match = {"id": "m1", "home_team": "Bayern Munich", "away_team": "Arsenal",
+             "odds": {"home": 2.0, "draw": 3.0, "away": 4.0}, "edge_home": 0.9,
+             "raw_match": {"round": "League Phase"}}
+    enriched = _enrich_edge([match], engine, object(), competition="ucl2026")[0]
+    assert enriched.get("edge_home") is None
+    assert enriched.get("elo_home_share") is None

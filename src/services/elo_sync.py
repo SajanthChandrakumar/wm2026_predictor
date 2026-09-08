@@ -295,7 +295,9 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
 
                 home = entry['metadata']['home_team']
                 away = entry['metadata']['away_team']
-                is_ko_match = entry['metadata'].get('is_ko_phase', False)
+                match_context = dict(entry.get('metadata') or {})
+                match_context.setdefault('commence_time', ct_map.get(mid))
+                is_ko_match = match_context.get('is_ko_phase', False)
 
                 reconstructed_prediction = prediction_service.reconstruct(
                     home,
@@ -303,6 +305,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
                     commence_time=ct_map.get(mid),
                     competition=competition,
                     is_ko=is_ko_match,
+                    context=match_context,
                 )
                 if reconstructed_prediction.get("model_tip") is None:
                     continue
@@ -321,6 +324,13 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
                     continue
 
                 entry['prediction']['top_tip'] = tip
+                entry['prediction']['model_tip'] = tip
+                entry['prediction']['pool_tip'] = reconstructed_prediction.get('pool_tip')
+                entry['prediction']['pool_status'] = reconstructed_prediction.get('pool_status', 'unavailable')
+                entry['prediction']['source_mode'] = reconstructed_prediction.get('source_mode')
+                entry['prediction']['model_version'] = reconstructed_prediction.get('model_version')
+                entry['prediction']['input_provenance'] = reconstructed_prediction.get('input_provenance')
+                entry['prediction']['context'] = reconstructed_prediction.get('context', match_context)
                 entry['prediction']['max_xp'] = max_xp
                 entry['prediction']['algo_reconstructed'] = True
                 entry['prediction']['bots'] = bots

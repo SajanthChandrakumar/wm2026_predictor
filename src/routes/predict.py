@@ -87,18 +87,30 @@ def init_router(math_engine, odds_engine, cache_collection, limiter, archive_col
             except Exception:
                 elo_state = None
             context = dict(match_data.get("match_context") or match_data.get("metadata") or {})
+            context.update({
+                key: payload[key]
+                for key in (
+                    "stage", "tie_id", "leg", "first_leg_score", "score_90", "score_aet",
+                    "shootout_winner", "extra_time_eligible",
+                )
+                if key in payload
+            })
             context.setdefault("commence_time", match_data.get("commence_time") or (match_data.get("raw_match") or {}).get("commence_time"))
             if comp.id == "wc2026":
                 context.setdefault("is_ko", is_ko)
+            pool_context = find_competition_document(cache_store, comp, f"pool_context:{event_id}") or {}
+            field_counts = payload.get("tip_counts") or payload.get("field_tip_counts")
+            if field_counts is None:
+                field_counts = pool_context.get("tip_counts")
             result = prediction_service.predict(
                 odds=odds,
                 elo=elo_state,
                 competition=comp,
                 context=context,
-                field_counts=payload.get("tip_counts") or payload.get("field_tip_counts"),
-                user_points=payload.get("user_points", 0),
-                leader_points=payload.get("leader_points", 0),
-                remaining_srf_max_points=payload.get("remaining_srf_max_points", 1),
+                field_counts=field_counts,
+                user_points=payload.get("user_points", pool_context.get("user_points", 0)),
+                leader_points=payload.get("leader_points", pool_context.get("leader_points", 0)),
+                remaining_srf_max_points=payload.get("remaining_srf_max_points", pool_context.get("remaining_srf_max_points", 1)),
             )
             matrix = result.pop("score_matrix_df", None)
             result["max_prob"] = float(matrix.to_numpy().max()) if matrix is not None else 0.0

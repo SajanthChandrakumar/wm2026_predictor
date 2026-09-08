@@ -137,6 +137,8 @@ def build_match_context(value: Mapping[str, Any] | MatchContext | None = None, *
 def extra_time_eligible_for_score(context: MatchContext | Mapping[str, Any], home_score: int, away_score: int) -> bool:
     """Return whether a 90-minute cell advances to extra time."""
     ctx = build_match_context(context)
+    if ctx.leg == "first":
+        return False
     if ctx.competition == "wc2026" and ctx.extra_time_eligible:
         return home_score == away_score
     if ctx.stage == "final":
@@ -391,7 +393,20 @@ class PredictionService:
         comp = get_competition(competition or (context or {}).get("competition") if isinstance(context, Mapping) else competition)
         ctx = build_match_context(context, competition=comp)
         clean_odds, clean_elo = _safe_odds(odds), _safe_elo(elo)
-        sources = compose_match_sources(clean_odds, clean_elo, observed_at=observed_at)
+        odds_status = odds.get("status", "fresh") if isinstance(odds, Mapping) else "fresh"
+        elo_status = elo.get("status", "fresh") if isinstance(elo, Mapping) else "fresh"
+        source_errors = {}
+        for label, payload in (("odds", odds), ("elo", elo)):
+            if isinstance(payload, Mapping) and payload.get("error"):
+                source_errors[label] = payload["error"]
+        sources = compose_match_sources(
+            clean_odds,
+            clean_elo,
+            observed_at=observed_at,
+            odds_status=odds_status,
+            elo_status=elo_status,
+            errors=source_errors,
+        )
         output: dict[str, Any] = {
             "status": sources["status"],
             "source_mode": sources["source_mode"],
@@ -471,7 +486,17 @@ class PredictionService:
             remaining_srf_max_points,
             is_ko_phase=is_ko,
         )
-        output.update({key: value for key, value in pool.items() if key not in {"candidates"}})
+        output.update({
+            "pool_tip": pool.get("tip"),
+            "pool_status": pool.get("status", "unavailable"),
+            "pool_lambda": pool.get("lambda"),
+            "pool_score": pool.get("pool_score"),
+            "expected_advantage": pool.get("expected_advantage"),
+            "std_advantage": pool.get("std_advantage"),
+            # Keep the short metric name for old consumers; never copy the
+            # pool result's generic `status` over the source status above.
+            "lambda": pool.get("lambda"),
+        })
         return output
 
     def reconstruct(
@@ -482,6 +507,7 @@ class PredictionService:
         commence_time: str | None = None,
         competition=None,
         is_ko: bool = False,
+        context: Mapping[str, Any] | MatchContext | None = None,
     ) -> dict[str, Any]:
         """Rebuild a model prediction from ratings without reimplementing it.
 
@@ -490,6 +516,13 @@ class PredictionService:
         frame, so an absent ClubElo row remains explicitly unavailable.
         """
         comp = get_competition(competition)
+        prediction_context = dict(context.as_dict() if isinstance(context, MatchContext) else (context or {}))
+        prediction_context.setdefault("competition", comp.id)
+        prediction_context.setdefault("stage", "playoff" if is_ko else "league")
+        prediction_context.setdefault("leg", "single")
+        prediction_context.setdefault("commence_time", commence_time)
+        if comp.id == "wc2026":
+            prediction_context.setdefault("is_ko", is_ko)
         if comp.id == "ucl2026":
             frame = getattr(self.math_engine, "elo_df", None)
             try:
@@ -503,7 +536,7 @@ class PredictionService:
                     odds=None,
                     elo=None,
                     competition=comp,
-                    context={"stage": "playoff" if is_ko else "league", "is_ko": is_ko, "commence_time": commence_time},
+                    context=prediction_context,
                 )
             home_rating = float(frame.loc[frame["team_name"] == home_norm, "elo_rating"].iloc[0])
             away_rating = float(frame.loc[frame["team_name"] == away_norm, "elo_rating"].iloc[0])
@@ -514,7 +547,7 @@ class PredictionService:
             odds=None,
             elo={"home_rating": home_rating, "away_rating": away_rating},
             competition=comp,
-            context={"stage": "playoff" if is_ko else "league", "is_ko": is_ko, "commence_time": commence_time},
+            context=prediction_context,
         )
         matrix = result.get("score_matrix_df")
         xp = pd.DataFrame(result.get("xp_tips") or [])
@@ -615,14 +648,14 @@ def freeze_prediction(
         provenance={"snapshot_id": snapshot.get("_id"), "snapshot_bucket": snapshot.get("bucket")},
     )
     frozen_at = current.isoformat()
-    stored_prediction = dict(prediction)
-    stored_prediction.update({
+    freeze_fields = {
         "model_tip": result.get("model_tip"),
         "top_tip": result.get("top_tip"),
         "pool_tip": result.get("pool_tip"),
         "pool_status": result.get("pool_status"),
         "source_mode": result.get("source_mode"),
         "model_version": result.get("model_version"),
+        "context": result.get("context"),
         "input_provenance": result.get("input_provenance"),
         "source_inputs": result.get("source_inputs"),
         "score_inputs": {
@@ -632,29 +665,80 @@ def freeze_prediction(
             "score_aet": metadata.get("score_aet"),
         },
         "frozen_at": frozen_at,
-    })
-    updated = dict(entry)
-    updated["prediction"] = stored_prediction
-    stored_snapshot = dict(entry.get("pre_match_snapshot") or {})
-    stored_snapshot.update({
-        "odds": snapshot.get("odds") or {},
+    }
+    update = {"$set": {f"prediction.{key}": value for key, value in freeze_fields.items()}}
+    result_write = archive_collection.update_one(
+        {"_id": match_id, "prediction.frozen_at": {"$exists": False}},
+        update,
+        upsert=False,
+    )
+    if getattr(result_write, "matched_count", 0):
+        return archive_collection.find_one({"_id": match_id})
+    # Another writer won the compare-and-set.  Reload its complete document so
+    # a concurrent user-tip/archive update is preserved for the caller.
+    winner = archive_collection.find_one({"_id": match_id})
+    if winner and (winner.get("prediction") or {}).get("frozen_at"):
+        return winner
+    raise ValueError("Prediction freeze was concurrently replaced")
+
+
+def rebuild_prediction(
+    service: PredictionService,
+    entry: dict[str, Any],
+    *,
+    competition=None,
+) -> dict[str, Any] | None:
+    """Rebuild an archived tip through the same service as live predictions."""
+    snapshot = entry.get("pre_match_snapshot") or {}
+    odds = snapshot.get("odds") or {}
+    elo = snapshot.get("elo_state") or {}
+    if not all(key in odds for key in ("home", "draw", "away")):
+        return None
+    if not all(key in elo for key in ("home_rating", "away_rating")):
+        return None
+    metadata = dict(entry.get("metadata") or {})
+    result = service.predict(
+        odds=odds,
+        elo=elo,
+        competition=competition,
+        context=metadata,
+        observed_at=snapshot.get("timestamp_recorded"),
+        provenance=snapshot.get("input_provenance") or {},
+    )
+    if not result.get("model_tip"):
+        return None
+    prediction = dict(entry.get("prediction") or {})
+    prediction.update({
+        "model_tip": result.get("model_tip"),
+        "top_tip": result.get("top_tip"),
+        "pool_tip": result.get("pool_tip"),
+        "pool_status": result.get("pool_status"),
         "source_mode": result.get("source_mode"),
         "model_version": result.get("model_version"),
         "input_provenance": result.get("input_provenance"),
-        "score_inputs": stored_prediction["score_inputs"],
-        "frozen_at": frozen_at,
+        "source_inputs": result.get("source_inputs"),
+        "max_xp": result.get("max_xp", 0.0),
+        "algo_reconstructed": False,
+        "tip_source": "pre_match_snapshot",
     })
-    updated["pre_match_snapshot"] = stored_snapshot
-    archive_collection.replace_one({"_id": match_id}, updated, upsert=True)
+    updated = dict(entry)
+    updated["prediction"] = prediction
+    actual = (updated.get("post_match_result") or {}).get("actual_score")
+    if actual:
+        is_ko = bool(result.get("is_ko_phase"))
+        updated.setdefault("post_match_result", {})["algo_points"] = MathEngine.calculate_actual_points(
+            prediction["model_tip"], actual, is_ko
+        )
     return updated
 
 
-def user_tip_is_open(commence_time: Any, now: datetime | None = None) -> bool:
+def user_tip_is_open(commence_time: Any, now: datetime | None = None, *, competition=None) -> bool:
     """T-5 closure with compatibility for legacy undated WC entries."""
+    comp = get_competition(competition)
     try:
         kickoff = parse_time(commence_time)
     except (TypeError, ValueError, OverflowError):
-        return True
+        return comp.id == "wc2026"
     current = parse_time(now or datetime.now(timezone.utc))
     return current < kickoff - timedelta(minutes=5)
 
