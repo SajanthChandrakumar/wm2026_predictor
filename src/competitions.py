@@ -111,9 +111,16 @@ def get_competition(value: str | Competition | None = None) -> Competition:
     """Resolve a competition ID, defaulting omitted/blank values to WC."""
     if isinstance(value, Competition):
         return value
-    competition_id = DEFAULT_COMPETITION_ID if value is None else str(value).strip().lower()
-    if not competition_id:
+    if value is None:
         competition_id = DEFAULT_COMPETITION_ID
+    elif not isinstance(value, str):
+        raise ValueError(f"Unknown competition: {value}")
+    elif not value.strip():
+        competition_id = DEFAULT_COMPETITION_ID
+    else:
+        # IDs are protocol values. Do not silently normalize casing or
+        # surrounding characters, which can hide client/configuration bugs.
+        competition_id = value
     try:
         return COMPETITIONS[competition_id]
     except KeyError as exc:

@@ -76,3 +76,72 @@ Output:
 
 - Provider-specific ESPN fetching and UCL odds/Elo ingestion remain intentionally deferred to Task 2; this task only establishes the shared registry and storage boundary.
 - Existing local Elo/scores files remain governed by the current WC sync implementation; later UCL provider/state work should give those local artifacts competition-specific paths before enabling UCL maintenance.
+
+## Review fixes (round 1/5)
+
+### RED
+
+Added these regression tests to `test_competition_core.py` before the fixes:
+
+- `test_wc_state_lookup_prefers_scoped_document_and_falls_back_to_legacy`
+- `test_prediction_ko_policy_ignores_ucl_client_flag_but_keeps_wc_legacy_fallback`
+- `test_require_competition_exposes_unknown_ids_as_http_400`
+- uppercase rejection in `test_missing_competition_defaults_to_world_cup_and_unknown_is_rejected`
+
+Command:
+
+```text
+.venv/bin/python -m pytest test_competition_core.py -q
+```
+
+Expected RED output:
+
+```text
+ImportError while importing test module 'test_competition_core.py'
+ImportError: cannot import name 'effective_is_ko' from 'src.routes.predict'
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+```
+
+### GREEN
+
+Command:
+
+```text
+.venv/bin/python -m pytest test_competition_core.py -q
+```
+
+Output:
+
+```text
+11 passed in 0.62s
+```
+
+Full verification command:
+
+```text
+.venv/bin/python -m compileall -q src test_competition_core.py && .venv/bin/python -m pytest -q && git diff --check
+```
+
+Output:
+
+```text
+64 passed in 2.91s
+```
+
+### Fixes
+
+- API startup restoration now uses `find_competition_document` for `elo_ratings`, `elo_history`, and `processed_match_ids`, preferring `wc2026:` state IDs and falling back to legacy IDs.
+- Competition parsing no longer lowercases or silently trims nonblank IDs; uppercase/mixed IDs are rejected while omitted/blank values still default to WC.
+- Prediction KO handling is centralized in `effective_is_ko`: WC retains the legacy client `is_ko` fallback, while UCL ignores that client flag and only accepts explicit stored `extra_time_eligible` metadata.
+
+### Fix self-review
+
+- The startup test exercises the real scoped-first/fallback helper used by `src/api.py`; it proves both the new and legacy paths.
+- The KO test covers both UCL client-flag rejection and stored metadata acceptance, plus WC compatibility.
+- `require_competition` is directly tested for HTTP 400.
+- No provider calls, data files, frontend artifacts, or original-checkout files were touched.
+- Full suite and whitespace checks are clean.
+
+### Remaining concerns
+
+- Full stage/leg/extra-time context derivation remains Task 3’s central prediction-service responsibility; this fix prevents the legacy client flag from bypassing that boundary for UCL.

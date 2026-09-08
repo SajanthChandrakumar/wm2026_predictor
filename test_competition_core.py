@@ -9,10 +9,13 @@ from src.competitions import (
     competition_document_id,
     get_competition,
     list_competitions,
+    find_competition_document,
+    require_competition,
 )
 from src.services import archive
 from src.routes.custom_bot import init_router as custom_bot_router
 from src.routes.matches import init_router as matches_router
+from src.routes.predict import effective_is_ko
 
 
 class MemoryCollection:
@@ -57,6 +60,28 @@ def test_missing_competition_defaults_to_world_cup_and_unknown_is_rejected():
     assert get_competition("").id == DEFAULT_COMPETITION_ID
     with pytest.raises(ValueError, match="Unknown competition"):
         get_competition("not-a-competition")
+    with pytest.raises(ValueError, match="Unknown competition"):
+        get_competition("UCL2026")
+
+
+def test_require_competition_exposes_unknown_ids_as_http_400():
+    with pytest.raises(HTTPException) as exc_info:
+        require_competition("bad")
+    assert exc_info.value.status_code == 400
+
+
+def test_wc_state_lookup_prefers_scoped_document_and_falls_back_to_legacy():
+    cache = MemoryCollection(
+        "cache",
+        [
+            {"_id": "elo_ratings", "rows": [{"team_name": "legacy"}]},
+            {"_id": "wc2026:elo_ratings", "rows": [{"team_name": "scoped"}]},
+        ],
+    )
+    assert find_competition_document(cache, "wc2026", "elo_ratings")["rows"][0]["team_name"] == "scoped"
+
+    del cache.documents["wc2026:elo_ratings"]
+    assert find_competition_document(cache, "wc2026", "elo_ratings")["rows"][0]["team_name"] == "legacy"
 
 
 def test_competition_list_is_safe_api_metadata():
@@ -135,3 +160,13 @@ def test_custom_bot_state_is_scoped_and_wc_legacy_state_remains_readable():
     with pytest.raises(HTTPException) as exc_info:
         get_endpoint(competition="bad")
     assert exc_info.value.status_code == 400
+
+
+def test_prediction_ko_policy_ignores_ucl_client_flag_but_keeps_wc_legacy_fallback():
+    assert effective_is_ko("ucl2026", {"is_ko": True}, {}) is False
+    assert effective_is_ko(
+        "ucl2026",
+        {"is_ko": False},
+        {"metadata": {"extra_time_eligible": True}},
+    ) is True
+    assert effective_is_ko("wc2026", {"is_ko": True}, {}) is True

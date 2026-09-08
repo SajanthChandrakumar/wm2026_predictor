@@ -11,6 +11,25 @@ from src.math_engine import MathEngine
 logger = logging.getLogger(__name__)
 
 
+def effective_is_ko(competition, payload: dict, match_data: dict) -> bool:
+    """Resolve KO scoring without letting new competitions trust client flags."""
+    comp = require_competition(competition)
+    if comp.id == "wc2026":
+        return bool(payload.get("is_ko", False))
+
+    # UCL match context is provider/archive metadata. Keep the accepted
+    # field explicit; stage/leg resolution is owned by the central predictor.
+    for source in (
+        match_data,
+        match_data.get("match_context"),
+        match_data.get("metadata"),
+        match_data.get("raw_match"),
+    ):
+        if isinstance(source, dict) and "extra_time_eligible" in source:
+            return bool(source["extra_time_eligible"])
+    return False
+
+
 def init_router(math_engine, odds_engine, cache_collection, limiter):
     router = APIRouter(prefix="/api")
 
@@ -21,10 +40,11 @@ def init_router(math_engine, odds_engine, cache_collection, limiter):
         cache_store = collection_for(cache_collection, comp)
         math_engine.reload_elo_data()
         match_data = payload.get("match")
-        is_ko = payload.get("is_ko", False)
 
         if not match_data:
             raise HTTPException(status_code=400, detail="Match data required")
+
+        is_ko = effective_is_ko(comp, payload, match_data)
 
         try:
             event_id = match_data.get("id", "")

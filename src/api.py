@@ -30,6 +30,7 @@ from src.quota_store import read_quota
 from src.constants import TEAM_MAPPING, SCORES_CACHE_TTL, _is_ko_round
 from src.competitions import (
     COMPETITIONS,
+    DEFAULT_COMPETITION_ID,
     collection_for,
     find_competition_document,
     list_competitions,
@@ -116,17 +117,17 @@ if not os.path.exists(elo_csv_path):
     }).to_csv(elo_csv_path, index=False)
 
 try:
-    _elo_doc = cache_collection.find_one({"_id": "elo_ratings"})
+    _elo_doc = find_competition_document(cache_collection, DEFAULT_COMPETITION_ID, "elo_ratings")
     if _elo_doc and _elo_doc.get("rows"):
         pd.DataFrame(_elo_doc["rows"]).to_csv(elo_csv_path, index=False)
         logger.info("Startup: restored elo_ratings.csv from MongoDB")
-    _hist_doc = cache_collection.find_one({"_id": "elo_history"})
+    _hist_doc = find_competition_document(cache_collection, DEFAULT_COMPETITION_ID, "elo_history")
     if _hist_doc and _hist_doc.get("data"):
         _hist_path = os.path.join(_data_dir, 'elo_history.json')
         with open(_hist_path, 'w', encoding='utf-8') as _hf:
             json.dump(_hist_doc["data"], _hf, indent=4)
         logger.info("Startup: restored elo_history.json from MongoDB")
-    _proc_doc = cache_collection.find_one({"_id": "processed_match_ids"})
+    _proc_doc = find_competition_document(cache_collection, DEFAULT_COMPETITION_ID, "processed_match_ids")
     if _proc_doc and _proc_doc.get("ids") is not None:
         _proc_path = os.path.join(_data_dir, 'processed_matches.json')
         with open(_proc_path, 'w', encoding='utf-8') as _pf:
