@@ -40,7 +40,8 @@ from src.competitions import (
 from src.services.archive import load_archive_from_db, upsert_archive_entry
 from src.services.auth import require_cron_secret
 from src.services.elo_sync import perform_elo_sync
-from src.services.prediction import PredictionService, rebuild_prediction, user_tip_is_open
+from src.services.prediction import PredictionService, infer_stage, rebuild_prediction, user_tip_is_open
+from src.services.ucl_simulation import _fixture_score, _fixture_teams, build_ucl_table
 from src.routes.matches import init_router as matches_router
 from src.routes.predict import init_router as predict_router
 from src.routes.custom_bot import init_router as custom_bot_router
@@ -221,11 +222,148 @@ def get_standings(competition: str | None = None):
     cache_store = collection_for(cache_collections, comp)
     try:
         doc = find_competition_document(cache_store, comp, "standings_cache")
-        if doc and doc.get("data"):
+        if comp.id != "ucl2026" and doc and doc.get("data"):
             return doc["data"]
     except Exception:
-        pass
+        doc = None
+    if comp.id == "ucl2026":
+        cached = None
+        try:
+            cached = find_competition_document(cache_store, comp, "matches_cache")
+            if doc and _valid_ucl_standings(doc.get("data")):
+                return doc["data"]
+            derived = _derive_ucl_standings(cached or {})
+            if derived:
+                return [{"name": "UCL League Phase", "rows": derived}]
+        except Exception:
+            pass
     return []
+
+
+def _valid_ucl_standings(data) -> bool:
+    if not isinstance(data, list) or len(data) != 1 or not isinstance(data[0], dict):
+        return False
+    rows = data[0].get("rows")
+    if not isinstance(rows, list) or len(rows) != 36:
+        return False
+    teams, positions = [], []
+    for row in rows:
+        if not isinstance(row, dict) or not row.get("team"):
+            return False
+        try:
+            positions.append(int(row.get("pos")))
+        except (TypeError, ValueError):
+            return False
+        teams.append(str(row["team"]))
+    return len(set(teams)) == 36 and set(positions) == set(range(1, 37))
+
+
+def _derive_ucl_standings(cached: dict) -> list[dict]:
+    if not isinstance(cached, dict):
+        return []
+    metadata = cached.get("metadata") if isinstance(cached.get("metadata"), dict) else {}
+    fixtures = cached.get("data")
+    if not isinstance(fixtures, list) or not fixtures:
+        return []
+    league_fixtures = []
+    for fixture in fixtures:
+        if not isinstance(fixture, dict):
+            return []
+        raw_match = fixture.get("raw_match") if isinstance(fixture.get("raw_match"), dict) else {}
+        round_name = fixture.get("round") or fixture.get("stage") or raw_match.get("round", "")
+        if _is_ko_round(round_name) or infer_stage(round_name) != "league":
+            continue
+        league_fixtures.append(fixture)
+
+    def metadata_value(key):
+        return cached.get(key, metadata.get(key))
+
+    teams = cached.get("teams", metadata.get("teams"))
+    if isinstance(teams, dict):
+        teams = [row.get("team", row.get("team_name")) for row in teams.values() if isinstance(row, dict)]
+    elif isinstance(teams, (list, tuple)) and teams and isinstance(teams[0], dict):
+        teams = [row.get("team", row.get("team_name")) for row in teams]
+    if not isinstance(teams, (list, tuple)) or not teams:
+        teams = sorted({
+            team
+            for fixture in league_fixtures
+            for team in (fixture.get("home_team"), fixture.get("away_team"))
+            if team
+        })
+    teams = [str(team) for team in teams if team]
+    if len(teams) != 36 or len(set(teams)) != 36:
+        return []
+
+    official_order = metadata_value("official_order")
+    if isinstance(official_order, list) and official_order and isinstance(official_order[0], dict):
+        official_order = [row.get("team", row.get("team_name")) for row in official_order]
+    try:
+        table = build_ucl_table(
+            teams,
+            league_fixtures,
+            official_order=official_order,
+            disciplinary_scores=metadata_value("disciplinary_scores"),
+            uefa_coefficients=metadata_value("uefa_coefficients"),
+            uefa_coefficient_ranks=metadata_value("uefa_coefficient_ranks"),
+            coefficient_version=metadata_value("coefficient_version") or "2026",
+        )
+    except (TypeError, ValueError, KeyError):
+        return []
+
+    played = {team: 0 for team in teams}
+    draws = {team: 0 for team in teams}
+    logos = {}
+    team_metadata = metadata_value("team_metadata") or metadata_value("teams_metadata") or metadata_value("team_logos")
+    if isinstance(team_metadata, dict):
+        team_metadata = team_metadata.items()
+    if isinstance(team_metadata, (list, tuple)):
+        entries = team_metadata if team_metadata and isinstance(team_metadata[0], dict) else ()
+        if entries:
+            team_metadata = ((row.get("team", row.get("team_name")), row) for row in entries)
+        else:
+            team_metadata = ()
+    if team_metadata:
+        for team, details in team_metadata:
+            if team and isinstance(details, dict) and details.get("logo"):
+                logos[str(team)] = details["logo"]
+    for fixture in league_fixtures:
+        try:
+            home, away = _fixture_teams(fixture)
+        except (TypeError, ValueError):
+            return []
+        raw_match = fixture.get("raw_match") if isinstance(fixture.get("raw_match"), dict) else {}
+        for team, key in ((home, "home_logo"), (away, "away_logo")):
+            logo = fixture.get(key) or raw_match.get(key)
+            if logo:
+                logos.setdefault(team, logo)
+        score = _fixture_score(fixture)
+        if score is None:
+            continue
+        played[home] += 1
+        played[away] += 1
+        if score[0] == score[1]:
+            draws[home] += 1
+            draws[away] += 1
+
+    rows = []
+    for row in table:
+        team = row["team"]
+        wins = int(row.get("wins", 0))
+        draws_count = draws[team]
+        rows.append({
+            "pos": int(row["rank"]),
+            "team": team,
+            "logo": logos.get(team, ""),
+            "p": played[team],
+            "w": wins,
+            "d": draws_count,
+            "l": max(0, played[team] - wins - draws_count),
+            "gf": int(row.get("goals_for", 0)),
+            "ga": int(row.get("goals_against", 0)),
+            "gd": int(row.get("goal_difference", 0)),
+            "pts": int(row.get("points", 0)),
+        })
+    return rows if _valid_ucl_standings([{"rows": rows}]) else []
 
 @app.get("/api/elo_history")
 def get_elo_history(competition: str | None = None):

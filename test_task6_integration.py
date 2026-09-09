@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import os
+import importlib
 from pathlib import Path
 import subprocess
 import sys
@@ -9,12 +10,30 @@ import pytest
 from test_task2_providers import MemoryCollection
 from src.competitions import competition_document_id
 from src.routes.matches import init_router as matches_router
+from src.routes.simulate import init_router as simulate_router
 from src.services.maintenance import run_maintenance
 from src.services.migration import migrate_wc_legacy
 from src.services.prediction import freeze_prediction
 from src.services.elo_sync import perform_elo_sync
 from src.services.snapshots import append_odds_snapshot
 from src.services.ucl_simulation import simulate_ucl_tournament
+from src.math_engine import MathEngine
+
+
+def _ucl_teams_and_fixtures():
+    teams = [f"Team {index:02d}" for index in range(36)]
+    fixtures = []
+    for round_no in range(4):
+        for team_index, home in enumerate(teams):
+            away = teams[(team_index + round_no + 1) % len(teams)]
+            fixtures.append({
+                "id": f"m-{round_no}-{team_index}",
+                "home_team": home,
+                "away_team": away,
+                "status": "completed",
+                "score_90": "0:0",
+            })
+    return teams, fixtures
 
 
 def test_public_match_cache_miss_is_explicitly_unavailable_without_provider_calls(monkeypatch):
@@ -63,6 +82,108 @@ def test_force_matches_uses_the_cached_presentation_path(monkeypatch):
     assert result == [{"id": "e1", "presented": True}]
     assert calls[0] == "reload"
     assert calls[1][0]["id"] == "e1"
+
+
+def test_cached_pending_wc_match_uses_full_prediction_contract_without_provider_calls():
+    cache = MemoryCollection([{
+        "_id": "wc2026:matches_cache",
+        "data": [{
+            "id": "wc-1",
+            "home_team": "France",
+            "away_team": "Spain",
+            "commence_time": "2026-06-20T18:00:00Z",
+            "round": "Group A",
+            "completed": False,
+            "odds": {"home": 2.0, "draw": 3.0, "away": 4.0},
+        }],
+    }])
+
+    class Provider:
+        def get_competition_odds(self, *args, **kwargs):
+            raise AssertionError("cached WC reads must not call providers")
+
+    endpoint = matches_router(
+        MathEngine("data/elo_ratings.csv"),
+        Provider(),
+        {"wc2026": cache},
+        {"wc2026": MemoryCollection()},
+    ).routes[0].endpoint
+
+    result = endpoint(competition="wc2026")
+    match = result[0]
+
+    assert match["top_tip"] != "N/A"
+    assert match["max_xp"] > 0
+    assert match["source"]
+    assert match["provenance"]
+    assert match["context"]["competition"] == "wc2026"
+
+
+def test_ucl_standings_api_derives_one_valid_frontend_group_from_schedule(monkeypatch):
+    teams, fixtures = _ucl_teams_and_fixtures()
+    cache = MemoryCollection([{
+        "_id": "ucl2026:matches_cache",
+        "data": fixtures,
+        "teams": teams,
+    }])
+    monkeypatch.setenv("MONGO_URI", "mongodb://127.0.0.1:27017/?serverSelectionTimeoutMS=50")
+    monkeypatch.setenv("ODDS_API_KEY", "test-only-key")
+    api = importlib.import_module("src.api")
+    monkeypatch.setattr(api, "cache_collections", {"ucl2026": cache})
+
+    groups = api.get_standings(competition="ucl2026")
+
+    assert groups and len(groups) == 1
+    assert groups[0]["name"] == "UCL League Phase"
+    rows = groups[0]["rows"]
+    assert len(rows) == 36
+    assert {row["team"] for row in rows} == set(teams)
+    assert {row["pos"] for row in rows} == set(range(1, 37))
+
+
+def test_ucl_standings_api_returns_empty_for_unestablished_schedule(monkeypatch):
+    teams, fixtures = _ucl_teams_and_fixtures()
+    cache = MemoryCollection([{
+        "_id": "ucl2026:matches_cache",
+        "data": fixtures[:-1],
+        "teams": teams,
+    }])
+    monkeypatch.setenv("MONGO_URI", "mongodb://127.0.0.1:27017/?serverSelectionTimeoutMS=50")
+    monkeypatch.setenv("ODDS_API_KEY", "test-only-key")
+    api = importlib.import_module("src.api")
+    monkeypatch.setattr(api, "cache_collections", {"ucl2026": cache})
+
+    assert api.get_standings(competition="ucl2026") == []
+
+
+def test_ucl_simulation_routes_clamp_large_and_negative_runs(monkeypatch):
+    cache = MemoryCollection([{
+        "_id": "ucl2026:matches_cache",
+        "data": [{
+            "id": "m1",
+            "home_team": "Team 01",
+            "away_team": "Team 02",
+            "status": "scheduled",
+            "matrix": {"0:0": 1.0},
+        }],
+        "teams": ["Team 01", "Team 02"],
+    }])
+    observed = []
+
+    def fake_simulation(*args, **kwargs):
+        observed.append(kwargs["n_runs"])
+        return {"status": "fresh", "n_runs": kwargs["n_runs"]}
+
+    monkeypatch.setattr("src.routes.simulate.simulate_ucl_tournament", fake_simulation)
+    router = simulate_router(object(), {"ucl2026": cache})
+    ucl_endpoint = next(route.endpoint for route in router.routes if route.path == "/api/simulate_ucl")
+    knockout_endpoint = next(route.endpoint for route in router.routes if route.path == "/api/simulate_knockout")
+
+    assert ucl_endpoint(runs=999999, competition="ucl2026")["n_runs"] == 100000
+    assert ucl_endpoint(runs=-5, competition="ucl2026")["n_runs"] == 1000
+    assert knockout_endpoint(runs=999999, competition="ucl2026")["n_runs"] == 100000
+    assert knockout_endpoint(runs=-5, competition="ucl2026")["n_runs"] == 1000
+    assert observed == [100000, 1000, 100000, 1000]
 
 
 def test_migration_script_direct_invocation_bootstraps_repo_imports_and_dotenv():

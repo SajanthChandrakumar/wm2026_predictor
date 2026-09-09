@@ -24,11 +24,11 @@ def init_router(math_engine, cache_collection):
         competition: str | None = None,
     ):
         comp = require_competition(competition)
+        runs = max(1_000, min(runs, 100_000))
         if comp.id == "ucl2026":
             return get_ucl_simulation(runs=runs, competition=comp.id)
         cache_store = collection_for(cache_collection, comp)
         cache_id = competition_document_id(comp, _CACHE_ID)
-        runs = max(1_000, min(runs, 100_000))
 
         if not force:
             try:
@@ -68,6 +68,7 @@ def init_router(math_engine, cache_collection):
         comp = require_competition(competition)
         if comp.id != "ucl2026":
             raise HTTPException(status_code=400, detail="simulate_ucl requires competition=ucl2026")
+        runs = max(1_000, min(runs, 100_000))
         cache_store = collection_for(cache_collection, comp)
         cached = find_competition_document(cache_store, comp, "matches_cache") or {}
         try:
