@@ -6,7 +6,15 @@ TEAM_MAPPING = {
     "Saudi Arabia": "Saudi Arabia", "KSA": "Saudi Arabia",
     "Turkey": "Türkiye", "Türkiye": "Türkiye",
     "Bosnia & Herzegovina": "Bosnia and Herzegovina",
-    "Bosnia and Herzegovina": "Bosnia and Herzegovina"
+    "Bosnia and Herzegovina": "Bosnia and Herzegovina",
+    # Club-name aliases shared by ESPN, The Odds API and ClubElo.
+    "Feyenoord": "Feyenoord Rotterdam",
+    "Sporting Lisbon": "Sporting CP",
+    "Paris Saint Germain": "Paris Saint-Germain",
+    "ŠK Slovan Bratislava": "Slovan Bratislava",
+    "Bodø/Glimt": "Bodo/Glimt",
+    "Slavia Praha": "Slavia Prague",
+    "RC Lens": "Lens",
 }
 
 DISPLAY_MAPPING = {

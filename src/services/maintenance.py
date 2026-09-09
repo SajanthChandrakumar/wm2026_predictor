@@ -7,6 +7,7 @@ import math
 from uuid import uuid4
 
 from src.competitions import collection_for, competition_document_id, find_competition_document, get_competition
+from src.constants import TEAM_MAPPING
 from src.services.odds_helpers import extract_odds
 from src.services.snapshots import append_odds_snapshot, bucket_state, due_buckets, mark_bucket, parse_time
 
@@ -114,12 +115,21 @@ def run_maintenance(
             }
 
         lookup = _quote_lookup(quotes)
+        available_by_event = {}
+        for fixture in fixtures:
+            event_id = str(fixture.get("id") or fixture.get("event_id") or "")
+            match = lookup.get(event_id) or _match_by_names(lookup, fixture)
+            odds = _extract_odds(match) if match else {}
+            if event_id and match:
+                available_by_event[event_id] = (match, odds)
+            if event_id and odds:
+                _store_fixture_odds(cache_collection, comp, event_id, odds, match)
         for event_id, (fixture, due) in due_by_event.items():
             # Missing historical windows become explicit missed buckets; only
             # the current (closest-to-kickoff) observation is recorded.
             for bucket in due[:-1]:
                 mark_bucket(cache_collection, comp, event_id, bucket, status="unavailable", observed_at=current, error="missed")
-            match = lookup.get(event_id) or _match_by_names(lookup, fixture)
+            match, odds = available_by_event.get(event_id, (None, {}))
             observed_bucket = due[-1]
             if match is None:
                 append_odds_snapshot(
@@ -128,7 +138,6 @@ def run_maintenance(
                 )
                 mark_bucket(cache_collection, comp, event_id, observed_bucket, status="unavailable", observed_at=current, error="event not returned by odds provider")
             else:
-                odds = _extract_odds(match)
                 snapshot_status = "fresh" if odds else "unavailable"
                 append_odds_snapshot(cache_collection, comp, event_id, observed_bucket, current, odds, status=snapshot_status)
                 mark_bucket(cache_collection, comp, event_id, observed_bucket, status="fresh" if odds else "unavailable", observed_at=current)
@@ -240,8 +249,20 @@ def _quote_lookup(quotes) -> dict:
 
 def _match_by_names(lookup, fixture):
     home, away = fixture.get("home_team"), fixture.get("away_team")
+    fixture_kickoff = fixture.get("commence_time") or (fixture.get("raw_match") or {}).get("commence_time")
     for quote in lookup.values():
-        if _normalise_team(quote.get("home_team")) == _normalise_team(home) and _normalise_team(quote.get("away_team")) == _normalise_team(away):
+        same_teams = (
+            _normalise_team(quote.get("home_team")) == _normalise_team(home)
+            and _normalise_team(quote.get("away_team")) == _normalise_team(away)
+        )
+        quote_kickoff = quote.get("commence_time")
+        try:
+            same_kickoff = not fixture_kickoff or not quote_kickoff or abs(
+                (parse_time(fixture_kickoff) - parse_time(quote_kickoff)).total_seconds()
+            ) <= 300
+        except (TypeError, ValueError):
+            same_kickoff = False
+        if same_teams and same_kickoff:
             return quote
     return None
 
@@ -275,7 +296,8 @@ def _extract_odds(quote):
 
 
 def _normalise_team(value):
-    return " ".join(str(value or "").casefold().split())
+    name = str(value or "")
+    return " ".join(TEAM_MAPPING.get(name, name).casefold().split())
 
 
 def _store_fixture_odds(cache_collection, competition, event_id, odds, quote):

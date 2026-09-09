@@ -8,7 +8,7 @@ from src.competitions import competition_document_id
 from src.routes.maintenance import init_router
 from src.routes.matches import init_router as matches_router
 from src.services import espn_data
-from src.services.maintenance import run_maintenance
+from src.services.maintenance import _match_by_names, run_maintenance
 from src.services.snapshots import (
     BUCKET_OFFSETS,
     append_odds_snapshot,
@@ -313,6 +313,80 @@ def test_odds_provider_uses_configurable_competition_identifier(monkeypatch):
     assert engine.get_competition_odds("ucl2026", market="h2h,totals")
     assert calls[0][0].endswith("/soccer_custom_ucl/odds")
     assert calls[0][1]["markets"] == "h2h,totals"
+
+
+def test_ucl_quote_matching_uses_club_aliases_and_kickoff():
+    fixture = {
+        "home_team": "Sporting CP",
+        "away_team": "Galatasaray",
+        "commence_time": "2026-09-09T19:00:00Z",
+    }
+    wrong_kickoff = {
+        "id": "wrong",
+        "home_team": "Sporting Lisbon",
+        "away_team": "Galatasaray",
+        "commence_time": "2026-10-09T19:00:00Z",
+    }
+    right_kickoff = {
+        "id": "right",
+        "home_team": "Sporting Lisbon",
+        "away_team": "Galatasaray",
+        "commence_time": "2026-09-09T19:00:00Z",
+    }
+
+    assert _match_by_names({"wrong": wrong_kickoff, "right": right_kickoff}, fixture) == right_kickoff
+
+
+def test_maintenance_stores_every_bulk_quote_but_snapshots_only_due_fixture():
+    now = datetime(2026, 9, 9, 18, 45, tzinfo=timezone.utc)
+    due = datetime(2026, 9, 9, 19, 0, tzinfo=timezone.utc)
+    later = datetime(2026, 9, 10, 19, 0, tzinfo=timezone.utc)
+    fixtures = [
+        {"id": "espn-liverpool", "home_team": "Liverpool", "away_team": "Atlético Madrid", "commence_time": due.isoformat()},
+        {"id": "espn-feyenoord", "home_team": "Barcelona", "away_team": "Feyenoord Rotterdam", "commence_time": later.isoformat()},
+        {"id": "espn-sporting", "home_team": "Sporting CP", "away_team": "Galatasaray", "commence_time": later.isoformat()},
+        {"id": "espn-psg", "home_team": "Paris Saint-Germain", "away_team": "Slovan Bratislava", "commence_time": later.isoformat()},
+        {"id": "espn-bodo", "home_team": "Bayern Munich", "away_team": "Bodo/Glimt", "commence_time": later.isoformat()},
+        {"id": "espn-slavia", "home_team": "Slavia Prague", "away_team": "Lens", "commence_time": later.isoformat()},
+    ]
+    provider_pairs = [
+        ("Liverpool", "Atlético Madrid"),
+        ("Barcelona", "Feyenoord"),
+        ("Sporting Lisbon", "Galatasaray"),
+        ("Paris Saint Germain", "ŠK Slovan Bratislava"),
+        ("Bayern Munich", "Bodø/Glimt"),
+        ("Slavia Praha", "RC Lens"),
+    ]
+    quotes = [
+        {
+            "id": f"odds-{index}",
+            "home_team": home,
+            "away_team": away,
+            "commence_time": (due if index == 0 else later).isoformat(),
+            "odds": {"home": 2.0 + index / 10, "draw": 3.2, "away": 4.0},
+        }
+        for index, (home, away) in enumerate(provider_pairs)
+    ]
+    cache = MemoryCollection()
+
+    class Provider:
+        def get_competition_odds(self, competition, market):
+            return quotes
+
+    run_maintenance(
+        {"ucl2026": cache},
+        Provider(),
+        competition="ucl2026",
+        now=now,
+        fixture_fetcher=lambda **kwargs: fixtures,
+        clubelo_ingestor=lambda *args, **kwargs: {"status": "fresh", "source": "clubelo"},
+    )
+
+    stored = cache.find_one({"_id": competition_document_id("ucl2026", "matches_cache")})["data"]
+    assert [match.get("odds", {}).get("home") for match in stored] == [2.0, 2.1, 2.2, 2.3, 2.4, 2.5]
+    snapshots = [document for document in cache.inserts if "odds_snapshot" in document["_id"]]
+    assert len(snapshots) == 1
+    assert snapshots[0]["event_id"] == "espn-liverpool"
 
 
 def test_append_only_snapshots_and_t15_selector_use_observation_time():
