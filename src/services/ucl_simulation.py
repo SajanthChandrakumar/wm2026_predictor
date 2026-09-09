@@ -92,6 +92,8 @@ def _score_pair(value: Any) -> tuple[int, int] | None:
 
 
 def _fixture_teams(fixture: Mapping[str, Any]) -> tuple[str, str]:
+    if not isinstance(fixture, Mapping):
+        raise ValueError("Fixture must be a mapping")
     home = fixture.get("home_team", fixture.get("home"))
     away = fixture.get("away_team", fixture.get("away"))
     if not home or not away:
@@ -814,8 +816,12 @@ def simulate_ucl_tournament(
     bracket = build_ucl_bracket()
     bracket["sample_draw"] = sample_draw
     warnings = []
-    if not uefa_coefficients and not uefa_coefficient_ranks:
+    coefficient_teams = set(uefa_coefficients or {}) | set(uefa_coefficient_ranks or {})
+    covered_teams = set(team_list) & {str(team) for team in coefficient_teams}
+    if not coefficient_teams:
         warnings.append("UEFA coefficient input unavailable; lexical name is only a deterministic final fallback")
+    elif len(covered_teams) < len(team_list):
+        warnings.append(f"UEFA coefficient coverage incomplete: {len(covered_teams)}/{len(team_list)} teams; lexical fallback remains for missing teams")
     if not official_order:
         warnings.append("ESPN official order unavailable; local ranking is used for simulation")
     result = {

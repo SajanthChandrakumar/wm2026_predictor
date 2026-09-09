@@ -170,3 +170,63 @@ Output:
   800%, SF 400%, final 200%, and champion 100% across teams.
 - No live provider calls, new dependencies, protected data files, or
   `frontend-v2/dist` changes were introduced.
+
+## Review fixes: round 2
+
+### RED
+
+Added focused regressions before the fixes:
+
+```text
+.venv/bin/python -m pytest test_task4_ucl.py -q
+```
+
+Output included:
+
+```text
+AttributeError: 'NoneType' object has no attribute 'get'
+FAILED test_partial_coefficient_coverage_emits_explicit_quality_warning
+```
+
+### GREEN
+
+Focused command:
+
+```text
+.venv/bin/python -m pytest test_task4_ucl.py -q
+```
+
+Output:
+
+```text
+28 passed in 0.83s
+```
+
+Full verification:
+
+```text
+.venv/bin/python -m pytest -q
+.venv/bin/python -m compileall -q src test_task4_ucl.py
+git diff --check
+```
+
+Output:
+
+```text
+137 passed in 3.79s
+```
+
+### Fixes
+
+- Fixture parsing now rejects non-mapping values at the shared boundary with a
+  clear `ValueError`; simulation converts that validation failure to the
+  explicit `unavailable` response rather than leaking `AttributeError`.
+- Simulator quality warnings now distinguish absent coefficients from partial
+  coverage, naming the covered count and lexical fallback for missing teams.
+
+### Self-review
+
+- The changes are limited to the UCL service and its focused tests/report; WC
+  behavior and all prior Task 4 draw/cache paths remain unchanged.
+- No provider calls, dependency changes, protected data changes, or frontend
+  build artifacts were introduced.

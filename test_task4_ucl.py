@@ -245,6 +245,25 @@ def test_missing_coefficient_inputs_emit_quality_warning():
     assert any("coefficient" in warning.lower() for warning in result["warnings"])
 
 
+def test_non_mapping_fixture_returns_unavailable_instead_of_attribute_error():
+    fixtures = _fixtures(completed=False)
+    fixtures[0] = None
+    result = simulate_ucl_tournament(_teams(), fixtures, {"default": _matrix()}, n_runs=2)
+    assert result["status"] == "unavailable"
+    assert "fixture" in result["reason"].lower()
+
+
+def test_partial_coefficient_coverage_emits_explicit_quality_warning():
+    result = simulate_ucl_tournament(
+        _teams(),
+        _fixtures(completed=False),
+        {"default": _matrix()},
+        n_runs=2,
+        uefa_coefficients={"Team 00": 101},
+    )
+    assert any("incomplete" in warning.lower() and "coefficient" in warning.lower() for warning in result["warnings"])
+
+
 def test_simulation_final_uses_et_then_penalties_without_copying_knockout_math():
     teams = ["A", "B"]
     fixture = {"id": "final", "home_team": "A", "away_team": "B", "status": "scheduled"}
