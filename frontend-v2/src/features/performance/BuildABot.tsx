@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSaveCustomBot } from '../../hooks/queries'
+import { useAppState } from '../../state/AppState'
+import { botFormState, DEFAULT_BOT_PARAMS } from '../../lib/customBot.mjs'
 import type { BotSimulation, CustomBot, CustomBotParams } from '../../lib/types'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
 import { Slider } from '../../components/ui/Slider'
@@ -7,8 +9,6 @@ import { cn } from '../../lib/util'
 import type { usePerformanceData } from './usePerformanceData'
 
 const CYAN = '#2dd4bf'
-const DEFAULTS: CustomBotParams = { market_weight: 0.7, risk: 0, draw_bias: 0, underdog_bias: 0 }
-
 const SLIDERS: { key: keyof CustomBotParams; label: string; min: number; max: number; step: number }[] = [
   { key: 'market_weight', label: 'Markt ↔ Elo', min: 0, max: 1, step: 0.05 },
   { key: 'risk', label: 'Risiko', min: -1, max: 1, step: 0.1 },
@@ -28,33 +28,33 @@ export function BuildABot({ customBot, simulate, userPoints, algoPoints }: {
   userPoints: number
   algoPoints: number
 }) {
-  const [params, setParams] = useState<CustomBotParams>(DEFAULTS)
+  const { competition } = useAppState()
+  const [params, setParams] = useState<CustomBotParams>(DEFAULT_BOT_PARAMS)
   const [name, setName] = useState('Mein Bot')
   const [sim, setSim] = useState<BotSimulation | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'error'>('idle')
   const save = useSaveCustomBot()
   const timer = useRef<ReturnType<typeof setTimeout>>(null)
-  const initialized = useRef(false)
-
-  // Prefill once from the saved config.
+  const runIdRef = useRef(0)
+  // Reload the scoped bot whenever the active competition or saved bot changes.
   useEffect(() => {
-    if (initialized.current || !customBot) return
-    initialized.current = true
-    if (customBot.exists) {
-      setParams({ ...DEFAULTS, ...customBot.params })
-      setName(customBot.name ?? 'Mein Bot')
-    }
-  }, [customBot])
+    const state = botFormState(customBot)
+    setParams(state.params)
+    setName(state.name)
+    setSim(null)
+    setSaveState('idle')
+  }, [customBot, competition])
 
-  // Debounced live simulation (300ms) — also runs on mount.
+  // Debounced live simulation (300ms), scoped to the active competition.
   useEffect(() => {
+    const runId = ++runIdRef.current
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => {
-      simulate.mutate(params, { onSuccess: setSim })
+      simulate.mutate(params, { onSuccess: (result) => { if (runId === runIdRef.current) setSim(result) } })
     }, 300)
     return () => { if (timer.current) clearTimeout(timer.current) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params])
+  }, [params, competition])
 
   const onSave = () => {
     setSaveState('saving')

@@ -1,4 +1,5 @@
 import { probColor } from '../../lib/util'
+import { hasScoreMatrix } from '../../lib/prediction.mjs'
 import { useAppState } from '../../state/AppState'
 import type { Prediction } from '../../lib/types'
 
@@ -7,7 +8,7 @@ export function ScoreHeatmap({ calc, homeDisp, awayDisp }: {
 }) {
   const { light } = useAppState()
   const matrix = calc.matrix
-  if (!matrix) return <p className="text-sm text-fg-3">Score data unavailable.</p>
+  if (!matrix || !hasScoreMatrix(matrix)) return <p className="text-sm text-fg-3">Score data unavailable.</p>
   const maxP = calc.max_prob
     ?? Math.max(...Object.values(matrix).flatMap((row) => Object.values(row)), 0.0001)
   const goals = [0, 1, 2, 3, 4, 5]
