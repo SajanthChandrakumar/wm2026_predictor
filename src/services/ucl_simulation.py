@@ -45,9 +45,11 @@ RANKING_CRITERIA = (
     "uefa_coefficient",
 )
 
-PLAYOFF_POSITION_PAIRS = (
-    (9, 24), (10, 23), (11, 22), (12, 21),
-    (13, 20), (14, 19), (15, 18), (16, 17),
+PLAYOFF_POSITION_BANDS = (
+    ((9, 10), (23, 24)),
+    ((11, 12), (21, 22)),
+    ((13, 14), (19, 20)),
+    ((15, 16), (17, 18)),
 )
 
 # The four position bands are the official draw path.  A lower-ranked team
@@ -57,6 +59,12 @@ R16_POSITION_BANDS = (
     ((3, 4), (13, 14)),
     ((5, 6), (11, 12)),
     ((7, 8), (9, 10)),
+)
+
+# Legacy import compatibility. Runtime draws use PLAYOFF_POSITION_BANDS.
+PLAYOFF_POSITION_PAIRS = tuple(
+    (seeded[0], unseeded[0])
+    for seeded, unseeded in PLAYOFF_POSITION_BANDS
 )
 
 
@@ -148,6 +156,9 @@ def _fixture_score(fixture: Mapping[str, Any]) -> tuple[int, int] | None:
 
 def _is_completed(fixture: Mapping[str, Any]) -> bool:
     if _fixture_score(fixture) is not None:
+        return True
+    post = fixture.get("post_match_result")
+    if isinstance(post, Mapping) and str(post.get("status", "")).lower() in {"completed", "final", "post"}:
         return True
     status = str(fixture.get("status", "")).lower()
     return bool(fixture.get("completed")) or status in {"completed", "final", "post"}
@@ -272,6 +283,8 @@ def build_ucl_table(
         opponents[away].append(home)
         score = _fixture_score(fixture)
         if score is None:
+            if _is_completed(fixture):
+                raise ValueError(f"completed fixture {home} vs {away} has no valid score")
             continue
         # Unplayed fixtures contribute no cards.  This keeps future discipline
         # tied in every simulation run, while completed discipline remains a
@@ -325,50 +338,102 @@ def build_ucl_table(
     return local
 
 
+def _rng(value: np.random.Generator | None) -> np.random.Generator:
+    return value or np.random.default_rng(DEFAULT_UCL_SEED)
+
+
 def build_playoff_bracket(standings: Sequence[Mapping[str, Any]] | None = None) -> list[dict[str, Any]]:
-    """Return the fixed position-pair path; seeded clubs host leg two."""
+    """Describe permitted playoff bands without pretending a draw occurred."""
     rows = list(standings or ())
     by_position = {int(row.get("rank", index + 1)): row.get("team") for index, row in enumerate(rows)}
-    bracket = []
-    for index, (seeded, unseeded) in enumerate(PLAYOFF_POSITION_PAIRS, 1):
-        tie = {
-            "tie_id": f"playoff-{index}",
-            "seeded_position": seeded,
-            "unseeded_position": unseeded,
-            "seeded_team": by_position.get(seeded),
-            "unseeded_team": by_position.get(unseeded),
-            "first_leg": {"leg": "first", "home_position": unseeded, "away_position": seeded, "home": by_position.get(unseeded), "away": by_position.get(seeded)},
-            "second_leg": {"leg": "second", "home_position": seeded, "away_position": unseeded, "home": by_position.get(seeded), "away": by_position.get(unseeded)},
+    return [
+        {
+            "band": index,
+            "seeded_positions": list(seeded),
+            "unseeded_positions": list(unseeded),
+            "allowed_pairs": [[seed, challenger] for seed in seeded for challenger in unseeded],
+            "seeded_hosts_second_leg": True,
+            "seeded_teams": [by_position.get(position) for position in seeded],
+            "unseeded_teams": [by_position.get(position) for position in unseeded],
         }
-        bracket.append(tie)
-    return bracket
+        for index, (seeded, unseeded) in enumerate(PLAYOFF_POSITION_BANDS, 1)
+    ]
+
+
+def draw_ucl_bracket(
+    standings: Sequence[Mapping[str, Any]] | None = None,
+    rng: np.random.Generator | None = None,
+) -> dict[str, Any]:
+    """Draw every permitted playoff/R16 pairing using the supplied seed."""
+    # Accept draw_ucl_bracket(rng) for small integrations.
+    if isinstance(standings, np.random.Generator) and rng is None:
+        rng, standings = standings, None
+    generator = _rng(rng)
+    rows = list(standings or ())
+    by_position = {int(row.get("rank", index + 1)): row.get("team") for index, row in enumerate(rows)}
+
+    playoff = []
+    for band, (seeded_band, unseeded_band) in enumerate(PLAYOFF_POSITION_BANDS, 1):
+        seeded_positions = list(generator.permutation(seeded_band))
+        unseeded_positions = list(generator.permutation(unseeded_band))
+        for index, (seeded, unseeded) in enumerate(zip(seeded_positions, unseeded_positions), 1):
+            playoff.append({
+                "tie_id": f"playoff-{band}-{index}",
+                "band": band,
+                "seeded_position": int(seeded),
+                "unseeded_position": int(unseeded),
+                "seeded_team": by_position.get(int(seeded)),
+                "unseeded_team": by_position.get(int(unseeded)),
+                "first_leg": {"leg": "first", "home_position": int(unseeded), "away_position": int(seeded), "home": by_position.get(int(unseeded)), "away": by_position.get(int(seeded))},
+                "second_leg": {"leg": "second", "home_position": int(seeded), "away_position": int(unseeded), "home": by_position.get(int(seeded)), "away": by_position.get(int(unseeded))},
+            })
+
+    r16 = []
+    for band, (top_band, playoff_band) in enumerate(R16_POSITION_BANDS, 1):
+        top_positions = list(generator.permutation(top_band))
+        playoff_positions = list(generator.permutation(playoff_band))
+        for top_position, playoff_position in zip(top_positions, playoff_positions):
+            tie_id = f"round-of-16-{len(r16) + 1}"
+            r16.append({
+                "tie_id": tie_id,
+                "band": band,
+                "top_band": list(top_band),
+                "playoff_band": list(playoff_band),
+                "top_position": int(top_position),
+                "playoff_seed_position": int(playoff_position),
+                "top_slot": f"league:{int(top_position)}",
+                "playoff_slot": f"playoff-seed:{int(playoff_position)}",
+                "first_leg": {"home_slot": f"playoff-seed:{int(playoff_position)}", "away_slot": f"league:{int(top_position)}"},
+                "second_leg": {"home_slot": f"league:{int(top_position)}", "away_slot": f"playoff-seed:{int(playoff_position)}"},
+            })
+    qf = []
+    for index in range(0, len(r16), 2):
+        left, right = r16[index]["tie_id"], r16[index + 1]["tie_id"]
+        qf.append({"tie_id": f"quarterfinal-{len(qf) + 1}", "left": left, "right": right, "first_leg": {"home_slot": right, "away_slot": left}, "second_leg": {"home_slot": left, "away_slot": right}})
+    sf = []
+    for index in range(0, len(qf), 2):
+        left, right = qf[index]["tie_id"], qf[index + 1]["tie_id"]
+        sf.append({"tie_id": f"semifinal-{len(sf) + 1}", "left": left, "right": right, "first_leg": {"home_slot": right, "away_slot": left}, "second_leg": {"home_slot": left, "away_slot": right}})
+    return {"playoff": playoff, "round_of_16": r16, "quarterfinal": qf, "semifinal": sf, "final": {"tie_id": "final", "single_leg": True}}
 
 
 def build_ucl_bracket(standings: Sequence[Mapping[str, Any]] | None = None) -> dict[str, Any]:
-    """Describe playoff, R16, QF, SF and final position-dependent path."""
-    playoff = build_playoff_bracket(standings)
-    r16 = []
-    for band_index, (top_positions, playoff_positions) in enumerate(R16_POSITION_BANDS, 1):
-        for slot_index, (top_position, playoff_position) in enumerate(zip(top_positions, playoff_positions), 1):
-            r16.append({
-                "tie_id": f"round-of-16-{len(r16) + 1}",
-                "home_position": playoff_position,
-                "away_position": top_position,
-                "home_slot": f"playoff:{playoff_position}",
-                "away_slot": f"league:{top_position}",
-                "first_leg": {"home_slot": f"playoff:{playoff_position}", "away_slot": f"league:{top_position}"},
-                "second_leg": {"home_slot": f"league:{top_position}", "away_slot": f"playoff:{playoff_position}"},
-                "band": band_index,
-            })
-    qf = []
-    for i in range(1, 5):
-        left, right = f"round-of-16-{2 * i - 1}", f"round-of-16-{2 * i}"
-        qf.append({"tie_id": f"quarterfinal-{i}", "left": left, "right": right, "first_leg": {"home_slot": right, "away_slot": left}, "second_leg": {"home_slot": left, "away_slot": right}})
-    sf = []
-    for i in range(1, 3):
-        left, right = f"quarterfinal-{2 * i - 1}", f"quarterfinal-{2 * i}"
-        sf.append({"tie_id": f"semifinal-{i}", "left": left, "right": right, "first_leg": {"home_slot": right, "away_slot": left}, "second_leg": {"home_slot": left, "away_slot": right}})
-    return {"playoff": playoff, "round_of_16": r16, "quarterfinal": qf, "semifinal": sf, "final": {"tie_id": "final", "single_leg": True}}
+    """Describe allowed bands and the downstream bracket slot path."""
+    draw = draw_ucl_bracket(standings)
+    return {
+        "playoff": build_playoff_bracket(standings),
+        "round_of_16": [{"band": band, "top_positions": list(top), "playoff_seed_positions": list(playoff), "seeded_hosts_second_leg": True} for band, (top, playoff) in enumerate(R16_POSITION_BANDS, 1)],
+        "quarterfinal": [{"tie_id": tie["tie_id"], "left": tie["left"], "right": tie["right"], "first_leg": tie["first_leg"], "second_leg": tie["second_leg"]} for tie in draw["quarterfinal"]],
+        "semifinal": [{"tie_id": tie["tie_id"], "left": tie["left"], "right": tie["right"], "first_leg": tie["first_leg"], "second_leg": tie["second_leg"]} for tie in draw["semifinal"]],
+        "final": draw["final"],
+    }
+
+
+def draw_playoff_bracket(
+    standings: Sequence[Mapping[str, Any]] | None = None,
+    rng: np.random.Generator | None = None,
+) -> list[dict[str, Any]]:
+    return draw_ucl_bracket(standings, rng)["playoff"]
 
 
 def _normalise_matrix(value: Any) -> tuple[list[tuple[int, int]], np.ndarray]:
@@ -419,9 +484,9 @@ def _matrix_lookup(fixture: Mapping[str, Any], matrices: Any, home: str, away: s
         candidates.append((matrices, False))
     elif isinstance(matrices, Mapping):
         fixture_id = fixture.get("id", fixture.get("match_id", fixture.get("event_id")))
-        keys = (fixture_id, (home, away), f"{home}::{away}", f"{home}:{away}", (away, home), f"{away}::{home}", f"{away}:{home}", "default")
+        keys = (fixture_id, str(fixture_id) if fixture_id is not None else None, (home, away), f"{home}::{away}", f"{home}:{away}", (away, home), f"{away}::{home}", f"{away}:{home}", "default")
         for key in keys:
-            if key in matrices:
+            if key is not None and key in matrices:
                 candidates.append((matrices[key], key in ((away, home), f"{away}::{home}", f"{away}:{home}")))
     for value, transpose in candidates:
         try:
@@ -432,6 +497,77 @@ def _matrix_lookup(fixture: Mapping[str, Any], matrices: Any, home: str, away: s
             scores = [(away_goals, home_goals) for home_goals, away_goals in scores]
         return scores, probabilities
     raise MissingModelInput(f"no valid score matrix for {home} vs {away}")
+
+
+def _fixture_matrix(fixture: Mapping[str, Any]) -> Any:
+    for key in ("matrix", "score_matrix"):
+        if fixture.get(key) is not None:
+            return fixture[key]
+    prediction = fixture.get("prediction")
+    if isinstance(prediction, Mapping):
+        for key in ("matrix", "score_matrix"):
+            if prediction.get(key) is not None:
+                return prediction[key]
+    return None
+
+
+def _normalised_matrix_dict(value: Any) -> dict[str, float] | None:
+    try:
+        scores, probabilities = _normalise_matrix(value)
+    except (MissingModelInput, TypeError, ValueError):
+        return None
+    return {f"{home}:{away}": float(probability) for (home, away), probability in zip(scores, probabilities)}
+
+
+def build_cached_ucl_inputs(cached: Mapping[str, Any]) -> dict[str, Any]:
+    """Normalize cache fixture matrices and pass through simulation metadata."""
+    if not isinstance(cached, Mapping):
+        raise ValueError("UCL fixture cache is unavailable")
+    metadata = cached.get("metadata") if isinstance(cached.get("metadata"), Mapping) else {}
+    fixtures = cached.get("data")
+    if not isinstance(fixtures, list) or not fixtures:
+        raise ValueError("UCL fixture cache contains no fixtures")
+    matrices = dict(cached.get("score_matrices") or {}) if isinstance(cached.get("score_matrices"), Mapping) else {}
+    open_matrices: list[dict[str, float]] = []
+    for fixture in fixtures:
+        if not isinstance(fixture, Mapping):
+            raise ValueError("UCL fixture cache contains an invalid fixture")
+        fixture_id = fixture.get("id", fixture.get("match_id", fixture.get("event_id")))
+        fixture_matrix = _fixture_matrix(fixture)
+        if fixture_matrix is None and fixture_id is not None:
+            fixture_matrix = matrices.get(str(fixture_id), matrices.get(fixture_id))
+        matrix = _normalised_matrix_dict(fixture_matrix)
+        if matrix and fixture_id is not None:
+            matrices[str(fixture_id)] = matrix
+        if matrix and not _is_completed(fixture):
+            open_matrices.append(matrix)
+
+    explicit_default = cached.get("default_score_matrix", cached.get("default_matrix"))
+    if explicit_default is None and isinstance(cached.get("score_matrices"), Mapping):
+        explicit_default = cached["score_matrices"].get("default")
+    default_matrix = _normalised_matrix_dict(explicit_default) if explicit_default is not None else None
+    if default_matrix is None and open_matrices:
+        aggregate: defaultdict[str, float] = defaultdict(float)
+        for matrix in open_matrices:
+            for score, probability in matrix.items():
+                aggregate[score] += probability
+        default_matrix = {score: probability / len(open_matrices) for score, probability in aggregate.items()}
+    if default_matrix:
+        matrices["default"] = default_matrix
+    official_order = cached.get("official_order", metadata.get("official_order"))
+    if isinstance(official_order, list) and official_order and isinstance(official_order[0], Mapping):
+        official_order = [row.get("team", row.get("team_name")) for row in official_order]
+    return {
+        "fixtures": fixtures,
+        "teams": cached.get("teams"),
+        "score_matrices": matrices,
+        "disciplinary_scores": cached.get("disciplinary_scores", metadata.get("disciplinary_scores")) or {},
+        "uefa_coefficients": cached.get("uefa_coefficients", metadata.get("uefa_coefficients")) or {},
+        "uefa_coefficient_ranks": cached.get("uefa_coefficient_ranks", metadata.get("uefa_coefficient_ranks")) or {},
+        "official_order": official_order,
+        "coefficient_version": cached.get("coefficient_version", cached.get("uefa_coefficient_version", metadata.get("coefficient_version", UCL_COEFFICIENT_VERSION))),
+        "provenance": cached.get("provenance", cached.get("input_provenance", metadata.get("provenance"))) or {},
+    }
 
 
 def _sample_score(fixture: Mapping[str, Any], matrices: Any, home: str, away: str, rng: np.random.Generator) -> tuple[int, int, tuple[float, float]]:
@@ -551,6 +687,8 @@ def simulate_ucl_tournament(
     uefa_coefficients: Mapping[str, Any] | None = None,
     uefa_coefficient_ranks: Mapping[str, Any] | None = None,
     official_order: Sequence[str] | None = None,
+    coefficient_version: str = UCL_COEFFICIENT_VERSION,
+    coefficient_provenance: Mapping[str, Any] | None = None,
     validate_schedule: bool = True,
 ) -> dict[str, Any]:
     """Run a seeded UCL league/table/playoff/knockout simulation."""
@@ -559,14 +697,19 @@ def simulate_ucl_tournament(
     n_runs = int(n_runs)
     if n_runs <= 0:
         raise ValueError("Simulation runs must be positive")
-    team_list = [str(team) for team in teams]
-    if validate_schedule:
-        validate_ucl_schedule(team_list, fixtures)
     try:
+        team_list = [str(team) for team in teams]
+        if validate_schedule:
+            validate_ucl_schedule(team_list, fixtures)
+        for fixture in fixtures:
+            if _is_completed(fixture) and _fixture_score(fixture) is None:
+                home, away = _fixture_teams(fixture)
+                raise ValueError(f"completed fixture {home} vs {away} has no valid score")
         for fixture in fixtures:
             if not _is_completed(fixture):
                 _matrix_lookup(fixture, score_matrices, *_fixture_teams(fixture))
-    except MissingModelInput as exc:
+    except (MissingModelInput, TypeError, ValueError, KeyError) as exc:
+        team_list = [str(team) for team in teams] if teams is not None else []
         return _unavailable(team_list, n_runs, seed, str(exc))
 
     rng = np.random.default_rng(seed)
@@ -574,6 +717,7 @@ def simulate_ucl_tournament(
         team: {"points": 0.0, "rank": 0.0, "top8": 0, "top24": 0, "round_of_16": 0, "quarterfinal": 0, "semifinal": 0, "final": 0, "champion": 0}
         for team in team_list
     }
+    sample_draw = None
     for _ in range(n_runs):
         sampled_fixtures = []
         for fixture in fixtures:
@@ -585,7 +729,7 @@ def simulate_ucl_tournament(
                 copy["status"] = "completed"
             sampled_fixtures.append(copy)
         try:
-            table = build_ucl_table(team_list, sampled_fixtures, disciplinary_scores=disciplinary_scores, uefa_coefficients=uefa_coefficients, uefa_coefficient_ranks=uefa_coefficient_ranks)
+            table = build_ucl_table(team_list, sampled_fixtures, disciplinary_scores=disciplinary_scores, uefa_coefficients=uefa_coefficients, uefa_coefficient_ranks=uefa_coefficient_ranks, coefficient_version=coefficient_version)
         except ValueError as exc:
             if not validate_schedule:
                 return _unavailable(team_list, n_runs, seed, str(exc))
@@ -601,8 +745,13 @@ def simulate_ucl_tournament(
                 stats[team]["top24"] += 1
 
         by_rank = {position: row["team"] for position, row in enumerate(table, 1)}
+        draw = draw_ucl_bracket(table, rng=rng)
+        if sample_draw is None:
+            sample_draw = draw
         playoff_winners: dict[int, str] = {}
-        for seeded_position, unseeded_position in PLAYOFF_POSITION_PAIRS:
+        for tie in draw["playoff"]:
+            seeded_position = tie["seeded_position"]
+            unseeded_position = tie["unseeded_position"]
             try:
                 winner, _ = _play_two_leg_tie(by_rank[seeded_position], by_rank[unseeded_position], score_matrices, rng, stage="playoff")
             except MissingModelInput as exc:
@@ -611,14 +760,15 @@ def simulate_ucl_tournament(
             stats[winner]["round_of_16"] += 1
 
         r16_winners = []
-        for top_positions, playoff_positions in R16_POSITION_BANDS:
-            for top_position, playoff_position in zip(top_positions, playoff_positions):
-                seeded, challenger = by_rank[top_position], playoff_winners[playoff_position]
-                try:
-                    winner, _ = _play_two_leg_tie(seeded, challenger, score_matrices, rng, stage="round_of_16")
-                except MissingModelInput as exc:
-                    return _unavailable(team_list, n_runs, seed, str(exc))
-                r16_winners.append(winner)
+        for tie in draw["round_of_16"]:
+            top_position = tie["top_position"]
+            playoff_position = tie["playoff_seed_position"]
+            seeded, challenger = by_rank[top_position], playoff_winners[playoff_position]
+            try:
+                winner, _ = _play_two_leg_tie(seeded, challenger, score_matrices, rng, stage="round_of_16")
+            except MissingModelInput as exc:
+                return _unavailable(team_list, n_runs, seed, str(exc))
+            r16_winners.append(winner)
         for team in r16_winners:
             stats[team]["quarterfinal"] += 1
 
@@ -661,6 +811,13 @@ def simulate_ucl_tournament(
             item[field] = round(100.0 * stats[team][field] / n_runs, 4)
         output_teams.append(item)
     output_teams.sort(key=lambda item: (-item["champion"], item["expected_rank"], item["team"]))
+    bracket = build_ucl_bracket()
+    bracket["sample_draw"] = sample_draw
+    warnings = []
+    if not uefa_coefficients and not uefa_coefficient_ranks:
+        warnings.append("UEFA coefficient input unavailable; lexical name is only a deterministic final fallback")
+    if not official_order:
+        warnings.append("ESPN official order unavailable; local ranking is used for simulation")
     result = {
         "status": "fresh",
         "runs": n_runs,
@@ -668,10 +825,15 @@ def simulate_ucl_tournament(
         "run_count": n_runs,
         "seed": seed,
         "table_version": UCL_TABLE_VERSION,
-        "coefficient_version": UCL_COEFFICIENT_VERSION,
+        "coefficient_version": coefficient_version,
+        "coefficient_provenance": dict(coefficient_provenance or {}),
+        "provenance": dict(coefficient_provenance or {}),
+        "official_order": list(official_order or []),
+        "ranking_source": "local",
+        "warnings": warnings,
         "teams": output_teams,
         "results": output_teams,
-        "bracket": build_ucl_bracket(),
+        "bracket": bracket,
     }
     result["probabilities"] = {item["team"]: {field: item[field] for field in ("top8", "top24", "round_of_16", "quarterfinal", "semifinal", "final", "champion")} for item in output_teams}
     result["by_team"] = {item["team"]: item for item in output_teams}

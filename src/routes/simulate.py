@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 
 from src.competitions import collection_for, competition_document_id, find_competition_document, require_competition
 from src.services.monte_carlo import simulate_knockout
-from src.services.ucl_simulation import simulate_ucl_tournament
+from src.services.ucl_simulation import build_cached_ucl_inputs, simulate_ucl_tournament
 
 logger = logging.getLogger(__name__)
 
@@ -69,11 +69,23 @@ def init_router(math_engine, cache_collection):
             raise HTTPException(status_code=400, detail="simulate_ucl requires competition=ucl2026")
         cache_store = collection_for(cache_collection, comp)
         cached = find_competition_document(cache_store, comp, "matches_cache") or {}
-        fixtures = cached.get("data") or []
-        if not isinstance(fixtures, list):
-            return {"status": "unavailable", "reason": "UCL fixture cache is unavailable", "runs": runs, "seed": 20260908}
-        teams = cached.get("teams") or sorted({team for fixture in fixtures for team in (fixture.get("home_team"), fixture.get("away_team")) if team})
-        matrices = cached.get("score_matrices") or {}
-        return simulate_ucl_tournament(teams, fixtures, matrices, n_runs=runs)
+        try:
+            inputs = build_cached_ucl_inputs(cached)
+            fixtures = inputs["fixtures"]
+            teams = inputs.get("teams") or sorted({team for fixture in fixtures for team in (fixture.get("home_team"), fixture.get("away_team")) if team})
+            return simulate_ucl_tournament(
+                teams,
+                fixtures,
+                inputs["score_matrices"],
+                n_runs=runs,
+                disciplinary_scores=inputs["disciplinary_scores"],
+                uefa_coefficients=inputs["uefa_coefficients"],
+                uefa_coefficient_ranks=inputs["uefa_coefficient_ranks"],
+                official_order=inputs["official_order"],
+                coefficient_version=inputs["coefficient_version"],
+                coefficient_provenance=inputs["provenance"],
+            )
+        except (TypeError, ValueError, KeyError) as exc:
+            return {"status": "unavailable", "reason": str(exc), "runs": runs, "n_runs": runs, "seed": 20260908}
 
     return router

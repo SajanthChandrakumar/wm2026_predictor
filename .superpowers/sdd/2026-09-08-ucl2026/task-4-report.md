@@ -92,3 +92,81 @@ Output:
   intentionally use small run counts.
 - Protected data files, `frontend-v2/dist`, and the original checkout were not
   modified.
+
+## Review fixes: round 1
+
+### RED
+
+The review regressions were added before the fixes and initially failed during
+collection because the required `PLAYOFF_POSITION_BANDS`/draw API did not yet
+exist:
+
+```text
+.venv/bin/python -m pytest test_task4_ucl.py -q
+```
+
+```text
+ImportError: cannot import name 'PLAYOFF_POSITION_BANDS'
+```
+
+The added cases also cover both legal draw outcomes, forbidden cross-band
+pairings, R16 band assignment, probability accounting, real cached match
+shape, metadata propagation, invalid schedules, and completed fixtures with a
+missing score.
+
+### GREEN
+
+Focused command:
+
+```text
+.venv/bin/python -m pytest test_task4_ucl.py -q
+```
+
+Output:
+
+```text
+26 passed in 0.76s
+```
+
+Full verification:
+
+```text
+.venv/bin/python -m pytest -q
+.venv/bin/python -m compileall -q src test_task4_ucl.py
+git diff --check
+```
+
+Output:
+
+```text
+135 passed in 3.62s
+```
+
+### Fixes applied
+
+- Replaced fixed playoff pairs with seeded random permutations inside the four
+  official bands. R16 pairing also randomizes the permitted top-seed and
+  playoff-winner assignments within each band; concrete draw slots flow into
+  QF/SF metadata, and seeded clubs host their second legs.
+- Added cache preparation that normalizes fixture-level `matrix`/
+  `score_matrix` fields, preserves an explicit cached default, or averages
+  valid open-fixture matrices into a normalized data-derived default for
+  dynamic knockout matchups.
+- Simulation and route boundaries now return explicit `unavailable` payloads
+  for empty/invalid schedules, malformed fixtures, missing matrices, and
+  completed fixtures without valid scores.
+- The route passes cached discipline, UEFA coefficients/ranks, coefficient
+  version, official order, and provenance to the simulator. Missing coefficient
+  inputs produce a quality warning instead of treating lexical order as an
+  official ranking.
+
+### Self-review and concerns
+
+- WC simulation paths and responses remain unchanged; UCL uses the new route
+  branch only for `competition=ucl2026`.
+- The returned bracket contains allowed band metadata plus a seeded sample
+  draw; per-run outcomes use the same RNG draw that drives advancement, so
+  probability accounting remains Top-8 800%, Top-24 2400%, R16 1600%, QF
+  800%, SF 400%, final 200%, and champion 100% across teams.
+- No live provider calls, new dependencies, protected data files, or
+  `frontend-v2/dist` changes were introduced.
