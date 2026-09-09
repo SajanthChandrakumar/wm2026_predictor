@@ -4,6 +4,7 @@ import { competitionPath, validCompetition } from '../src/lib/competition.mjs'
 import { botFormState } from '../src/lib/customBot.mjs'
 import { validUclStandingsRows } from '../src/lib/standings.mjs'
 import { hasScoreMatrix } from '../src/lib/prediction.mjs'
+import { hasUclSimulationResults } from '../src/lib/simulation.mjs'
 
 test('competitionPath URL-encodes the active competition', () => {
   assert.equal(competitionPath('/matches?force=true', 'ucl2026'), '/matches?force=true&competition=ucl2026')
@@ -39,4 +40,11 @@ test('hasScoreMatrix rejects empty matrices', () => {
   assert.equal(hasScoreMatrix({}), false)
   assert.equal(hasScoreMatrix({ 0: { 0: 0, 1: 0 }, 1: { 0: 0 } }), false)
   assert.equal(hasScoreMatrix({ 0: { 0: 0.25 } }), true)
+})
+
+test('hasUclSimulationResults rejects unavailable and malformed payloads', () => {
+  assert.equal(hasUclSimulationResults(undefined), false)
+  assert.equal(hasUclSimulationResults({ status: 'unavailable' }), false)
+  assert.equal(hasUclSimulationResults({ status: 'fresh' }), false)
+  assert.equal(hasUclSimulationResults({ status: 'fresh', results: [] }), true)
 })

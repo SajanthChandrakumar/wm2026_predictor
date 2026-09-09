@@ -273,6 +273,8 @@ export interface UclSimulationTeam {
 
 export interface UclSimulation {
   status: string
+  error?: string
+  reason?: string
   runs?: number
   n_runs: number
   seed?: number

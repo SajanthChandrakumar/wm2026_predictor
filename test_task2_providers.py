@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import pytest
+import requests
 from fastapi import FastAPI
 from starlette.requests import Request
 
@@ -16,6 +17,7 @@ from src.services.snapshots import (
 from src.services.ucl_providers import (
     compose_match_sources,
     ingest_clubelo,
+    parse_clubelo_html,
 )
 from src.odds_engine import OddsApiEngine
 from src.odds_engine_apifootball import OddsApiEngine as ApiFootballOddsEngine
@@ -144,6 +146,55 @@ def test_ucl_espn_windows_are_bounded_and_deduplicated(monkeypatch):
     assert all("uefa.champions" in call[0] for call in calls)
 
 
+def test_ucl_espn_keeps_successful_windows_when_one_window_fails():
+    base = datetime(2026, 9, 1, tzinfo=timezone.utc)
+
+    class Response:
+        def __init__(self, payload=None, error=None):
+            self.payload = payload or {}
+            self.error = error
+
+        def raise_for_status(self):
+            if self.error:
+                raise self.error
+
+        def json(self):
+            return self.payload
+
+    def fake_get(url, params, timeout):
+        if params["dates"].startswith("20260901"):
+            return Response({"events": [_event("kept", "2026-09-05T18:00:00Z")]})
+        return Response(error=requests.HTTPError("502 Bad Gateway"))
+
+    events = espn_data.get_scoreboard(
+        competition="ucl2026",
+        days_back=0,
+        days_forward=10,
+        now=base,
+        chunk_days=7,
+        use_cache=False,
+        request_get=fake_get,
+    )
+
+    assert [event["id"] for event in events] == ["kept"]
+
+
+def test_ucl_espn_raises_when_every_window_fails():
+    class Response:
+        def raise_for_status(self):
+            raise requests.HTTPError("502 Bad Gateway")
+
+    with pytest.raises(requests.HTTPError):
+        espn_data.get_scoreboard(
+            competition="ucl2026",
+            days_back=0,
+            days_forward=0,
+            now=datetime(2026, 9, 1, tzinfo=timezone.utc),
+            use_cache=False,
+            request_get=lambda *args, **kwargs: Response(),
+        )
+
+
 def test_clubelo_cache_contract_preserves_alias_and_provenance(monkeypatch):
     html = """
     <html><body><table id="ranking">
@@ -172,6 +223,22 @@ def test_clubelo_cache_contract_preserves_alias_and_provenance(monkeypatch):
     assert document["provenance"]["url"]
     assert {row["team"] for row in document["rows"]} == {"Bayern Munich", "Arsenal"}
     assert cache.find_one({"_id": competition_document_id("ucl2026", "clubelo_ratings")})["etag"] == '"ucl"'
+
+
+def test_clubelo_parser_reads_current_vega_dataset():
+    html = '''<script>
+      var vegaJson = {"datasets":{"data-live":[
+        {"Name":"Bayern München","Elo":2042.3},
+        {"Name":"Arsenal","Elo":2035.4}
+      ]}};
+    </script>'''
+
+    rows = parse_clubelo_html(html)
+
+    assert rows == [
+        {"rank": 1, "team": "Bayern Munich", "team_name": "Bayern Munich", "elo": 2042.3, "elo_rating": 2042.3},
+        {"rank": 2, "team": "Arsenal", "team_name": "Arsenal", "elo": 2035.4, "elo_rating": 2035.4},
+    ]
 
 
 def test_clubelo_persistence_never_sets_immutable_mongo_id(monkeypatch):

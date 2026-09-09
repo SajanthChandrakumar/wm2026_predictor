@@ -155,11 +155,21 @@ def _fixtures(cache_collection, competition) -> list[dict]:
 def _refresh_fixtures(cache_collection, competition, fetcher, current) -> dict:
     """Refresh the fixture skeleton without collecting paid enrichment."""
     comp = get_competition(competition)
+    fetch_now = current
+    days_back = 30
+    days_forward = 75
+    if comp.id == "ucl2026":
+        start_year = int(comp.season.split("/", 1)[0])
+        season_start = current.replace(year=start_year, month=7, day=1)
+        season_end = current.replace(year=start_year + 1, month=6, day=30)
+        fetch_now = min(max(current, season_start), season_end)
+        days_back = (fetch_now.date() - season_start.date()).days
+        days_forward = (season_end.date() - fetch_now.date()).days
     kwargs = {
         "competition": comp,
-        "now": current,
-        "days_back": 365 if comp.id == "ucl2026" else 30,
-        "days_forward": 365 if comp.id == "ucl2026" else 75,
+        "now": fetch_now,
+        "days_back": days_back,
+        "days_forward": days_forward,
         "chunk_days": 7,
     }
     try:

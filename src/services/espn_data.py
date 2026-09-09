@@ -156,20 +156,31 @@ def get_scoreboard(
     # deliberately bounded because its season spans a much wider range.
     effective_chunk_days = chunk_days if resolved_competition.id == "ucl2026" else days_back + days_forward + 1
     cursor = from_dt
+    successful_windows = 0
+    last_request_error = None
     while cursor <= to_dt:
         chunk_end = min(cursor + timedelta(days=effective_chunk_days - 1), to_dt)
-        events = _fetch_range(
-            cursor.strftime("%Y%m%d"),
-            chunk_end.strftime("%Y%m%d"),
-            competition=competition,
-            request_get=request_get,
-            use_cache=use_cache,
-        )
+        try:
+            events = _fetch_range(
+                cursor.strftime("%Y%m%d"),
+                chunk_end.strftime("%Y%m%d"),
+                competition=competition,
+                request_get=request_get,
+                use_cache=use_cache,
+            )
+            successful_windows += 1
+        except requests.RequestException as exc:
+            last_request_error = exc
+            cursor = chunk_end + timedelta(days=1)
+            continue
         for event in events:
             event_id = str(event.get("id", ""))
             if event_id:
                 events_by_id[event_id] = event
         cursor = chunk_end + timedelta(days=1)
+
+    if not successful_windows and last_request_error is not None:
+        raise last_request_error
 
     out = []
     for e in events_by_id.values():

@@ -289,6 +289,8 @@ def test_maintenance_refreshes_ucl_fixtures_and_flattens_provider_odds():
 
     assert result["status"] == "success"
     assert fixture_calls and fixture_calls[0]["chunk_days"] == 7
+    assert fixture_calls[0]["days_back"] == 71
+    assert fixture_calls[0]["days_forward"] == 293
     matches = cache.find_one({"_id": competition_document_id("ucl2026", "matches_cache")})["data"]
     assert matches[0]["odds"] == {
         "home": 2.0,

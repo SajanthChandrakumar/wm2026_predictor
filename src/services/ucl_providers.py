@@ -6,6 +6,7 @@ rating for a club which ClubElo did not publish.
 
 from __future__ import annotations
 
+import json
 import os
 from html.parser import HTMLParser
 from datetime import datetime, timezone
@@ -83,7 +84,35 @@ def parse_clubelo_html(html: str) -> list[dict]:
         team = _canonical_club(cells[1])
         if team:
             rows.append({"rank": rank, "team": team, "team_name": team, "elo": elo, "elo_rating": elo})
-    return rows
+    if rows:
+        return rows
+
+    marker = "var vegaJson ="
+    marker_index = (html or "").find(marker)
+    if marker_index < 0:
+        return []
+    try:
+        payload, _ = json.JSONDecoder().raw_decode(html[marker_index + len(marker):].lstrip())
+    except (json.JSONDecodeError, TypeError):
+        return []
+    for dataset in (payload.get("datasets") or {}).values():
+        if not isinstance(dataset, list):
+            continue
+        live_rows = []
+        for item in dataset:
+            if not isinstance(item, dict) or "Name" not in item or "Elo" not in item:
+                continue
+            try:
+                elo = float(item["Elo"])
+            except (TypeError, ValueError):
+                continue
+            team = _canonical_club(str(item["Name"]))
+            if team:
+                rank = len(live_rows) + 1
+                live_rows.append({"rank": rank, "team": team, "team_name": team, "elo": elo, "elo_rating": elo})
+        if live_rows:
+            return live_rows
+    return []
 
 
 def _is_number(value: str) -> bool:

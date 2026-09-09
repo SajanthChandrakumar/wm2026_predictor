@@ -5,6 +5,7 @@ import { flag, cn } from '../../lib/util'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
 import { PageTransition, PageHeader, staggerContainer, staggerItem } from '../../components/shared/PageTransition'
 import type { KnockoutSimulation, UclSimulation } from '../../lib/types'
+import { hasUclSimulationResults } from '../../lib/simulation.mjs'
 
 const COLUMNS: { key: 'reached_qf' | 'reached_sf' | 'reached_final' | 'champion'; label: string; color: string }[] = [
   { key: 'reached_qf', label: 'Viertelfinale', color: 'var(--blue)' },
@@ -104,13 +105,14 @@ export function SimulatorView() {
 }
 
 function UclSimulator({ data, isLoading, error }: { data?: UclSimulation; isLoading: boolean; error: Error | null }) {
+  const hasResults = hasUclSimulationResults(data)
   return (
     <PageTransition>
       <PageHeader title="UCL Tournament Simulator" subtitle="Seeded league-phase and knockout simulation from the stored fixture model" />
       {isLoading && <p className="text-fg-2">Simulating tournament paths…</p>}
       {error && <p className="text-red-a">Error: {error.message}</p>}
-      {data?.status === 'unavailable' && <p className="text-amber-a">Simulation unavailable: {data.warnings?.join(' ') || 'missing model inputs'}</p>}
-      {data && <div className="space-y-4">
+      {data?.status === 'unavailable' && <p className="text-amber-a">Simulation unavailable: {data.error || data.reason || data.warnings?.join(' ') || 'missing model inputs'}</p>}
+      {hasResults && data && <div className="space-y-4">
         {data.warnings?.length ? <GlassCard><SectionTitle className="mb-2">Data status</SectionTitle><ul className="space-y-1 text-xs text-fg-2">{data.warnings.map((warning) => <li key={warning}>• {warning}</li>)}</ul></GlassCard> : null}
         <GlassCard className="!p-0">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-4"><SectionTitle>Full UCL output</SectionTitle><span className="text-xs text-fg-3">{(data.n_runs ?? data.runs ?? 0).toLocaleString('de-CH')} runs · seed {data.seed ?? '—'}</span></div>
