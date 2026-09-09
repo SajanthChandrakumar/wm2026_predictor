@@ -5,6 +5,7 @@ import { botFormState } from '../src/lib/customBot.mjs'
 import { validUclStandingsRows } from '../src/lib/standings.mjs'
 import { hasScoreMatrix } from '../src/lib/prediction.mjs'
 import { hasUclSimulationResults } from '../src/lib/simulation.mjs'
+import { withRatingBaselines } from '../src/lib/team-form.mjs'
 
 test('competitionPath URL-encodes the active competition', () => {
   assert.equal(competitionPath('/matches?force=true', 'ucl2026'), '/matches?force=true&competition=ucl2026')
@@ -47,4 +48,20 @@ test('hasUclSimulationResults rejects unavailable and malformed payloads', () =>
   assert.equal(hasUclSimulationResults({ status: 'unavailable' }), false)
   assert.equal(hasUclSimulationResults({ status: 'fresh' }), false)
   assert.equal(hasUclSimulationResults({ status: 'fresh', results: [] }), true)
+})
+
+test('withRatingBaselines makes current ClubElo ratings chartable without invented history', () => {
+  assert.deepEqual(
+    withRatingBaselines({}, {
+      Arsenal: { elo: 2035 },
+      Barcelona: { elo: 2015 },
+    }),
+    {
+      Arsenal: [{ timestamp: 0, match_id: 'baseline', elo: 2035 }],
+      Barcelona: [{ timestamp: 0, match_id: 'baseline', elo: 2015 }],
+    },
+  )
+
+  const existing = { Arsenal: [{ timestamp: 123, match_id: 'match-1', elo: 2020 }] }
+  assert.deepEqual(withRatingBaselines(existing, { Arsenal: { elo: 2035 } }), existing)
 })

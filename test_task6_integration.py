@@ -12,6 +12,7 @@ from src.competitions import competition_document_id
 from src.routes.matches import init_router as matches_router
 from src.routes.simulate import init_router as simulate_router
 from src.services.maintenance import run_maintenance
+from src.services.archive import load_archive_from_db
 from src.services.migration import migrate_wc_legacy
 from src.services.prediction import freeze_prediction
 from src.services.elo_sync import perform_elo_sync
@@ -302,6 +303,52 @@ def test_maintenance_refreshes_ucl_fixtures_and_flattens_provider_odds():
     snapshots = [doc for doc in cache.inserts if "odds_snapshot" in doc["_id"]]
     assert snapshots and snapshots[0]["odds"] == matches[0]["odds"]
     assert snapshots[0]["status"] == "fresh"
+
+
+def test_maintenance_archives_completed_ucl_results_without_inventing_tips():
+    now = datetime(2026, 9, 9, 20, tzinfo=timezone.utc)
+    cache = MemoryCollection()
+    archive = MemoryCollection()
+
+    class Provider:
+        calls = 0
+
+        def get_competition_odds(self, *args, **kwargs):
+            self.calls += 1
+            return []
+
+    provider = Provider()
+    assert load_archive_from_db(archive) == {}
+    result = run_maintenance(
+        {"ucl2026": cache},
+        provider,
+        archive_collections={"ucl2026": archive},
+        competition="ucl2026",
+        now=now,
+        fixture_fetcher=lambda **kwargs: [{
+            "id": "ucl-finished",
+            "home_team": "Barcelona",
+            "away_team": "Feyenoord Rotterdam",
+            "commence_time": "2026-09-09T16:45:00Z",
+            "round": "League Phase",
+            "completed": True,
+            "actual_score": "5:1",
+        }],
+    )
+
+    assert result["status"] == "idle"
+    assert provider.calls == 0
+    entry = archive.find_one({"_id": "ucl-finished"})
+    assert entry["metadata"]["home_team"] == "Barcelona"
+    assert entry["post_match_result"] == {
+        "status": "completed",
+        "actual_score": "5:1",
+        "points_earned": None,
+        "algo_points": None,
+        "bot_points": {},
+    }
+    assert entry["prediction"]["top_tip"] is None
+    assert "ucl-finished" in load_archive_from_db(archive)
 
 
 def test_maintenance_snapshot_is_the_input_for_t15_freeze():

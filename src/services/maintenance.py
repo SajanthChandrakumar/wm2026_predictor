@@ -7,7 +7,8 @@ import math
 from uuid import uuid4
 
 from src.competitions import collection_for, competition_document_id, find_competition_document, get_competition
-from src.constants import TEAM_MAPPING
+from src.constants import DISPLAY_MAPPING, TEAM_MAPPING, _is_ko_round
+from src.services.archive import invalidate_archive_mem_cache
 from src.services.odds_helpers import extract_odds
 from src.services.snapshots import append_odds_snapshot, bucket_state, due_buckets, mark_bucket, parse_time
 
@@ -19,6 +20,7 @@ def run_maintenance(
     cache_collections,
     odds_provider,
     *,
+    archive_collections=None,
     competition=None,
     now=None,
     force: bool = False,
@@ -81,6 +83,11 @@ def run_maintenance(
         if comp.id == "ucl2026" and clubelo_ingestor is not None:
             clubelo_status = clubelo_ingestor(cache_collection, competition=comp, observed_at=current)
         fixtures = _fixtures(cache_collection, comp)
+        archived_results = 0
+        if archive_collections is not None:
+            archived_results = _sync_completed_results(
+                collection_for(archive_collections, comp), fixtures, comp
+            )
         due_by_event = {}
         all_due = []
         for fixture in fixtures:
@@ -93,7 +100,7 @@ def run_maintenance(
                 due_by_event[event_id] = (fixture, due)
                 all_due.extend(due)
         if not due_by_event:
-            return {"status": "idle", "provider_calls": 0, "mutated": False, "buckets": [], "fixture_status": fixture_status, "clubelo_status": clubelo_status}
+            return {"status": "idle", "provider_calls": 0, "mutated": bool(archived_results), "buckets": [], "fixture_status": fixture_status, "clubelo_status": clubelo_status, "archived_results": archived_results}
 
         try:
             quotes = _bulk_quotes(odds_provider, comp)
@@ -151,6 +158,7 @@ def run_maintenance(
             "events": len(due_by_event),
             "fixture_status": fixture_status,
             "clubelo_status": clubelo_status,
+            "archived_results": archived_results,
         }
     finally:
         cache_collection.delete_one({"_id": lease_id, "lease_token": lease_token})
@@ -320,6 +328,69 @@ def _store_fixture_odds(cache_collection, competition, event_id, odds, quote):
         {"$set": {"data": data}},
         upsert=True,
     )
+
+
+def _sync_completed_results(archive_collection, fixtures, competition) -> int:
+    """Persist completed fixtures while preserving only real pre-match tips."""
+    changed = 0
+    for fixture in fixtures:
+        event_id = str(fixture.get("id") or fixture.get("event_id") or "")
+        actual_score = fixture.get("actual_score")
+        if not event_id or not fixture.get("completed") or not _valid_score(actual_score):
+            continue
+        existing = archive_collection.find_one({"_id": event_id}) or {}
+        metadata = dict(existing.get("metadata") or {})
+        metadata.update({
+            "competition": get_competition(competition).id,
+            "home_team": fixture.get("home_team"),
+            "away_team": fixture.get("away_team"),
+            "home_disp": DISPLAY_MAPPING.get(fixture.get("home_team"), fixture.get("home_team")),
+            "away_disp": DISPLAY_MAPPING.get(fixture.get("away_team"), fixture.get("away_team")),
+            "is_ko_phase": _is_ko_round(fixture.get("round", "")),
+            "round": fixture.get("round", ""),
+            "commence_time": fixture.get("commence_time"),
+        })
+        prediction = dict(existing.get("prediction") or {"top_tip": None, "max_xp": None})
+        post = dict(existing.get("post_match_result") or {})
+        if post.get("status") == "completed" and post.get("actual_score") == actual_score:
+            continue
+        from src.math_engine import MathEngine
+        algo_tip = prediction.get("top_tip") or prediction.get("model_tip")
+        user_tip = prediction.get("user_tip")
+        bots = prediction.get("bots") or {}
+        post.update({
+            "status": "completed",
+            "actual_score": actual_score,
+            "points_earned": MathEngine.calculate_actual_points(user_tip, actual_score, metadata["is_ko_phase"]) if user_tip else None,
+            "algo_points": MathEngine.calculate_actual_points(algo_tip, actual_score, metadata["is_ko_phase"]) if algo_tip else None,
+            "bot_points": {
+                name: MathEngine.calculate_actual_points(info["tip"], actual_score, metadata["is_ko_phase"])
+                for name, info in bots.items() if info.get("tip")
+            },
+        })
+        archive_collection.update_one(
+            {"_id": event_id},
+            {"$set": {
+                "competition": get_competition(competition).id,
+                "metadata": metadata,
+                "pre_match_snapshot": existing.get("pre_match_snapshot"),
+                "prediction": prediction,
+                "post_match_result": post,
+            }},
+            upsert=True,
+        )
+        changed += 1
+    if changed:
+        invalidate_archive_mem_cache(archive_collection)
+    return changed
+
+
+def _valid_score(value) -> bool:
+    try:
+        home, away = str(value).split(":", 1)
+        return int(home) >= 0 and int(away) >= 0
+    except (TypeError, ValueError):
+        return False
 
 
 def _bucket_order():

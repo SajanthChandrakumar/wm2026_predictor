@@ -13,7 +13,7 @@ from src.services.maintenance import run_maintenance
 from src.services.ucl_providers import ingest_clubelo
 
 
-def init_router(cache_collections, odds_provider, *, cron_secret: str | None = None, now_fn=None):
+def init_router(cache_collections, odds_provider, *, archive_collections=None, cron_secret: str | None = None, now_fn=None):
     router = APIRouter(prefix="/api/internal")
     configured_secret = cron_secret if cron_secret is not None else os.getenv("CRON_SECRET", "")
 
@@ -24,6 +24,7 @@ def init_router(cache_collections, odds_provider, *, cron_secret: str | None = N
         return run_maintenance(
             cache_collections,
             odds_provider,
+            archive_collections=archive_collections,
             competition=competition,
             force=force,
             now=(now_fn() if now_fn else None),
