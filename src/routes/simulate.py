@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 
 from src.competitions import collection_for, competition_document_id, find_competition_document, require_competition
 from src.services.monte_carlo import simulate_knockout
+from src.services.ucl_simulation import simulate_ucl_tournament
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,8 @@ def init_router(math_engine, cache_collection):
         competition: str | None = None,
     ):
         comp = require_competition(competition)
+        if comp.id == "ucl2026":
+            return get_ucl_simulation(runs=runs, competition=comp.id)
         cache_store = collection_for(cache_collection, comp)
         cache_id = competition_document_id(comp, _CACHE_ID)
         runs = max(1_000, min(runs, 100_000))
@@ -54,5 +57,23 @@ def init_router(math_engine, cache_collection):
             pass
 
         return result
+
+    @router.get("/simulate_ucl")
+    def get_ucl_simulation(
+        runs: int = 20_000,
+        competition: str | None = None,
+    ):
+        """Run the local UCL simulation from the cache-only fixture snapshot."""
+        comp = require_competition(competition)
+        if comp.id != "ucl2026":
+            raise HTTPException(status_code=400, detail="simulate_ucl requires competition=ucl2026")
+        cache_store = collection_for(cache_collection, comp)
+        cached = find_competition_document(cache_store, comp, "matches_cache") or {}
+        fixtures = cached.get("data") or []
+        if not isinstance(fixtures, list):
+            return {"status": "unavailable", "reason": "UCL fixture cache is unavailable", "runs": runs, "seed": 20260908}
+        teams = cached.get("teams") or sorted({team for fixture in fixtures for team in (fixture.get("home_team"), fixture.get("away_team")) if team})
+        matrices = cached.get("score_matrices") or {}
+        return simulate_ucl_tournament(teams, fixtures, matrices, n_runs=runs)
 
     return router
