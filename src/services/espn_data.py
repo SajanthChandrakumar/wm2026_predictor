@@ -206,6 +206,8 @@ def get_scoreboard(
             "id": str(e.get("id", "")),
             "home_team": home_name,
             "away_team": away_name,
+            "home_logo": ((home.get("team") or {}).get("logos") or [{}])[0].get("href"),
+            "away_logo": ((away.get("team") or {}).get("logos") or [{}])[0].get("href"),
             "commence_time": e.get("date", ""),
             "round": round_name,
             "completed": is_final,

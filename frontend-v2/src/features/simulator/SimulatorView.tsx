@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion'
 import { useKnockoutSimulation } from '../../hooks/queries'
+import { useAppState } from '../../state/AppState'
 import { flag, cn } from '../../lib/util'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
 import { PageTransition, PageHeader, staggerContainer, staggerItem } from '../../components/shared/PageTransition'
+import type { KnockoutSimulation, UclSimulation } from '../../lib/types'
 
 const COLUMNS: { key: 'reached_qf' | 'reached_sf' | 'reached_final' | 'champion'; label: string; color: string }[] = [
   { key: 'reached_qf', label: 'Viertelfinale', color: 'var(--blue)' },
@@ -13,6 +15,12 @@ const COLUMNS: { key: 'reached_qf' | 'reached_sf' | 'reached_final' | 'champion'
 
 export function SimulatorView() {
   const { data, isLoading, error } = useKnockoutSimulation()
+  const { competition } = useAppState()
+
+  if (competition === 'ucl2026') {
+    return <UclSimulator data={data as UclSimulation | undefined} isLoading={isLoading} error={error as Error | null} />
+  }
+  const wcData = data as KnockoutSimulation | undefined
 
   return (
     <PageTransition>
@@ -24,12 +32,12 @@ export function SimulatorView() {
       {isLoading && <p className="text-fg-2">Simuliere Turnierverläufe…</p>}
       {error && <p className="text-red-a">Fehler: {(error as Error).message}</p>}
 
-      {data && (
+      {wcData && (
         <div className="space-y-4">
           <GlassCard className="!p-0">
             <div className="flex items-center justify-between border-b border-line px-5 py-4">
               <SectionTitle>Titelchancen</SectionTitle>
-              <span className="text-xs text-fg-3">{data.n_runs.toLocaleString('de-CH')} simulierte Turniere</span>
+              <span className="text-xs text-fg-3">{wcData.n_runs.toLocaleString('de-CH')} simulierte Turniere</span>
             </div>
 
             <div className="overflow-x-auto">
@@ -48,7 +56,7 @@ export function SimulatorView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.results.map((r, i) => (
+                  {wcData.results.map((r, i) => (
                     <tr key={r.team} className={cn('border-t border-line', i === 0 && 'bg-gold-dim/30')}>
                       <td className="px-5 py-2.5 tabular-nums text-fg-3">{i + 1}</td>
                       <td className="px-2 py-2.5 font-semibold text-fg">
@@ -76,7 +84,7 @@ export function SimulatorView() {
               Ausgangspunkt der Simulation. Der weitere Baum (Viertelfinale, Halbfinale, Finale) ergibt sich aus den Siegern.
             </p>
             <motion.div variants={staggerContainer} initial="initial" animate="animate" className="grid gap-2 sm:grid-cols-2">
-              {data.bracket.map((m, i) => (
+              {wcData.bracket.map((m, i) => (
                 <motion.div
                   key={i}
                   variants={staggerItem}
@@ -93,6 +101,37 @@ export function SimulatorView() {
       )}
     </PageTransition>
   )
+}
+
+function UclSimulator({ data, isLoading, error }: { data?: UclSimulation; isLoading: boolean; error: Error | null }) {
+  return (
+    <PageTransition>
+      <PageHeader title="UCL Tournament Simulator" subtitle="Seeded league-phase and knockout simulation from the stored fixture model" />
+      {isLoading && <p className="text-fg-2">Simulating tournament paths…</p>}
+      {error && <p className="text-red-a">Error: {error.message}</p>}
+      {data?.status === 'unavailable' && <p className="text-amber-a">Simulation unavailable: {data.warnings?.join(' ') || 'missing model inputs'}</p>}
+      {data && <div className="space-y-4">
+        {data.warnings?.length ? <GlassCard><SectionTitle className="mb-2">Data status</SectionTitle><ul className="space-y-1 text-xs text-fg-2">{data.warnings.map((warning) => <li key={warning}>• {warning}</li>)}</ul></GlassCard> : null}
+        <GlassCard className="!p-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-4"><SectionTitle>Full UCL output</SectionTitle><span className="text-xs text-fg-3">{(data.n_runs ?? data.runs ?? 0).toLocaleString('de-CH')} runs · seed {data.seed ?? '—'}</span></div>
+          <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-[10px] font-bold uppercase tracking-wider text-fg-3">
+            {['#', 'Team', 'Ø Pkt', 'Ø Rank', 'Top 8', 'Top 24', 'R16', 'QF', 'SF', 'Final', 'Champion'].map((label) => <th key={label} className="whitespace-nowrap px-3 py-2 text-right first:text-left">{label}</th>)}
+          </tr></thead><tbody>{data.results.map((team, index) => <tr key={team.team} className={cn('border-t border-line', index === 0 && 'bg-gold-dim/30')}>
+            <td className="px-3 py-2 tabular-nums text-fg-3">{index + 1}</td><td className="px-3 py-2 text-left font-semibold text-fg">{flag(team.team)} {team.team}</td>
+            <td className="px-3 py-2 text-right tabular-nums text-fg-2">{team.expected_points.toFixed(2)}</td><td className="px-3 py-2 text-right tabular-nums text-fg-2">{team.expected_rank.toFixed(2)}</td>
+            {(['top8', 'top24', 'round_of_16', 'quarterfinal', 'semifinal', 'final', 'champion'] as const).map((key) => <td key={key} className="px-3 py-2 text-right tabular-nums text-fg-2">{team[key].toFixed(1)}%</td>)}
+          </tr>)}</tbody></table></div>
+        </GlassCard>
+        {data.bracket && <GlassCard><SectionTitle className="mb-3">Bracket and provenance</SectionTitle><p className="mb-3 text-xs text-fg-3">Ranking source: {data.ranking_source ?? 'local'} · table {data.table_version ?? '—'} · coefficients {data.coefficient_version ?? '—'}</p><BracketValue value={data.bracket} /></GlassCard>}
+      </div>}
+    </PageTransition>
+  )
+}
+
+function BracketValue({ value, depth = 0 }: { value: unknown; depth?: number }) {
+  if (value == null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return <span className="text-xs text-fg-2">{String(value ?? '—')}</span>
+  if (Array.isArray(value)) return <div className="space-y-2 pl-3">{value.map((item, index) => <div key={index} className="rounded-lg border border-line bg-surface p-2"><BracketValue value={item} depth={depth + 1} /></div>)}</div>
+  return <div className="space-y-2">{Object.entries(value as Record<string, unknown>).map(([key, item]) => <div key={key} className="text-xs"><span className="font-bold text-fg">{key.replaceAll('_', ' ')}:</span> <BracketValue value={item} depth={depth + 1} /></div>)}</div>
 }
 
 function PctCell({ value, color }: { value: number; color: string }) {

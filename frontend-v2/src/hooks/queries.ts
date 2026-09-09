@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import type { CustomBotParams, Match, RawMatch } from '../lib/types'
+import { useAppState } from '../state/AppState'
+import type { CustomBotParams, Match, PoolContext, RawMatch } from '../lib/types'
 
 /** The cache can hold the same fixture under two ids (provider switch) —
  *  keep the entry with the richer prediction per team-pair + kickoff. */
@@ -16,79 +17,136 @@ function dedupeMatches(matches: Match[]): Match[] {
   return [...byKey.values()]
 }
 
-export const useMatches = () =>
-  useQuery({
-    queryKey: ['matches'],
-    queryFn: () => api.matches(),
+export const useMatches = () => {
+  const { competition } = useAppState()
+  return useQuery({
+    queryKey: ['matches', competition],
+    queryFn: () => api.matches(competition),
     staleTime: 60_000,
     select: dedupeMatches,
   })
+}
 
-export const useArchive = () =>
-  useQuery({ queryKey: ['archive'], queryFn: api.archive, staleTime: 60_000 })
+export const useArchive = () => {
+  const { competition } = useAppState()
+  return useQuery({ queryKey: ['archive', competition], queryFn: () => api.archive(competition), staleTime: 60_000 })
+}
 
-export const useQuota = () =>
-  useQuery({ queryKey: ['quota'], queryFn: api.quota, staleTime: 60_000 })
+export const useStandings = () => {
+  const { competition } = useAppState()
+  return useQuery({ queryKey: ['standings', competition], queryFn: () => api.standings(competition), staleTime: 60_000 })
+}
 
-export const useEloHistory = () =>
-  useQuery({ queryKey: ['eloHistory'], queryFn: api.eloHistory, staleTime: 300_000 })
+export const useQuota = () => {
+  const { competition } = useAppState()
+  return useQuery({ queryKey: ['quota', competition], queryFn: () => api.quota(competition), staleTime: 60_000 })
+}
 
-export const useEloRatings = () =>
-  useQuery({ queryKey: ['eloRatings'], queryFn: api.eloRatings, staleTime: 300_000 })
+export const useEloHistory = () => {
+  const { competition } = useAppState()
+  return useQuery({ queryKey: ['eloHistory', competition], queryFn: () => api.eloHistory(competition), staleTime: 300_000 })
+}
 
-export const useKnockoutSimulation = () =>
-  useQuery({ queryKey: ['knockoutSim'], queryFn: () => api.simulateKnockout(), staleTime: 300_000 })
+export const useEloRatings = () => {
+  const { competition } = useAppState()
+  return useQuery({ queryKey: ['eloRatings', competition], queryFn: () => api.eloRatings(competition), staleTime: 300_000 })
+}
 
-export const useCustomBot = () =>
-  useQuery({ queryKey: ['customBot'], queryFn: api.customBot, staleTime: 300_000, retry: false })
-
-export const usePredict = () =>
-  useMutation({
-    mutationFn: ({ match, isKo }: { match: RawMatch; isKo: boolean }) => api.predict(match, isKo),
-  })
-
-export const useSaveUserTip = () => {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ matchId, tip }: { matchId: string; tip: string }) => api.saveUserTip(matchId, tip),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['archive'] }),
+export const useKnockoutSimulation = () => {
+  const { competition } = useAppState()
+  return useQuery({
+    queryKey: ['knockoutSim', competition],
+    queryFn: () => competition === 'ucl2026' ? api.simulateUcl(competition) : api.simulateKnockout(competition),
+    staleTime: 300_000,
   })
 }
 
-export const useSaveCustomBot = () => {
+export const useCustomBot = () => {
+  const { competition } = useAppState()
+  return useQuery({ queryKey: ['customBot', competition], queryFn: () => api.customBot(competition), staleTime: 300_000, retry: false })
+}
+
+export const usePoolContext = (matchId: string | undefined) => {
+  const { competition } = useAppState()
+  return useQuery({
+    queryKey: ['poolContext', competition, matchId],
+    queryFn: () => api.poolContext(competition, matchId!),
+    enabled: Boolean(matchId),
+    staleTime: 60_000,
+  })
+}
+
+export const usePredict = () => {
+  const { competition } = useAppState()
+  return useMutation({
+    mutationFn: ({ match }: { match: RawMatch }) => api.predict(match, competition),
+  })
+}
+
+export const useSaveUserTip = () => {
+  const { competition } = useAppState()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ name, params }: { name: string; params: CustomBotParams }) =>
-      api.saveCustomBot(name, params),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['customBot'] })
+    mutationFn: ({ matchId, tip }: { matchId: string; tip: string }) => api.saveUserTip(competition, matchId, tip),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['archive', competition] }),
+  })
+}
+
+export const useSavePoolContext = () => {
+  const { competition } = useAppState()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ matchId, context }: { matchId: string; context: Omit<PoolContext, 'match_id' | 'competition' | 'pool_tip' | 'pool_status'> }) =>
+      api.savePoolContext(competition, matchId, context),
+    onSuccess: (_, { matchId }) => {
+      qc.invalidateQueries({ queryKey: ['poolContext', competition, matchId] })
+      qc.invalidateQueries({ queryKey: ['matches', competition] })
+      qc.invalidateQueries({ queryKey: ['archive', competition] })
     },
   })
 }
 
-export const useSimulateBot = () =>
-  useMutation({ mutationFn: (params: CustomBotParams) => api.simulateBot(params) })
-
-export const useRefreshData = () => {
+export const useSaveCustomBot = () => {
+  const { competition } = useAppState()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => api.matches(true),
+    mutationFn: ({ name, params }: { name: string; params: CustomBotParams }) =>
+      api.saveCustomBot(competition, name, params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['customBot', competition] })
+    },
+  })
+}
+
+export const useSimulateBot = () => {
+  const { competition } = useAppState()
+  return useMutation({ mutationFn: (params: CustomBotParams) => api.simulateBot(competition, params) })
+}
+
+export const useRefreshData = () => {
+  const { competition } = useAppState()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.matches(competition, true),
     onSuccess: (data) => {
-      qc.setQueryData(['matches'], data)
-      qc.invalidateQueries({ queryKey: ['quota'] })
+      qc.setQueryData(['matches', competition], data)
+      qc.invalidateQueries({ queryKey: ['quota', competition] })
     },
   })
 }
 
 export const useSyncElo = () => {
+  const { competition } = useAppState()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: api.syncElo,
+    mutationFn: () => api.syncElo(competition),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['archive'] })
-      qc.invalidateQueries({ queryKey: ['eloHistory'] })
-      qc.invalidateQueries({ queryKey: ['eloRatings'] })
-      qc.invalidateQueries({ queryKey: ['quota'] })
+      qc.invalidateQueries({ queryKey: ['matches', competition] })
+      qc.invalidateQueries({ queryKey: ['archive', competition] })
+      qc.invalidateQueries({ queryKey: ['standings', competition] })
+      qc.invalidateQueries({ queryKey: ['eloHistory', competition] })
+      qc.invalidateQueries({ queryKey: ['eloRatings', competition] })
+      qc.invalidateQueries({ queryKey: ['quota', competition] })
     },
   })
 }

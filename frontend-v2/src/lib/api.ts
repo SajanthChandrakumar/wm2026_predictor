@@ -1,7 +1,9 @@
 import type {
-  Archive, BotSimulation, CustomBot, CustomBotParams, EloHistory,
-  EloRatings, KnockoutSimulation, Match, Prediction, Quota, RawMatch, SyncResult,
+  Archive, BotSimulation, CompetitionId, CompetitionInfo, CustomBot, CustomBotParams, EloHistory,
+  EloRatings, KnockoutSimulation, Match, PoolContext, Prediction, Quota, RawMatch, StandingsGroup,
+  SyncResult, UclSimulation,
 } from './types'
+import { competitionPath } from './competition.mjs'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -16,33 +18,45 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  quota: () => request<Quota>('/quota'),
-  matches: (force = false) => request<Match[]>(`/matches${force ? '?force=true' : ''}`),
-  predict: (match: RawMatch, isKo: boolean) =>
-    request<Prediction>('/predict', {
+  competitions: () => request<CompetitionInfo[]>('/competitions'),
+  quota: (competition: CompetitionId) => request<Quota>(competitionPath('/quota', competition)),
+  matches: (competition: CompetitionId, force = false) =>
+    request<Match[]>(competitionPath(`/matches${force ? '?force=true' : ''}`, competition)),
+  predict: (match: RawMatch, competition: CompetitionId) =>
+    request<Prediction>(competitionPath('/predict', competition), {
       method: 'POST',
-      body: JSON.stringify({ match, is_ko: isKo }),
+      body: JSON.stringify({ match, is_ko: Boolean(match.is_ko_phase) }),
     }),
-  archive: () => request<Archive>('/archive'),
-  eloHistory: () => request<EloHistory>('/elo_history'),
-  eloRatings: () => request<EloRatings>('/elo_ratings'),
-  syncElo: () => request<SyncResult>('/sync_elo?force=true'),
-  saveUserTip: (matchId: string, userTip: string) =>
-    request<{ status: string }>('/archive/user_tip', {
+  archive: (competition: CompetitionId) => request<Archive>(competitionPath('/archive', competition)),
+  standings: (competition: CompetitionId) => request<StandingsGroup[]>(competitionPath('/standings', competition)),
+  eloHistory: (competition: CompetitionId) => request<EloHistory>(competitionPath('/elo_history', competition)),
+  eloRatings: (competition: CompetitionId) => request<EloRatings>(competitionPath('/elo_ratings', competition)),
+  syncElo: (competition: CompetitionId) => request<SyncResult>(competitionPath('/sync_elo?force=true', competition)),
+  saveUserTip: (competition: CompetitionId, matchId: string, userTip: string) =>
+    request<{ status: string }>(competitionPath('/archive/user_tip', competition), {
       method: 'POST',
-      body: JSON.stringify({ match_id: matchId, user_tip: userTip }),
+      body: JSON.stringify({ match_id: matchId, user_tip: userTip, competition }),
     }),
-  customBot: () => request<CustomBot>('/custom_bot'),
-  saveCustomBot: (name: string, params: CustomBotParams) =>
-    request<{ status: string }>('/custom_bot', {
+  poolContext: (competition: CompetitionId, matchId: string) =>
+    request<PoolContext>(competitionPath(`/pool-context/${encodeURIComponent(matchId)}`, competition)),
+  savePoolContext: (competition: CompetitionId, matchId: string, context: Omit<PoolContext, 'match_id' | 'competition' | 'pool_tip' | 'pool_status'>) =>
+    request<PoolContext>(competitionPath(`/pool-context/${encodeURIComponent(matchId)}`, competition), {
+      method: 'PUT',
+      body: JSON.stringify({ ...context, competition }),
+    }),
+  customBot: (competition: CompetitionId) => request<CustomBot>(competitionPath('/custom_bot', competition)),
+  saveCustomBot: (competition: CompetitionId, name: string, params: CustomBotParams) =>
+    request<{ status: string }>(competitionPath('/custom_bot', competition), {
       method: 'POST',
-      body: JSON.stringify({ name, params }),
+      body: JSON.stringify({ name, params, competition }),
     }),
-  simulateBot: (params: CustomBotParams) =>
-    request<BotSimulation>('/custom_bot/simulate', {
+  simulateBot: (competition: CompetitionId, params: CustomBotParams) =>
+    request<BotSimulation>(competitionPath('/custom_bot/simulate', competition), {
       method: 'POST',
-      body: JSON.stringify({ params }),
+      body: JSON.stringify({ params, competition }),
     }),
-  simulateKnockout: (runs = 20_000) =>
-    request<KnockoutSimulation>(`/simulate_knockout?runs=${runs}`),
+  simulateKnockout: (competition: CompetitionId, runs = 20_000) =>
+    request<KnockoutSimulation | UclSimulation>(competitionPath(`/simulate_knockout?runs=${runs}`, competition)),
+  simulateUcl: (competition: CompetitionId, runs = 20_000) =>
+    request<UclSimulation>(competitionPath(`/simulate_ucl?runs=${runs}`, competition)),
 }

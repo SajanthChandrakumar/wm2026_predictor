@@ -29,7 +29,7 @@ export function FixtureRow({ match, trailing }: { match: Match; trailing?: React
       <span className="min-w-0">
         <span className="flex items-center justify-between gap-3">
           <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right">
-            <TeamLabel name={match.home_team} disp={match.home_disp} />
+            <TeamLabel name={match.home_team} disp={match.home_disp} logo={match.home_logo} />
             <FireDot form={match.home_form} />
           </span>
           <span className="w-40 shrink-0 max-sm:w-24">
@@ -45,7 +45,7 @@ export function FixtureRow({ match, trailing }: { match: Match; trailing?: React
             )}
           </span>
           <span className="flex min-w-0 flex-1 items-center gap-1.5">
-            <TeamLabel name={match.away_team} disp={match.away_disp} />
+            <TeamLabel name={match.away_team} disp={match.away_disp} logo={match.away_logo} />
             <FireDot form={match.away_form} />
           </span>
         </span>

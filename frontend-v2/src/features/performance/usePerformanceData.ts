@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useArchive, useCustomBot, useSimulateBot } from '../../hooks/queries'
+import { useAppState } from '../../state/AppState'
 import { api } from '../../lib/api'
 import type { Archive, ArchiveEntry, BotKey } from '../../lib/types'
 
@@ -89,6 +90,7 @@ export function aggregate(archive: Archive | undefined) {
 }
 
 export function usePerformanceData() {
+  const { competition } = useAppState()
   const { data: archive, isLoading } = useArchive()
   const { data: customBot } = useCustomBot()
   const simulate = useSimulateBot()
@@ -97,8 +99,8 @@ export function usePerformanceData() {
 
   // Saved build-a-bot competes alongside the house bots — replayed via simulate.
   const { data: customSim } = useQuery({
-    queryKey: ['customBotSim', customBot?.params],
-    queryFn: () => api.simulateBot(customBot!.params!),
+    queryKey: ['customBotSim', competition, customBot?.params],
+    queryFn: () => api.simulateBot(competition, customBot!.params!),
     enabled: Boolean(customBot?.exists && customBot.params),
     staleTime: 300_000,
   })
