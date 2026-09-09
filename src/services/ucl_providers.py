@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 import requests
 
 from src.competitions import competition_document_id, find_competition_document, get_competition
+from src.services.snapshots import normalize_status
 
 
 CLUBELO_URL = os.getenv("CLUBELO_URL", "https://clubelo.com/Ranking")
@@ -206,6 +207,8 @@ def compose_match_sources(
     errors: dict | None = None,
 ) -> dict:
     """Combine source payloads without filling missing data with defaults."""
+    odds_status = normalize_status(odds_status)
+    elo_status = normalize_status(elo_status)
     has_odds = _source_available(odds)
     has_elo = _source_available(elo)
     if has_odds and has_elo:
@@ -264,7 +267,8 @@ def _source_available(payload) -> bool:
 
 
 def _source_status(payload, fallback: str) -> str:
-    return payload.get("status", fallback) if isinstance(payload, dict) else fallback
+    value = payload.get("status", fallback) if isinstance(payload, dict) else fallback
+    return normalize_status(value, default=fallback)
 
 
 # Names used by small integrations/readers can stay descriptive and stable.

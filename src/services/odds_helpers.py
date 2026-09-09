@@ -13,19 +13,31 @@ def extract_odds(match):
         for market in bookie.get("markets", []):
             if market["key"] == "h2h":
                 for outcome in market.get("outcomes", []):
+                    try:
+                        price = float(outcome["price"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
                     if outcome["name"] == home_team:
-                        collected["home"].append(outcome["price"])
+                        collected["home"].append(price)
                     elif outcome["name"] == away_team:
-                        collected["away"].append(outcome["price"])
+                        collected["away"].append(price)
                     elif outcome["name"] == "Draw":
-                        collected["draw"].append(outcome["price"])
+                        collected["draw"].append(price)
             elif market["key"] == "totals":
                 for outcome in market.get("outcomes", []):
-                    if outcome.get("point") == 2.5:
+                    try:
+                        point = float(outcome.get("point"))
+                    except (TypeError, ValueError):
+                        continue
+                    try:
+                        price = float(outcome["price"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
+                    if point == 2.5:
                         if outcome["name"] == "Over":
-                            collected["over25"].append(outcome["price"])
+                            collected["over25"].append(price)
                         elif outcome["name"] == "Under":
-                            collected["under25"].append(outcome["price"])
+                            collected["under25"].append(price)
     odds = {k: statistics.median(v) for k, v in collected.items() if v}
     required_keys = ["home", "draw", "away"]
     missing_keys = [k for k in required_keys if k not in odds]

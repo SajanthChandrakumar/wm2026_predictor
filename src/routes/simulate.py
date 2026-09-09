@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 
@@ -85,7 +86,16 @@ def init_router(math_engine, cache_collection):
                 coefficient_version=inputs["coefficient_version"],
                 coefficient_provenance=inputs["provenance"],
             )
-        except (TypeError, ValueError, KeyError) as exc:
-            return {"status": "unavailable", "reason": str(exc), "runs": runs, "n_runs": runs, "seed": 20260908}
+        except (AttributeError, TypeError, ValueError, KeyError) as exc:
+            return {
+                "status": "unavailable",
+                "source": "ucl_matches_cache",
+                "observed_at": datetime.now(timezone.utc).isoformat(),
+                "error": str(exc),
+                "reason": str(exc),
+                "runs": runs,
+                "n_runs": runs,
+                "seed": 20260908,
+            }
 
     return router

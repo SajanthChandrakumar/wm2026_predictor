@@ -1,7 +1,7 @@
 import type {
   Archive, BotSimulation, CompetitionId, CompetitionInfo, CustomBot, CustomBotParams, EloHistory,
-  EloRatings, KnockoutSimulation, Match, PoolContext, Prediction, Quota, RawMatch, StandingsGroup,
-  SyncResult, UclSimulation,
+  EloRatings, KnockoutSimulation, MatchesResponse, PoolContext, Prediction, Quota, RawMatch,
+  StandingsGroup, SyncResult, UclSimulation,
 } from './types'
 import { competitionPath } from './competition.mjs'
 
@@ -21,7 +21,7 @@ export const api = {
   competitions: () => request<CompetitionInfo[]>('/competitions'),
   quota: (competition: CompetitionId) => request<Quota>(competitionPath('/quota', competition)),
   matches: (competition: CompetitionId, force = false) =>
-    request<Match[]>(competitionPath(`/matches${force ? '?force=true' : ''}`, competition)),
+    request<MatchesResponse>(competitionPath(`/matches${force ? '?force=true' : ''}`, competition)),
   predict: (match: RawMatch, competition: CompetitionId) =>
     request<Prediction>(competitionPath('/predict', competition), {
       method: 'POST',

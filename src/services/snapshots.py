@@ -14,6 +14,14 @@ BUCKET_OFFSETS = {
     "t30m": 30,
     "t15m": 15,
 }
+SNAPSHOT_STATUSES = frozenset({"fresh", "stale", "unavailable", "failed"})
+
+
+def normalize_status(value, *, default: str = "fresh") -> str:
+    status = default if value is None else str(value)
+    if status not in SNAPSHOT_STATUSES:
+        raise ValueError(f"status must be one of {sorted(SNAPSHOT_STATUSES)}")
+    return status
 
 
 def parse_time(value) -> datetime:
@@ -48,6 +56,7 @@ def append_odds_snapshot(
 ) -> dict:
     if bucket not in BUCKET_OFFSETS:
         raise ValueError(f"Unknown odds bucket: {bucket}")
+    status = normalize_status(status)
     comp = get_competition(competition)
     observed = parse_time(observed_at).isoformat()
     document = {
@@ -81,10 +90,13 @@ def mark_bucket(
     status: str,
     observed_at=None,
     error: str | None = None,
+    source: str = "odds_api",
 ) -> None:
     comp = get_competition(competition)
+    status = normalize_status(status)
     update = {"$set": {f"events.{event_id}.{bucket}": {
         "status": status,
+        "source": source,
         **({"observed_at": parse_time(observed_at).isoformat()} if observed_at else {}),
         **({"error": error} if error else {}),
     }}}

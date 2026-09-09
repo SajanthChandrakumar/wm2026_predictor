@@ -38,6 +38,7 @@ from src.competitions import (
     require_competition,
 )
 from src.services.archive import load_archive_from_db, upsert_archive_entry
+from src.services.auth import require_cron_secret
 from src.services.elo_sync import perform_elo_sync
 from src.services.prediction import PredictionService, rebuild_prediction, user_tip_is_open
 from src.routes.matches import init_router as matches_router
@@ -288,7 +289,8 @@ def get_elo_ratings(competition: str | None = None):
     return out
 
 @app.get("/api/recalculate_points")
-def recalculate_all_points(competition: str | None = None):
+def recalculate_all_points(request: Request, competition: str | None = None):
+    require_cron_secret(request, os.getenv("CRON_SECRET", ""))
     comp = require_competition(competition)
     archive_store = collection_for(archive_collections, comp)
     archive = load_archive_from_db(archive_store)
@@ -320,7 +322,8 @@ def recalculate_all_points(competition: str | None = None):
 
 
 @app.get("/api/rebuild_honest_tips")
-def rebuild_honest_tips(competition: str | None = None):
+def rebuild_honest_tips(request: Request, competition: str | None = None):
+    require_cron_secret(request, os.getenv("CRON_SECRET", ""))
     """One-off repair: recompute every completed match's algo tip from its
     pre_match_snapshot (odds + Elo captured BEFORE kickoff) using the exact
     dashboard pipeline. Removes any hindsight tips that leaked into the
@@ -349,6 +352,7 @@ def rebuild_honest_tips(competition: str | None = None):
 @app.get("/api/sync_elo")
 @limiter.limit("5/hour")
 def sync_elo(request: Request, force: bool = False, competition: str | None = None):
+    require_cron_secret(request, os.getenv("CRON_SECRET", ""))
     comp = require_competition(competition)
     archive_store = collection_for(archive_collections, comp)
     cache_store = collection_for(cache_collections, comp)

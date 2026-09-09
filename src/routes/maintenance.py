@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-import hmac
 import os
 
 from fastapi import APIRouter, HTTPException, Request
 
 from src.competitions import require_competition
+from src.services import espn_data
+from src.services.auth import require_cron_secret
 from src.services.maintenance import run_maintenance
+from src.services.ucl_providers import ingest_clubelo
 
 
 def init_router(cache_collections, odds_provider, *, cron_secret: str | None = None, now_fn=None):
@@ -17,10 +19,7 @@ def init_router(cache_collections, odds_provider, *, cron_secret: str | None = N
 
     @router.post("/maintenance")
     def maintenance(request: Request, competition: str | None = None, force: bool = False):
-        authorization = request.headers.get("authorization", "")
-        presented = authorization[7:] if authorization.startswith("Bearer ") else ""
-        if not configured_secret or not hmac.compare_digest(presented, configured_secret):
-            raise HTTPException(status_code=401, detail="Unauthorized")
+        require_cron_secret(request, configured_secret)
         require_competition(competition)
         return run_maintenance(
             cache_collections,
@@ -28,6 +27,8 @@ def init_router(cache_collections, odds_provider, *, cron_secret: str | None = N
             competition=competition,
             force=force,
             now=(now_fn() if now_fn else None),
+            fixture_fetcher=espn_data.get_scoreboard,
+            clubelo_ingestor=ingest_clubelo,
         )
 
     return router

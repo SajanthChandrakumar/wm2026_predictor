@@ -20,7 +20,7 @@ from scipy.stats import poisson
 
 from src.competitions import competition_document_id, get_competition
 from src.math_engine import MathEngine
-from src.services.snapshots import select_t15_snapshot, parse_time
+from src.services.snapshots import normalize_status, select_t15_snapshot, parse_time
 from src.services.ucl_providers import compose_match_sources
 
 
@@ -348,7 +348,7 @@ def _source_metadata(
     nested = value.get("provenance")
     provenance = dict(nested) if isinstance(nested, Mapping) else {}
     source = value.get("source") or provenance.get("source") or default_source
-    status = value.get("status", "fresh")
+    status = normalize_status(value.get("status"), default="fresh")
     observed_at = value.get("observed_at") or default_observed_at
     return str(source), str(status), observed_at, provenance
 
@@ -421,6 +421,8 @@ class PredictionService:
             default_observed_at=observed_at,
         )
         effective_observed_at = observed_at or odds_observed_at or elo_observed_at
+        if effective_observed_at is None:
+            effective_observed_at = datetime.now(timezone.utc).isoformat()
         source_errors = {}
         for label, payload in (("odds", odds), ("elo", elo)):
             if isinstance(payload, Mapping) and payload.get("error"):

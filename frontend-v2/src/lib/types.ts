@@ -110,6 +110,16 @@ export interface Match {
   raw_match: RawMatch
 }
 
+export interface UnavailablePayload {
+  status: 'unavailable' | 'failed' | 'stale' | 'fresh'
+  source: string
+  observed_at?: string | null
+  error?: string
+  data?: Match[]
+}
+
+export type MatchesResponse = Match[] | UnavailablePayload
+
 export interface XpTip {
   Tipp: string
   xP: number

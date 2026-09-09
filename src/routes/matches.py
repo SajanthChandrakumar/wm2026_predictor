@@ -160,6 +160,17 @@ def _sync_archive_tips(matches, archive, archive_collection):
     return matches
 
 
+def _unavailable_matches(source: str = "matches_cache") -> dict:
+    observed_at = datetime.now(timezone.utc).isoformat()
+    return {
+        "status": "unavailable",
+        "source": source,
+        "observed_at": observed_at,
+        "error": "match cache unavailable; authenticated maintenance has not populated fixtures",
+        "data": [],
+    }
+
+
 def _enrich_edge(matches, math_engine, odds_engine, competition=None, pool_context_collection=None):
     comp = get_competition(competition)
     prediction_service = PredictionService(math_engine)
@@ -177,22 +188,6 @@ def _enrich_edge(matches, math_engine, odds_engine, competition=None, pool_conte
         away_norm = TEAM_MAPPING.get(m.get("away_team"), m.get("away_team"))
         m["home_form"] = math_engine.team_forms.get(home_norm, {"form": [], "on_fire": False})
         m["away_form"] = math_engine.team_forms.get(away_norm, {"form": [], "on_fire": False})
-
-        if hasattr(odds_engine, "get_h2h"):
-            try:
-                if "h2h" not in m:
-                    home_id = m.get("home_team_id")
-                    away_id = m.get("away_team_id")
-                    if home_id and away_id:
-                        m["h2h"] = odds_engine.get_h2h(home_id, away_id)
-
-                if "lineup_diff" not in m:
-                    fixture_id = m.get("id")
-                    commence = m.get("commence_time") or m.get("raw_match", {}).get("commence_time")
-                    if fixture_id and commence:
-                        m["lineup_diff"] = odds_engine.get_lineup(fixture_id, commence)
-            except Exception:
-                pass
 
         if comp.id != "ucl2026" and m.get("edge_home") is not None:
             continue
@@ -277,14 +272,27 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
         cache_store = collection_for(cache_collection, comp)
         archive_store = collection_for(archive_collection, comp)
         cache_id = competition_document_id(comp, "matches_cache")
+        try:
+            cached = find_competition_document(cache_store, comp, "matches_cache")
+            cached_data = (cached or {}).get("data")
+        except Exception:
+            cached_data = None
         # Public refresh flags are intentionally cache-only. Provider credits
         # and writes belong to the authenticated maintenance scheduler.
         if force:
-            try:
-                cached = find_competition_document(cache_store, comp, "matches_cache")
-                return (cached or {}).get("data") or []
-            except Exception:
-                return []
+            if isinstance(cached_data, list):
+                return cached_data if cached_data else ([] if cached is not None else _unavailable_matches())
+            return _unavailable_matches()
+        if isinstance(cached_data, list) and cached_data:
+            math_engine.reload_elo_data()
+            archive = load_archive_from_db(archive_store)
+            return _sync_archive_tips(
+                _enrich_edge(cached_data, math_engine, odds_engine, comp, cache_store),
+                archive, archive_store,
+            )
+        if cached is not None and cached_data == []:
+            return []
+        return _unavailable_matches()
         # ── Fast path: serve from MongoDB cache without any expensive work ──
         if not force:
             try:

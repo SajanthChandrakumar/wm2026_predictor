@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from numbers import Real
+from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -665,6 +666,9 @@ def _play_two_leg_tie(
 def _unavailable(teams: Sequence[str], runs: int, seed: int, reason: str) -> dict[str, Any]:
     return {
         "status": "unavailable",
+        "source": "ucl_simulation_cache",
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+        "error": reason,
         "reason": reason,
         "runs": runs,
         "n_runs": runs,
@@ -701,6 +705,12 @@ def simulate_ucl_tournament(
         raise ValueError("Simulation runs must be positive")
     try:
         team_list = [str(team) for team in teams]
+        if not isinstance(fixtures, Sequence) or isinstance(fixtures, (str, bytes)):
+            raise ValueError("UCL fixtures must be a sequence")
+        for fixture in fixtures:
+            if not isinstance(fixture, Mapping):
+                raise ValueError("UCL fixture must be a mapping")
+            _fixture_teams(fixture)
         if validate_schedule:
             validate_ucl_schedule(team_list, fixtures)
         for fixture in fixtures:

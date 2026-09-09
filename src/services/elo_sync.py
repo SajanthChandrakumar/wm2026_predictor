@@ -34,6 +34,28 @@ def _remap_to_archive_ids(scores: list, archive: dict) -> list:
 def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collection, data_dir, scores_cache_path, MathEngine, force: bool = False, competition=None) -> dict:
     print("Elo sync triggered...")
     competition = get_competition(competition)
+    if competition.id == "ucl2026":
+        # UCL ratings are owned by the ClubElo-scoped cache. Never reuse the
+        # WC CSV/history/processed files or write them from this route.
+        document = find_competition_document(cache_collection, competition, "clubelo_ratings") or {}
+        rows = document.get("rows") or []
+        if rows:
+            try:
+                import pandas as pd
+                math_engine.elo_df = pd.DataFrame(rows)
+            except Exception:
+                pass
+        status = document.get("status") if document else "unavailable"
+        if status not in {"fresh", "stale", "unavailable", "failed"}:
+            status = "unavailable"
+        return {
+            "status": status,
+            "source": document.get("source", "clubelo"),
+            "observed_at": document.get("observed_at"),
+            "error": document.get("error"),
+            "updates": 0,
+            "competition": competition.id,
+        }
     prediction_service = PredictionService(math_engine)
     cache_document_id = lambda key: competition_document_id(competition, key)
     processed_json_path = os.path.join(data_dir, 'processed_matches.json')

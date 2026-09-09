@@ -533,7 +533,21 @@ def test_completed_matches_surface_archived_prediction_contract(monkeypatch):
         },
         "post_match_result": {"status": "completed", "actual_score": "1:0"},
     }])
-    cache = MemoryCollection()
+    cache = MemoryCollection([{
+        "_id": "ucl2026:matches_cache",
+        "data": [{
+            "id": "m1",
+            "home_team": "Bayern Munich",
+            "away_team": "Arsenal",
+            "raw_match": {
+                "id": "m1",
+                "home_team": "Bayern Munich",
+                "away_team": "Arsenal",
+                "commence_time": kickoff.isoformat(),
+                "round": "Round of 16",
+            },
+        }],
+    }])
     monkeypatch.setattr(
         "src.routes.matches.espn_data.get_scoreboard",
         lambda competition=None: [{

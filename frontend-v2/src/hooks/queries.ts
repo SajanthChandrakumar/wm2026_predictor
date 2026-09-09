@@ -21,7 +21,10 @@ export const useMatches = () => {
   const { competition } = useAppState()
   return useQuery({
     queryKey: ['matches', competition],
-    queryFn: () => api.matches(competition),
+    queryFn: async () => {
+      const result = await api.matches(competition)
+      return Array.isArray(result) ? result : []
+    },
     staleTime: 60_000,
     select: dedupeMatches,
   })
@@ -129,7 +132,7 @@ export const useRefreshData = () => {
   return useMutation({
     mutationFn: () => api.matches(competition, true),
     onSuccess: (data) => {
-      qc.setQueryData(['matches', competition], data)
+      qc.setQueryData(['matches', competition], Array.isArray(data) ? data : [])
       qc.invalidateQueries({ queryKey: ['quota', competition] })
     },
   })
