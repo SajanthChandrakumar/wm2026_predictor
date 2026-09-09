@@ -115,10 +115,37 @@ def _sync_archive_tips(matches, archive, archive_collection):
             continue
 
         if entry.get("post_match_result", {}).get("status") == "completed":
-            frozen = entry["prediction"].get("top_tip")
+            prediction = entry["prediction"]
+            snapshot = entry.get("pre_match_snapshot") or {}
+            frozen = prediction.get("top_tip") or prediction.get("model_tip")
             if frozen:
                 m["top_tip"] = frozen
-                m["max_xp"] = float(entry["prediction"].get("max_xp") or 0)
+                m["model_tip"] = prediction.get("model_tip") or frozen
+                m["max_xp"] = float(prediction.get("max_xp") or 0)
+                for key in ("pool_tip", "pool_status", "source_mode", "status", "source_status", "source", "observed_at"):
+                    if key in prediction:
+                        m[key] = prediction[key]
+                    elif key in snapshot:
+                        m[key] = snapshot[key]
+                for key in ("input_provenance", "provenance"):
+                    value = prediction.get(key) or snapshot.get(key)
+                    if value is not None:
+                        m[key] = value
+                archived_context = prediction.get("context") or snapshot.get("context")
+                if not archived_context:
+                    metadata = entry.get("metadata") or {}
+                    context_keys = {
+                        "competition", "stage", "tie_id", "leg", "first_leg_score",
+                        "first_leg_home_score", "first_leg_away_score", "score_90",
+                        "score_aet", "shootout_winner", "extra_time_eligible", "commence_time",
+                    }
+                    archived_context = {key: metadata[key] for key in context_keys if key in metadata}
+                if archived_context:
+                    m["context"] = archived_context
+                    m["match_context"] = archived_context
+                    for key in ("stage", "tie_id", "leg", "first_leg_score", "score_90", "score_aet", "shootout_winner", "extra_time_eligible"):
+                        if key in archived_context:
+                            m[key] = archived_context[key]
             continue
 
         tip = m.get("top_tip")
@@ -200,11 +227,18 @@ def _enrich_edge(matches, math_engine, odds_engine, competition=None, pool_conte
                     "top_tip": prediction.get("top_tip"),
                     "pool_tip": prediction.get("pool_tip"),
                     "pool_status": prediction.get("pool_status"),
+                    "status": prediction.get("status"),
+                    "source_status": prediction.get("source_status", prediction.get("status")),
+                    "source": prediction.get("source"),
+                    "observed_at": prediction.get("observed_at"),
                     "source_mode": prediction.get("source_mode"),
                     "model_version": prediction.get("model_version"),
                     "input_provenance": prediction.get("input_provenance"),
+                    "provenance": prediction.get("provenance"),
                     "xg_home": prediction.get("xg_home"),
                     "xg_away": prediction.get("xg_away"),
+                    "context": prediction.get("context"),
+                    "match_context": prediction.get("context"),
                 })
                 if elo_state is None:
                     m["edge_home"] = None
@@ -342,13 +376,31 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
             # Completed games: show the frozen odds + algo tip from the archive
             # (recomputing with today's Elo would corrupt a past prediction).
             arc = archive.get(match_id) or {}
-            arc_tip = (arc.get("prediction") or {}).get("top_tip")
+            archived_prediction = arc.get("prediction") or {}
+            archived_snapshot = arc.get("pre_match_snapshot") or {}
+            arc_tip = archived_prediction.get("top_tip") or archived_prediction.get("model_tip")
             if fx.get("completed") and arc_tip:
-                snap_odds = (arc.get("pre_match_snapshot") or {}).get("odds") or {}
+                snap_odds = archived_snapshot.get("odds") or {}
                 if all(k in snap_odds for k in ("home", "draw", "away")):
                     odds = snap_odds
-                top_tip = arc_tip
-                max_xp = float((arc.get("prediction") or {}).get("max_xp") or 0.0)
+                prediction_result = {
+                    "model_tip": archived_prediction.get("model_tip") or arc_tip,
+                    "top_tip": archived_prediction.get("top_tip") or arc_tip,
+                    "pool_tip": archived_prediction.get("pool_tip"),
+                    "pool_status": archived_prediction.get("pool_status", "unavailable"),
+                    "source_mode": archived_prediction.get("source_mode", archived_snapshot.get("source_mode", "unavailable")),
+                    "status": archived_prediction.get("status", archived_snapshot.get("status", "unavailable")),
+                    "source_status": archived_prediction.get("source_status") or archived_snapshot.get("source_status") or archived_prediction.get("status") or archived_snapshot.get("status") or "unavailable",
+                    "source": archived_prediction.get("source", archived_snapshot.get("source")),
+                    "observed_at": archived_prediction.get("observed_at", archived_snapshot.get("observed_at")),
+                    "model_version": archived_prediction.get("model_version", archived_snapshot.get("model_version")),
+                    "input_provenance": archived_prediction.get("input_provenance") or archived_snapshot.get("input_provenance", {}),
+                    "provenance": archived_prediction.get("provenance") or archived_snapshot.get("provenance", {}),
+                    "context": archived_prediction.get("context") or archived_snapshot.get("context") or context,
+                }
+                context = prediction_result.get("context") or context
+                top_tip = prediction_result["top_tip"]
+                max_xp = float(archived_prediction.get("max_xp") or 0.0)
             elif odds:
                 try:
                     elo_state = build_elo_snapshot(math_engine, home_raw, away_raw, comp)
@@ -411,9 +463,14 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                 "model_tip": prediction_result.get("model_tip") or (top_tip if top_tip != "N/A" else None),
                 "pool_tip": prediction_result.get("pool_tip"),
                 "pool_status": prediction_result.get("pool_status", "unavailable"),
+                "status": prediction_result.get("status", "unavailable"),
+                "source_status": prediction_result.get("source_status") or prediction_result.get("status", "unavailable"),
+                "source": prediction_result.get("source"),
+                "observed_at": prediction_result.get("observed_at"),
                 "source_mode": prediction_result.get("source_mode", "unavailable"),
                 "model_version": prediction_result.get("model_version"),
                 "input_provenance": prediction_result.get("input_provenance", {}),
+                "provenance": prediction_result.get("provenance", {}),
                 "xg_home": prediction_result.get("xg_home"),
                 "xg_away": prediction_result.get("xg_away"),
                 "matrix": prediction_result.get("matrix", {}),
@@ -433,6 +490,7 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                 "actual_score": fx.get("actual_score"),
                 "completed": fx.get("completed", False),
                 "raw_match": raw_match,
+                "context": prediction_result.get("context", context),
                 "match_context": prediction_result.get("context", context),
             })
 
@@ -537,14 +595,29 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
                             "odds": r["odds"],
                             "elo_state": elo_state,
                             "source_mode": r.get("source_mode"),
+                            "status": r.get("status"),
+                            "source_status": r.get("source_status", r.get("status")),
+                            "source": r.get("source"),
+                            "observed_at": r.get("observed_at"),
                             "model_version": r.get("model_version"),
                             "input_provenance": r.get("input_provenance", {}),
+                            "provenance": r.get("provenance", {}),
+                            "context": r.get("context", r.get("match_context", {})),
                         },
                         "prediction": {
                             "model_tip": r.get("model_tip") or r["top_tip"],
                             "top_tip": r["top_tip"],
                             "pool_tip": r.get("pool_tip"),
                             "pool_status": r.get("pool_status", "unavailable"),
+                            "status": r.get("status", "unavailable"),
+                            "source_status": r.get("source_status", r.get("status", "unavailable")),
+                            "source": r.get("source"),
+                            "observed_at": r.get("observed_at"),
+                            "source_mode": r.get("source_mode"),
+                            "model_version": r.get("model_version"),
+                            "input_provenance": r.get("input_provenance", {}),
+                            "provenance": r.get("provenance", {}),
+                            "context": r.get("context", r.get("match_context", {})),
                             "user_tip": None,
                             "max_xp": float(r["max_xp"]),
                             "bots": bots or {},

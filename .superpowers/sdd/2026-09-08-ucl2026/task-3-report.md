@@ -190,3 +190,79 @@ Output:
   in its original cells; extra-time-origin mass may aggregate into the same
   numeric final-score cell, then the matrix is normalized. Penalty advancement
   remains separate from the score matrix.
+
+## Review fixes: round 2
+
+### RED
+
+Focused regression command before the round-2 fixes:
+
+```text
+.venv/bin/python -m pytest test_task3_prediction.py -q
+```
+
+Output:
+
+```text
+21 passed, 3 failed
+```
+
+The failures covered stale T-15 snapshot status/source/provenance being
+discarded by freeze, missing persisted context during reconstruction, and
+completed `/api/matches` responses omitting archived model/pool/source/context
+fields.
+
+### GREEN
+
+Focused command after the fixes:
+
+```text
+.venv/bin/python -m pytest test_task3_prediction.py -q
+```
+
+Output:
+
+```text
+24 passed in 1.25s
+```
+
+Required full-suite and static checks:
+
+```text
+.venv/bin/python -m compileall -q src test_task3_prediction.py
+.venv/bin/python -m pytest -q
+git diff --check
+```
+
+Output:
+
+```text
+109 passed in 3.55s
+```
+
+### Fixes applied
+
+- Freeze now passes the complete selected snapshot into `PredictionService`;
+  source status, source name, observed time, and nested provenance survive
+  normalization and are persisted in the frozen prediction alongside the
+  snapshot identifiers.
+- Prediction output now exposes an aggregate source status and observed time
+  plus source-specific provenance. Reconstruction persists the service's
+  normalized context, status, source, and provenance with its model aliases.
+- Completed `/api/matches` results copy archived model/pool tips, pool status,
+  source mode/status/provenance, observed time, and context while preserving
+  the legacy `top_tip`; the same fields are restored on cache-hit reconciliation.
+  Newly archived live results retain these fields for later completed-fixture
+  responses.
+
+### Self-review and concerns
+
+- Numeric odds/Elo inputs remain backward-compatible: only mappings that carry
+  source metadata are wrapped, while `source_inputs` continues to expose the
+  cleaned numeric values consumed by existing callers.
+- Freeze still uses the prior compare-and-set update, so concurrent user tips
+  and archive fields are not replaced by the winner's prediction fields.
+- Completed fixtures intentionally do not recalculate model or pool tips with
+  current ratings; if an old archive lacks provenance, the route reports the
+  available snapshot metadata and keeps the response's legacy fields intact.
+- No protected data files or `frontend-v2/dist` were modified.

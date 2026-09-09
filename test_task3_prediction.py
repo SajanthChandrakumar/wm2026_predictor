@@ -21,6 +21,7 @@ from src.services.prediction import (
 from src.routes.predict import init_router as predict_router
 from src.routes.pool import init_router as pool_router
 from src.routes.matches import _enrich_edge
+from src.routes.matches import init_router as matches_router
 from src.services.ucl_providers import compose_match_sources
 
 
@@ -414,3 +415,151 @@ def test_ucl_cached_edge_clears_legacy_edge_without_explicit_ratings():
     enriched = _enrich_edge([match], engine, object(), competition="ucl2026")[0]
     assert enriched.get("edge_home") is None
     assert enriched.get("elo_home_share") is None
+
+
+def test_freeze_preserves_snapshot_source_status_and_provenance():
+    kickoff = datetime(2026, 9, 10, 18, tzinfo=timezone.utc)
+    observed_at = (kickoff - timedelta(minutes=15)).isoformat()
+    snapshot_provenance = {
+        "provider_request_id": "request-123",
+        "url": "https://odds.example/t15",
+    }
+    cache = MemoryCollection([{
+        "_id": "ucl2026:odds_snapshot:m1:t15m:1",
+        "event_id": "m1",
+        "competition": "ucl2026",
+        "bucket": "t15m",
+        "status": "stale",
+        "source": "odds_cache",
+        "observed_at": observed_at,
+        "provenance": snapshot_provenance,
+        "odds": {"home": 2.0, "draw": 3.0, "away": 4.0},
+    }])
+    archive = MemoryCollection([{
+        "_id": "m1",
+        "metadata": {"commence_time": kickoff.isoformat()},
+        "prediction": {},
+    }])
+
+    frozen = freeze_prediction(
+        cache,
+        archive,
+        PredictionService(_engine()),
+        "m1",
+        competition="ucl2026",
+        now=kickoff - timedelta(minutes=10),
+    )
+    prediction = frozen["prediction"]
+
+    assert prediction["status"] == "stale"
+    assert prediction["source"] == "odds_cache"
+    assert prediction["observed_at"] == observed_at
+    assert prediction["provenance"]["odds"]["provider_request_id"] == "request-123"
+    assert prediction["provenance"]["odds"]["source"] == "odds_cache"
+    assert prediction["provenance"]["odds"]["status"] == "stale"
+    assert prediction["input_provenance"]["odds"]["url"] == snapshot_provenance["url"]
+
+
+def test_rebuild_prediction_persists_prediction_context():
+    entry = {
+        "metadata": {
+            "stage": "round_of_16",
+            "tie_id": "tie-7",
+            "leg": "second",
+            "first_leg_score": "1:0",
+        },
+        "pre_match_snapshot": {
+            "odds": {"home": 2.0, "draw": 3.0, "away": 4.0},
+            "elo_state": {"home_rating": 1800, "away_rating": 1700},
+        },
+        "prediction": {},
+    }
+
+    rebuilt = rebuild_prediction(PredictionService(_engine()), entry, competition="ucl2026")
+
+    assert rebuilt["prediction"]["context"]["stage"] == "round_of_16"
+    assert rebuilt["prediction"]["context"]["tie_id"] == "tie-7"
+    assert rebuilt["prediction"]["context"]["leg"] == "second"
+    assert rebuilt["prediction"]["context"]["first_leg_score"] == "1:0"
+
+
+def test_completed_matches_surface_archived_prediction_contract(monkeypatch):
+    kickoff = datetime(2026, 9, 1, 18, tzinfo=timezone.utc)
+    observed_at = (kickoff - timedelta(minutes=15)).isoformat()
+    archived_context = {
+        "competition": "ucl2026",
+        "stage": "round_of_16",
+        "tie_id": "tie-7",
+        "leg": "second",
+        "first_leg_score": "1:0",
+    }
+    archived_provenance = {
+        "odds": {
+            "source": "odds_cache",
+            "status": "stale",
+            "observed_at": observed_at,
+            "provider_request_id": "request-123",
+        },
+    }
+    archive = MemoryCollection([{
+        "_id": "m1",
+        "metadata": {
+            "home_team": "Bayern Munich",
+            "away_team": "Arsenal",
+            "commence_time": kickoff.isoformat(),
+        },
+        "pre_match_snapshot": {
+            "odds": {"home": 2.0, "draw": 3.0, "away": 4.0},
+            "source_mode": "odds-only",
+            "status": "stale",
+            "source": "odds_cache",
+            "observed_at": observed_at,
+            "input_provenance": archived_provenance,
+            "provenance": archived_provenance,
+        },
+        "prediction": {
+            "model_tip": "1:0",
+            "top_tip": "1:0",
+            "pool_tip": "0:0",
+            "pool_status": "available",
+            "source_mode": "odds-only",
+            "status": "stale",
+            "source": "odds_cache",
+            "observed_at": observed_at,
+            "input_provenance": archived_provenance,
+            "provenance": archived_provenance,
+            "context": archived_context,
+            "max_xp": 1.5,
+        },
+        "post_match_result": {"status": "completed", "actual_score": "1:0"},
+    }])
+    cache = MemoryCollection()
+    monkeypatch.setattr(
+        "src.routes.matches.espn_data.get_scoreboard",
+        lambda competition=None: [{
+            "id": "m1",
+            "home_team": "Bayern Munich",
+            "away_team": "Arsenal",
+            "commence_time": kickoff.isoformat(),
+            "round": "Round of 16",
+            "completed": True,
+            "actual_score": "1:0",
+        }],
+    )
+    monkeypatch.setattr("src.routes.matches._build_odds_api_lookup", lambda *args, **kwargs: {})
+
+    router = matches_router(_engine(), object(), cache, archive)
+    endpoint = next(route.endpoint for route in router.routes if route.path == "/api/matches")
+    result = endpoint(competition="ucl2026")
+    match = result[0]
+
+    assert match["model_tip"] == "1:0"
+    assert match["top_tip"] == "1:0"
+    assert match["pool_tip"] == "0:0"
+    assert match["pool_status"] == "available"
+    assert match["source_mode"] == "odds-only"
+    assert match["status"] == "stale"
+    assert match["source"] == "odds_cache"
+    assert match["input_provenance"] == archived_provenance
+    assert match["provenance"] == archived_provenance
+    assert match["match_context"] == archived_context

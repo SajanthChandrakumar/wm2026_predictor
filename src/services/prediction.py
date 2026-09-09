@@ -336,6 +336,23 @@ def _safe_elo(value: Mapping[str, Any] | None) -> dict[str, float] | None:
     return None
 
 
+def _source_metadata(
+    value: Mapping[str, Any] | None,
+    *,
+    default_source: str,
+    default_observed_at: str | None,
+) -> tuple[str, str, Any, dict[str, Any]]:
+    """Read source metadata without letting numeric input cleaning discard it."""
+    if not isinstance(value, Mapping):
+        return default_source, "fresh", default_observed_at, {}
+    nested = value.get("provenance")
+    provenance = dict(nested) if isinstance(nested, Mapping) else {}
+    source = value.get("source") or provenance.get("source") or default_source
+    status = value.get("status", "fresh")
+    observed_at = value.get("observed_at") or default_observed_at
+    return str(source), str(status), observed_at, provenance
+
+
 def _matrix_dict(matrix: pd.DataFrame) -> dict[str, dict[str, float]]:
     return {
         str(row): {str(col): float(matrix.loc[row, col]) for col in matrix.columns}
@@ -393,8 +410,17 @@ class PredictionService:
         comp = get_competition(competition or (context or {}).get("competition") if isinstance(context, Mapping) else competition)
         ctx = build_match_context(context, competition=comp)
         clean_odds, clean_elo = _safe_odds(odds), _safe_elo(elo)
-        odds_status = odds.get("status", "fresh") if isinstance(odds, Mapping) else "fresh"
-        elo_status = elo.get("status", "fresh") if isinstance(elo, Mapping) else "fresh"
+        odds_source, odds_status, odds_observed_at, odds_provenance = _source_metadata(
+            odds,
+            default_source="odds_api",
+            default_observed_at=observed_at,
+        )
+        elo_source, elo_status, elo_observed_at, elo_provenance = _source_metadata(
+            elo,
+            default_source="clubelo",
+            default_observed_at=observed_at,
+        )
+        effective_observed_at = observed_at or odds_observed_at or elo_observed_at
         source_errors = {}
         for label, payload in (("odds", odds), ("elo", elo)):
             if isinstance(payload, Mapping) and payload.get("error"):
@@ -402,19 +428,57 @@ class PredictionService:
         sources = compose_match_sources(
             clean_odds,
             clean_elo,
-            observed_at=observed_at,
+            observed_at=effective_observed_at,
             odds_status=odds_status,
             elo_status=elo_status,
             errors=source_errors,
         )
+        source_metadata = {
+            "odds": (odds_source, odds_status, odds_observed_at, odds_provenance),
+            "elo": (elo_source, elo_status, elo_observed_at, elo_provenance),
+        }
+        source_provenance = {}
+        for label, (source, status, source_observed_at, payload_provenance) in source_metadata.items():
+            details = dict((sources.get("provenance") or {}).get(label) or {})
+            details.update(payload_provenance)
+            details.update({
+                "source": source,
+                "status": status,
+                "observed_at": source_observed_at,
+            })
+            source_provenance[label] = details
+        sources["provenance"] = source_provenance
+        available_sources = [
+            source for payload, (source, *_rest) in source_metadata.items()
+            if (clean_odds if payload == "odds" else clean_elo) is not None
+        ]
+        sources["source"] = "+".join(available_sources) or "none"
+        sources["observed_at"] = effective_observed_at
+        supplied_provenance = dict(provenance or {})
+        for label in source_provenance:
+            extra = supplied_provenance.get(label)
+            if isinstance(extra, Mapping):
+                source_provenance[label].update(extra)
+                source_provenance[label].update({
+                    "source": source_metadata[label][0],
+                    "status": source_metadata[label][1],
+                    "observed_at": source_metadata[label][2],
+                })
+        input_provenance = {
+            key: value for key, value in supplied_provenance.items()
+            if key not in source_provenance
+        }
+        input_provenance.update(source_provenance)
         output: dict[str, Any] = {
             "status": sources["status"],
+            "source_status": sources["status"],
             "source_mode": sources["source_mode"],
             "source": sources["source"],
+            "observed_at": sources.get("observed_at"),
             "model_version": self.model_version,
             "context": ctx.as_dict(),
-            "input_provenance": {**sources.get("provenance", {}), **dict(provenance or {})},
-            "provenance": {**sources.get("provenance", {}), **dict(provenance or {})},
+            "input_provenance": input_provenance,
+            "provenance": input_provenance,
             "source_inputs": {"odds": clean_odds, "elo": clean_elo},
             "model_tip": None,
             "top_tip": None,
@@ -635,8 +699,9 @@ def freeze_prediction(
     if not snapshot:
         raise ValueError("No eligible T-15 snapshot")
     elo = (entry.get("pre_match_snapshot") or {}).get("elo_state")
+    snapshot_provenance = snapshot.get("provenance") if isinstance(snapshot.get("provenance"), Mapping) else {}
     result = service.predict(
-        odds=snapshot.get("odds"),
+        odds=snapshot,
         elo=elo,
         competition=comp,
         context=metadata,
@@ -645,7 +710,11 @@ def freeze_prediction(
         leader_points=leader_points,
         remaining_srf_max_points=remaining_srf_max_points,
         observed_at=snapshot.get("observed_at"),
-        provenance={"snapshot_id": snapshot.get("_id"), "snapshot_bucket": snapshot.get("bucket")},
+        provenance={
+            **snapshot_provenance,
+            "snapshot_id": snapshot.get("_id"),
+            "snapshot_bucket": snapshot.get("bucket"),
+        },
     )
     frozen_at = current.isoformat()
     freeze_fields = {
@@ -653,10 +722,15 @@ def freeze_prediction(
         "top_tip": result.get("top_tip"),
         "pool_tip": result.get("pool_tip"),
         "pool_status": result.get("pool_status"),
+        "status": result.get("status"),
+        "source_status": result.get("source_status", result.get("status")),
+        "source": result.get("source"),
+        "observed_at": result.get("observed_at"),
         "source_mode": result.get("source_mode"),
         "model_version": result.get("model_version"),
         "context": result.get("context"),
         "input_provenance": result.get("input_provenance"),
+        "provenance": result.get("provenance"),
         "source_inputs": result.get("source_inputs"),
         "score_inputs": {
             "xg_home": result.get("xg_home"),
@@ -713,9 +787,15 @@ def rebuild_prediction(
         "top_tip": result.get("top_tip"),
         "pool_tip": result.get("pool_tip"),
         "pool_status": result.get("pool_status"),
+        "context": result.get("context"),
+        "status": result.get("status"),
+        "source_status": result.get("source_status", result.get("status")),
+        "source": result.get("source"),
+        "observed_at": result.get("observed_at"),
         "source_mode": result.get("source_mode"),
         "model_version": result.get("model_version"),
         "input_provenance": result.get("input_provenance"),
+        "provenance": result.get("provenance"),
         "source_inputs": result.get("source_inputs"),
         "max_xp": result.get("max_xp", 0.0),
         "algo_reconstructed": False,
