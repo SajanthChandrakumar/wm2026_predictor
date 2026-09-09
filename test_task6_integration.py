@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 import pytest
 
@@ -70,7 +71,7 @@ def test_migration_script_direct_invocation_bootstraps_repo_imports_and_dotenv()
     env.pop("MONGO_URI", None)
     env.pop("PYTHONPATH", None)
     result = subprocess.run(
-        [str(repo / ".venv/bin/python"), "scripts/migrate_wc_legacy.py"],
+        [sys.executable, "scripts/migrate_wc_legacy.py"],
         cwd=repo,
         env=env,
         capture_output=True,
