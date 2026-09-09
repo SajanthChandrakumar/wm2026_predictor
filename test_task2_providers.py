@@ -443,11 +443,13 @@ def test_public_match_force_is_cache_only():
             raise AssertionError("public force must not call a provider")
 
     class Engine:
-        pass
+        team_forms = {}
 
     router = matches_router(Engine(), Provider(), {"ucl2026": cache}, {"ucl2026": MemoryCollection()})
     result = router.routes[0].endpoint(force=True, competition="ucl2026")
-    assert result == [{"id": "cached"}]
+    assert result[0]["id"] == "cached"
+    assert "edge_home" in result[0]
+    assert "is_ko_phase" in result[0]
 
 
 def test_force_maintenance_validates_competition_before_noop():

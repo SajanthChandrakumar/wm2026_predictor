@@ -23,7 +23,7 @@ export function PerformanceView() {
     return (
       <PageTransition>
         <PageHeader title="Algorithm Performance" subtitle="Prediction accuracy vs actual results" />
-        <p className="text-fg-2">Noch keine abgeschlossenen Spiele. Nach Spielende „Sync Elo Ratings" ausführen.</p>
+        <p className="text-fg-2">Noch keine abgeschlossenen Spiele. Die geschützte Wartung synchronisiert Ergebnisse nach Spielende.</p>
       </PageTransition>
     )
   }

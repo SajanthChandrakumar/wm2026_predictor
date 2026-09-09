@@ -1,7 +1,7 @@
 import type {
   Archive, BotSimulation, CompetitionId, CompetitionInfo, CustomBot, CustomBotParams, EloHistory,
   EloRatings, KnockoutSimulation, MatchesResponse, PoolContext, Prediction, Quota, RawMatch,
-  StandingsGroup, SyncResult, UclSimulation,
+  StandingsGroup, UclSimulation,
 } from './types'
 import { competitionPath } from './competition.mjs'
 
@@ -31,7 +31,6 @@ export const api = {
   standings: (competition: CompetitionId) => request<StandingsGroup[]>(competitionPath('/standings', competition)),
   eloHistory: (competition: CompetitionId) => request<EloHistory>(competitionPath('/elo_history', competition)),
   eloRatings: (competition: CompetitionId) => request<EloRatings>(competitionPath('/elo_ratings', competition)),
-  syncElo: (competition: CompetitionId) => request<SyncResult>(competitionPath('/sync_elo?force=true', competition)),
   saveUserTip: (competition: CompetitionId, matchId: string, userTip: string) =>
     request<{ status: string }>(competitionPath('/archive/user_tip', competition), {
       method: 'POST',

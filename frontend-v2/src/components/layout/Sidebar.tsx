@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { useState } from 'react'
-import { useQuota, useRefreshData, useSyncElo } from '../../hooks/queries'
+import { useQuota, useRefreshData } from '../../hooks/queries'
 import { useAppState } from '../../state/AppState'
 import { Switch } from '../ui/Switch'
 import { cn } from '../../lib/util'
@@ -55,21 +54,6 @@ function QuotaMeter() {
 
 function SidebarButtons() {
   const refresh = useRefreshData()
-  const sync = useSyncElo()
-  const [syncMsg, setSyncMsg] = useState<string | null>(null)
-
-  const onSync = () => {
-    sync.mutate(undefined, {
-      onSuccess: (r) => {
-        setSyncMsg(r.status === 'success' ? `✓ ${r.updates} updated` : '✓ Aktuell')
-        setTimeout(() => setSyncMsg(null), 3000)
-      },
-      onError: () => {
-        setSyncMsg('✗ Sync failed')
-        setTimeout(() => setSyncMsg(null), 3000)
-      },
-    })
-  }
 
   return (
     <div className="space-y-2">
@@ -83,13 +67,6 @@ function SidebarButtons() {
         }}
       >
         {refresh.isPending ? 'Lade…' : 'Refresh Data'}
-      </button>
-      <button
-        onClick={onSync}
-        disabled={sync.isPending}
-        className="w-full rounded-xl border border-line-2 bg-surface px-4 py-2.5 text-sm font-semibold text-fg-2 transition hover:bg-surface-2 disabled:opacity-50"
-      >
-        {sync.isPending ? 'Synce…' : (syncMsg ?? 'Sync Elo Ratings')}
       </button>
     </div>
   )

@@ -137,19 +137,3 @@ export const useRefreshData = () => {
     },
   })
 }
-
-export const useSyncElo = () => {
-  const { competition } = useAppState()
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: () => api.syncElo(competition),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['matches', competition] })
-      qc.invalidateQueries({ queryKey: ['archive', competition] })
-      qc.invalidateQueries({ queryKey: ['standings', competition] })
-      qc.invalidateQueries({ queryKey: ['eloHistory', competition] })
-      qc.invalidateQueries({ queryKey: ['eloRatings', competition] })
-      qc.invalidateQueries({ queryKey: ['quota', competition] })
-    },
-  })
-}

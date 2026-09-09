@@ -5,9 +5,16 @@ never dropped; IDs and nested user tips are retained.
 """
 
 import os
+import sys
+from pathlib import Path
 
 import certifi
 from pymongo import MongoClient
+from dotenv import load_dotenv
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+load_dotenv(REPO_ROOT / ".env")
 
 from src.services.migration import migrate_wc_legacy
 

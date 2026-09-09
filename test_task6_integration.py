@@ -1,4 +1,7 @@
 from datetime import datetime, timedelta, timezone
+import os
+from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -8,6 +11,7 @@ from src.routes.matches import init_router as matches_router
 from src.services.maintenance import run_maintenance
 from src.services.migration import migrate_wc_legacy
 from src.services.prediction import freeze_prediction
+from src.services.elo_sync import perform_elo_sync
 from src.services.snapshots import append_odds_snapshot
 from src.services.ucl_simulation import simulate_ucl_tournament
 
@@ -31,6 +35,84 @@ def test_public_match_cache_miss_is_explicitly_unavailable_without_provider_call
     assert result["source"] == "matches_cache"
     assert result["observed_at"]
     assert result["error"]
+
+
+def test_force_matches_uses_the_cached_presentation_path(monkeypatch):
+    cache = MemoryCollection([{
+        "_id": "ucl2026:matches_cache",
+        "data": [{"id": "e1", "home_team": "Bayern Munich", "away_team": "Arsenal"}],
+    }])
+    calls = []
+
+    class Engine:
+        team_forms = {}
+
+        def reload_elo_data(self):
+            calls.append("reload")
+
+    def present(matches, *args, **kwargs):
+        calls.append(matches)
+        return [{"id": "e1", "presented": True}]
+
+    monkeypatch.setattr("src.routes.matches._enrich_edge", present)
+    endpoint = matches_router(Engine(), object(), {"ucl2026": cache}, {"ucl2026": MemoryCollection()}).routes[0].endpoint
+
+    result = endpoint(force=True, competition="ucl2026")
+
+    assert result == [{"id": "e1", "presented": True}]
+    assert calls[0] == "reload"
+    assert calls[1][0]["id"] == "e1"
+
+
+def test_migration_script_direct_invocation_bootstraps_repo_imports_and_dotenv():
+    repo = Path(__file__).resolve().parent
+    env = os.environ.copy()
+    env.pop("MONGO_URI", None)
+    env.pop("PYTHONPATH", None)
+    result = subprocess.run(
+        [str(repo / ".venv/bin/python"), "scripts/migrate_wc_legacy.py"],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "MONGO_URI is required" in result.stderr
+    assert "ModuleNotFoundError" not in result.stderr
+
+
+def test_public_ui_does_not_expose_protected_elo_sync_control():
+    repo = Path(__file__).resolve().parent
+    sidebar = (repo / "frontend-v2/src/components/layout/Sidebar.tsx").read_text()
+    api = (repo / "frontend-v2/src/lib/api.ts").read_text()
+    queries = (repo / "frontend-v2/src/hooks/queries.ts").read_text()
+
+    assert "Sync Elo Ratings" not in sidebar
+    assert "useSyncElo" not in sidebar
+    assert "syncElo:" not in api
+    assert "useSyncElo" not in queries
+    assert "Refresh Data" in sidebar
+
+
+def test_empty_ucl_clubelo_sync_has_truthful_metadata(tmp_path):
+    before = datetime.now(timezone.utc)
+    result = perform_elo_sync(
+        object(),
+        object(),
+        MemoryCollection(),
+        MemoryCollection(),
+        str(tmp_path),
+        str(tmp_path / "scores.json"),
+        object,
+        competition="ucl2026",
+    )
+    observed = datetime.fromisoformat(result["observed_at"])
+
+    assert result["status"] == "unavailable"
+    assert result["source"] == "clubelo"
+    assert result["error"]
+    assert observed >= before
 
 
 def test_maintenance_refreshes_ucl_fixtures_and_flattens_provider_odds():

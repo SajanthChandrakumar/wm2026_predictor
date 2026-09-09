@@ -2,6 +2,7 @@ import os
 import json
 import time
 import logging
+from datetime import datetime, timezone
 
 from src.constants import DISPLAY_MAPPING, SCORES_CACHE_TTL, _is_ko_round
 from src.competitions import competition_document_id, find_competition_document, get_competition
@@ -45,14 +46,17 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
                 math_engine.elo_df = pd.DataFrame(rows)
             except Exception:
                 pass
+        observed_at = document.get("observed_at") or datetime.now(timezone.utc).isoformat()
         status = document.get("status") if document else "unavailable"
         if status not in {"fresh", "stale", "unavailable", "failed"}:
             status = "unavailable"
+        error = document.get("error") or ("ClubElo ratings cache is unavailable" if status == "unavailable" else None)
         return {
             "status": status,
             "source": document.get("source", "clubelo"),
-            "observed_at": document.get("observed_at"),
-            "error": document.get("error"),
+            "observed_at": observed_at,
+            "error": error,
+            "provenance": {"source": document.get("source", "clubelo"), "observed_at": observed_at},
             "updates": 0,
             "competition": competition.id,
         }

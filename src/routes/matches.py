@@ -171,6 +171,20 @@ def _unavailable_matches(source: str = "matches_cache") -> dict:
     }
 
 
+def _present_cached_matches(cached_data, math_engine, odds_engine, competition, archive_store, cache_store):
+    """Apply one presentation path to normal and forced cache reads."""
+    if not isinstance(cached_data, list) or not cached_data:
+        return cached_data if isinstance(cached_data, list) else _unavailable_matches()
+    if hasattr(math_engine, "reload_elo_data"):
+        math_engine.reload_elo_data()
+    archive = load_archive_from_db(archive_store)
+    return _sync_archive_tips(
+        _enrich_edge(cached_data, math_engine, odds_engine, competition, cache_store),
+        archive,
+        archive_store,
+    )
+
+
 def _enrich_edge(matches, math_engine, odds_engine, competition=None, pool_context_collection=None):
     comp = get_competition(competition)
     prediction_service = PredictionService(math_engine)
@@ -281,15 +295,10 @@ def init_router(math_engine, odds_engine, cache_collection, archive_collection):
         # and writes belong to the authenticated maintenance scheduler.
         if force:
             if isinstance(cached_data, list):
-                return cached_data if cached_data else ([] if cached is not None else _unavailable_matches())
+                return _present_cached_matches(cached_data, math_engine, odds_engine, comp, archive_store, cache_store) if cached_data else ([] if cached is not None else _unavailable_matches())
             return _unavailable_matches()
         if isinstance(cached_data, list) and cached_data:
-            math_engine.reload_elo_data()
-            archive = load_archive_from_db(archive_store)
-            return _sync_archive_tips(
-                _enrich_edge(cached_data, math_engine, odds_engine, comp, cache_store),
-                archive, archive_store,
-            )
+            return _present_cached_matches(cached_data, math_engine, odds_engine, comp, archive_store, cache_store)
         if cached is not None and cached_data == []:
             return []
         return _unavailable_matches()
