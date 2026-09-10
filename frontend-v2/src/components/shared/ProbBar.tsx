@@ -19,11 +19,22 @@ export function ProbBar({ odds, showLabels = true }: { odds?: Odds | null; showL
         )}
       </div>
       {showLabels && (
-        <div className="mt-1 flex justify-between text-[11px] font-semibold tabular-nums">
-          <span className="text-blue-a">{pct(p.home)}</span>
-          <span className="text-fg-3">{pct(p.draw)} X</span>
-          <span className="text-red-a">{pct(p.away)}</span>
-        </div>
+        empty ? (
+          <div className="mt-1 text-center text-[10px] text-fg-3">Quoten noch nicht verfügbar</div>
+        ) : (
+          <>
+            <div className="mt-1 flex justify-between text-[11px] font-semibold tabular-nums">
+              <span className="text-blue-a">{pct(p.home)}</span>
+              <span className="text-fg-3">{pct(p.draw)} X</span>
+              <span className="text-red-a">{pct(p.away)}</span>
+            </div>
+            <div className="mt-0.5 flex justify-between text-[10px] tabular-nums text-fg-3">
+              <span>1&nbsp; {odds!.home.toFixed(2)}</span>
+              <span>X&nbsp; {odds!.draw.toFixed(2)}</span>
+              <span>2&nbsp; {odds!.away.toFixed(2)}</span>
+            </div>
+          </>
+        )
       )}
     </div>
   )
