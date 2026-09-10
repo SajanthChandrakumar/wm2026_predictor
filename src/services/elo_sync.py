@@ -32,6 +32,82 @@ def _remap_to_archive_ids(scores: list, archive: dict) -> list:
     return scores
 
 
+def _reconstruct_completed_entries(
+    prediction_service,
+    archive,
+    changed_entries,
+    MathEngine,
+    competition,
+    commence_times=None,
+) -> int:
+    """Backfill missed completed tips through the existing Elo-only model."""
+    commence_times = commence_times or {}
+    reconstructed = 0
+    for mid, entry in archive.items():
+        if entry.get("post_match_result", {}).get("status") != "completed":
+            continue
+        if entry.get("pre_match_snapshot") is not None:
+            continue
+        actual = entry.get("post_match_result", {}).get("actual_score")
+        if not actual:
+            continue
+
+        metadata = entry.get("metadata") or {}
+        home, away = metadata.get("home_team"), metadata.get("away_team")
+        if not home or not away:
+            continue
+        match_context = dict(metadata)
+        commence_time = metadata.get("commence_time") or commence_times.get(mid)
+        match_context.setdefault("commence_time", commence_time)
+        is_ko = bool(match_context.get("is_ko_phase", False))
+        result = prediction_service.reconstruct(
+            home,
+            away,
+            commence_time=commence_time,
+            competition=competition,
+            is_ko=is_ko,
+            context=match_context,
+        )
+        tip = result.get("model_tip")
+        if not tip:
+            continue
+
+        prediction = entry.setdefault("prediction", {})
+        bots = result.get("bots") or {}
+        if (
+            prediction.get("top_tip") == tip
+            and prediction.get("algo_reconstructed") is True
+            and prediction.get("bots")
+        ):
+            continue
+
+        prediction.update({
+            "top_tip": tip,
+            "model_tip": tip,
+            "pool_tip": result.get("pool_tip"),
+            "pool_status": result.get("pool_status", "unavailable"),
+            "source_mode": result.get("source_mode"),
+            "model_version": result.get("model_version"),
+            "input_provenance": result.get("input_provenance"),
+            "context": result.get("context", match_context),
+            "max_xp": result.get("max_xp", 0),
+            "algo_reconstructed": True,
+            "bots": bots,
+        })
+        post_match = entry.setdefault("post_match_result", {})
+        post_match["algo_points"] = MathEngine.calculate_actual_points(tip, actual, is_ko)
+        post_match["bot_points"] = {
+            name: MathEngine.calculate_actual_points(info["tip"], actual, is_ko)
+            for name, info in bots.items() if info.get("tip")
+        }
+        user_tip = prediction.get("user_tip")
+        if user_tip:
+            post_match["points_earned"] = MathEngine.calculate_actual_points(user_tip, actual, is_ko)
+        changed_entries[mid] = entry
+        reconstructed += 1
+    return reconstructed
+
+
 def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collection, data_dir, scores_cache_path, MathEngine, force: bool = False, competition=None) -> dict:
     print("Elo sync triggered...")
     competition = get_competition(competition)
@@ -51,13 +127,24 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
         if status not in {"fresh", "stale", "unavailable", "failed"}:
             status = "unavailable"
         error = document.get("error") or ("ClubElo ratings cache is unavailable" if status == "unavailable" else None)
+        archive = load_archive_from_db(archive_collection, force=True)
+        changed_entries = {}
+        reconstructed = _reconstruct_completed_entries(
+            PredictionService(math_engine),
+            archive,
+            changed_entries,
+            MathEngine,
+            competition,
+        )
+        for mid, entry in changed_entries.items():
+            upsert_archive_entry(archive_collection, mid, entry)
         return {
             "status": status,
             "source": document.get("source", "clubelo"),
             "observed_at": observed_at,
             "error": error,
             "provenance": {"source": document.get("source", "clubelo"), "observed_at": observed_at},
-            "updates": 0,
+            "updates": reconstructed,
             "competition": competition.id,
         }
     prediction_service = PredictionService(math_engine)
@@ -308,72 +395,14 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
             if ko_backfilled:
                 print(f"KO phase backfilled: {ko_backfilled} matches updated to is_ko_phase=True.")
 
-            # Reconstruction: Algo tips for completed entries without pre_match_snapshot
-            reconstructed = 0
-            for mid, entry in archive.items():
-                if entry.get('post_match_result', {}).get('status') != 'completed':
-                    continue
-                if entry.get('pre_match_snapshot') is not None:
-                    continue
-                actual = entry.get('post_match_result', {}).get('actual_score')
-                if not actual:
-                    continue
-
-                home = entry['metadata']['home_team']
-                away = entry['metadata']['away_team']
-                match_context = dict(entry.get('metadata') or {})
-                match_context.setdefault('commence_time', ct_map.get(mid))
-                is_ko_match = match_context.get('is_ko_phase', False)
-
-                reconstructed_prediction = prediction_service.reconstruct(
-                    home,
-                    away,
-                    commence_time=ct_map.get(mid),
-                    competition=competition,
-                    is_ko=is_ko_match,
-                    context=match_context,
-                )
-                if reconstructed_prediction.get("model_tip") is None:
-                    continue
-                bots = reconstructed_prediction.get("bots") or {}
-                tip = reconstructed_prediction.get("model_tip")
-                max_xp = reconstructed_prediction.get("max_xp", 0)
-                if not tip:
-                    continue
-
-                already_done = (
-                    entry['prediction'].get('top_tip') == tip
-                    and entry['prediction'].get('algo_reconstructed') is True
-                    and entry['prediction'].get('bots')
-                )
-                if already_done:
-                    continue
-
-                entry['prediction']['top_tip'] = tip
-                entry['prediction']['model_tip'] = tip
-                entry['prediction']['pool_tip'] = reconstructed_prediction.get('pool_tip')
-                entry['prediction']['pool_status'] = reconstructed_prediction.get('pool_status', 'unavailable')
-                entry['prediction']['source_mode'] = reconstructed_prediction.get('source_mode')
-                entry['prediction']['model_version'] = reconstructed_prediction.get('model_version')
-                entry['prediction']['input_provenance'] = reconstructed_prediction.get('input_provenance')
-                entry['prediction']['context'] = reconstructed_prediction.get('context', match_context)
-                entry['prediction']['max_xp'] = max_xp
-                entry['prediction']['algo_reconstructed'] = True
-                entry['prediction']['bots'] = bots
-                entry['post_match_result']['algo_points'] = MathEngine.calculate_actual_points(
-                    tip, actual, is_ko_match
-                )
-                entry['post_match_result']['bot_points'] = {
-                    name: MathEngine.calculate_actual_points(info["tip"], actual, is_ko_match)
-                    for name, info in bots.items() if info.get("tip")
-                }
-                user_tip = entry['prediction'].get('user_tip')
-                if user_tip:
-                    entry['post_match_result']['points_earned'] = MathEngine.calculate_actual_points(
-                        user_tip, actual, is_ko_match
-                    )
-                changed_entries[mid] = entry
-                reconstructed += 1
+            reconstructed = _reconstruct_completed_entries(
+                prediction_service,
+                archive,
+                changed_entries,
+                MathEngine,
+                competition,
+                ct_map,
+            )
 
             for mid, entry in changed_entries.items():
                 upsert_archive_entry(archive_collection, mid, entry)

@@ -9,6 +9,7 @@ import pytest
 
 from test_task2_providers import MemoryCollection
 from src.competitions import competition_document_id
+from src.constants import TEAM_MAPPING
 from src.routes.matches import init_router as matches_router
 from src.routes.simulate import init_router as simulate_router
 from src.services.maintenance import run_maintenance
@@ -236,6 +237,53 @@ def test_empty_ucl_clubelo_sync_has_truthful_metadata(tmp_path):
     assert result["source"] == "clubelo"
     assert result["error"]
     assert observed >= before
+
+
+def test_ucl_clubelo_sync_reconstructs_missed_completed_tip(tmp_path):
+    class ArchiveCollection(MemoryCollection):
+        def replace_one(self, query, document, upsert=False):
+            self.documents[query["_id"]] = dict(document)
+
+    cache = MemoryCollection([{
+        "_id": "ucl2026:clubelo_ratings",
+        "status": "fresh",
+        "source": "clubelo",
+        "observed_at": "2026-09-08T12:00:00+00:00",
+        "rows": [
+            {"team_name": "Dortmund", "elo_rating": 1891.0},
+            {"team_name": "Villarreal", "elo_rating": 1797.0},
+        ],
+    }])
+    archive = ArchiveCollection([{
+        "_id": "ucl-1",
+        "metadata": {
+            "home_team": "Borussia Dortmund",
+            "away_team": "Villarreal",
+            "commence_time": "2026-09-08T19:00:00Z",
+            "is_ko_phase": False,
+        },
+        "pre_match_snapshot": None,
+        "prediction": {"top_tip": None},
+        "post_match_result": {"status": "completed", "actual_score": "3:2"},
+    }])
+
+    result = perform_elo_sync(
+        MathEngine("data/elo_ratings.csv", TEAM_MAPPING),
+        object(),
+        cache,
+        archive,
+        str(tmp_path),
+        str(tmp_path / "scores.json"),
+        MathEngine,
+        competition="ucl2026",
+    )
+    rebuilt = archive.documents["ucl-1"]
+
+    assert result["updates"] == 1
+    assert rebuilt["prediction"]["algo_reconstructed"] is True
+    assert rebuilt["prediction"]["source_mode"] == "elo-only"
+    assert rebuilt["prediction"]["top_tip"]
+    assert rebuilt["post_match_result"]["algo_points"] >= 0
 
 
 def test_maintenance_refreshes_ucl_fixtures_and_flattens_provider_odds():
