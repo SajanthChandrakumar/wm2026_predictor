@@ -46,6 +46,7 @@ export function FixtureRow({ match, trailing }: { match: Match; trailing?: React
                 probabilities={match.probabilities}
                 sourceMode={match.source_mode}
                 observedAt={match.observed_at}
+                oddsObservedAt={match.odds_observed_at}
               />
             )}
           </span>

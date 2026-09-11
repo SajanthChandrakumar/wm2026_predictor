@@ -2,11 +2,12 @@ import { computeImpliedProbs, pct } from '../../lib/util'
 import type { Odds, Probabilities } from '../../lib/types'
 
 /** 3-segment implied-probability bar (home / draw / away). */
-export function ProbBar({ odds, probabilities, sourceMode, observedAt, showLabels = true }: {
+export function ProbBar({ odds, probabilities, sourceMode, observedAt, oddsObservedAt, showLabels = true }: {
   odds?: Odds | null
   probabilities?: Probabilities | null
   sourceMode?: string | null
   observedAt?: string | null
+  oddsObservedAt?: string | null
   showLabels?: boolean
 }) {
   const hasBookmakerOdds = Boolean(odds && [odds.home, odds.draw, odds.away].every((price) => Number.isFinite(price) && price > 1))
@@ -19,12 +20,13 @@ export function ProbBar({ odds, probabilities, sourceMode, observedAt, showLabel
     away: 1 / p.away,
   } : null)
   const source = hasBookmakerOdds ? 'Buchmacherquote' : (hasModel ? 'Elo-Modellquote · nicht wettbar' : 'Nicht verfügbar')
-  const freshness = observedAt ? new Intl.DateTimeFormat('de-CH', {
+  const effectiveObservedAt = hasBookmakerOdds ? oddsObservedAt : observedAt
+  const freshness = effectiveObservedAt ? new Intl.DateTimeFormat('de-CH', {
     day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
-  }).format(new Date(observedAt)) : null
+  }).format(new Date(effectiveObservedAt)) : null
   return (
     <div className="w-full">
-      <div className="mb-1 text-center text-[9px] leading-tight text-fg-3" title={observedAt ?? undefined}>
+      <div className="mb-1 text-center text-[9px] leading-tight text-fg-3" title={effectiveObservedAt ?? undefined}>
         {source}{freshness ? ` · ${freshness}` : ''}
       </div>
       <div className="flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full">

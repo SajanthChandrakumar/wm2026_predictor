@@ -75,6 +75,8 @@ export interface Match {
   away_logo?: string | null
   logo?: string | null
   odds?: Odds
+  odds_observed_at?: string | null
+  odds_provenance?: Record<string, unknown>
   probabilities?: Probabilities | null
   top_tip: string
   model_tip?: string | null

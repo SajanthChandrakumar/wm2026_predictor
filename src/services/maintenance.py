@@ -136,7 +136,7 @@ def run_maintenance(
             if event_id and match:
                 available_by_event[event_id] = (match, odds)
             if event_id and odds:
-                _store_fixture_odds(cache_collection, comp, event_id, odds, match)
+                _store_fixture_odds(cache_collection, comp, event_id, odds, match, current)
         for event_id, (fixture, due) in due_by_event.items():
             # Missing historical windows become explicit missed buckets; only
             # the current (closest-to-kickoff) observation is recorded.
@@ -155,7 +155,7 @@ def run_maintenance(
                 append_odds_snapshot(cache_collection, comp, event_id, observed_bucket, current, odds, status=snapshot_status)
                 mark_bucket(cache_collection, comp, event_id, observed_bucket, status="fresh" if odds else "unavailable", observed_at=current)
                 if odds:
-                    _store_fixture_odds(cache_collection, comp, event_id, odds, match)
+                    _store_fixture_odds(cache_collection, comp, event_id, odds, match, current)
         return {
             "status": "success",
             "provider_calls": 1,
@@ -343,7 +343,7 @@ def _normalise_team(value):
     return " ".join(TEAM_MAPPING.get(name, name).casefold().split())
 
 
-def _store_fixture_odds(cache_collection, competition, event_id, odds, quote):
+def _store_fixture_odds(cache_collection, competition, event_id, odds, quote, observed_at):
     comp = get_competition(competition)
     document = find_competition_document(cache_collection, comp, "matches_cache") or {}
     data = list(document.get("data") or [])
@@ -351,9 +351,19 @@ def _store_fixture_odds(cache_collection, competition, event_id, odds, quote):
         if str(match.get("id") or match.get("event_id")) != str(event_id):
             continue
         match["odds"] = odds
+        match["odds_status"] = "fresh"
+        match["odds_observed_at"] = observed_at.isoformat()
+        match["odds_provenance"] = {
+            "source": "odds_api",
+            "observed_at": observed_at.isoformat(),
+            "provider_event_id": str(quote.get("id") or quote.get("event_id") or ""),
+        }
         if quote.get("bookmakers"):
             match["bookmakers"] = quote["bookmakers"]
             match.setdefault("raw_match", {})["bookmakers"] = quote["bookmakers"]
+        match.setdefault("raw_match", {})["odds_status"] = "fresh"
+        match["raw_match"]["odds_observed_at"] = match["odds_observed_at"]
+        match["raw_match"]["odds_provenance"] = match["odds_provenance"]
         match["status"] = "fresh"
         match["source_status"] = "fresh"
         match["source"] = "odds_api"

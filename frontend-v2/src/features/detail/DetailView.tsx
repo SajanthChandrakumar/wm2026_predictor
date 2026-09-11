@@ -76,6 +76,7 @@ export function DetailView() {
   const quoteSource = hasBookmakerOdds
     ? 'Buchmacherquote'
     : (hasModelOdds ? 'Elo-Modellquote – nicht wettbar' : 'Nicht verfügbar')
+  const quoteObservedAt = hasBookmakerOdds ? match.odds_observed_at : (calc?.observed_at ?? match.observed_at)
   const modelTip = calc?.model_tip ?? match.model_tip ?? calc?.top_tip
   const poolTip = calc?.pool_tip ?? match.pool_tip
   const topTip = calc?.xp_tips?.find((tip) => tip.Tipp === modelTip) ?? calc?.xp_tips?.[0]
@@ -176,7 +177,7 @@ export function DetailView() {
         <GlassCard>
           <SectionTitle className="mb-1">1 / X / 2</SectionTitle>
           <p className="mb-4 text-[10px] text-fg-3">
-            {quoteSource}{(calc?.observed_at ?? match.observed_at) ? ` · Stand ${calc?.observed_at ?? match.observed_at}` : ''}
+            {quoteSource}{quoteObservedAt ? ` · Stand ${quoteObservedAt}` : ''}
           </p>
           <div className="space-y-3">
             {[

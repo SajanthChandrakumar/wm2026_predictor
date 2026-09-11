@@ -257,8 +257,15 @@ def _enrich_edge(matches, math_engine, odds_engine, competition=None, pool_conte
                 pool_document = find_competition_document(
                     pool_context_collection, comp, f"pool_context:{m.get('id')}"
                 ) or {}
+            odds_input = ({
+                "odds": odds,
+                "status": m.get("odds_status") or ("fresh" if m.get("odds_observed_at") else "stale"),
+                "source": "odds_api",
+                "observed_at": m.get("odds_observed_at"),
+                "provenance": m.get("odds_provenance") or {},
+            } if odds else None)
             prediction = prediction_service.predict(
-                odds=odds,
+                odds=odds_input,
                 elo=elo_state,
                 competition=comp,
                 context=context,
@@ -266,6 +273,7 @@ def _enrich_edge(matches, math_engine, odds_engine, competition=None, pool_conte
                 user_points=pool_document.get("user_points", 0),
                 leader_points=pool_document.get("leader_points", 0),
                 remaining_srf_max_points=pool_document.get("remaining_srf_max_points", 1),
+                observed_at=m.get("odds_observed_at") if odds else None,
             )
             m.update({
                 "model_tip": prediction.get("model_tip"),

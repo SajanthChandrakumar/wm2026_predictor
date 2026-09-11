@@ -61,17 +61,19 @@ def init_router(math_engine, odds_engine, cache_collection, limiter, archive_col
                 competition=comp,
             )
 
+            cached = find_competition_document(cache_store, comp, "matches_cache")
+            cached_match = next(
+                (match for match in (cached or {}).get("data", []) if match.get("id") == event_id),
+                {},
+            )
             try:
                 odds = extract_odds(match_data)
             except ValueError:
                 # ESPN-sourced raw_match entries carry no bookmakers — fall back
                 # to the aggregated odds stored alongside the match in the cache.
                 odds = None
-                cached = find_competition_document(cache_store, comp, "matches_cache")
-                for m in (cached or {}).get("data", []):
-                    if m.get("id") == event_id and m.get("odds", {}).get("home"):
-                        odds = m["odds"]
-                        break
+                if cached_match.get("odds", {}).get("home"):
+                    odds = cached_match["odds"]
 
             elo_state = None
             try:
@@ -102,8 +104,16 @@ def init_router(math_engine, odds_engine, cache_collection, limiter, archive_col
             field_counts = payload.get("tip_counts") or payload.get("field_tip_counts")
             if field_counts is None:
                 field_counts = pool_context.get("tip_counts")
+            odds_observed_at = cached_match.get("odds_observed_at") or match_data.get("odds_observed_at")
+            odds_input = ({
+                "odds": odds,
+                "status": cached_match.get("odds_status") or match_data.get("odds_status") or ("fresh" if odds_observed_at else "stale"),
+                "source": "odds_api",
+                "observed_at": odds_observed_at,
+                "provenance": cached_match.get("odds_provenance") or match_data.get("odds_provenance") or {},
+            } if odds else None)
             result = prediction_service.predict(
-                odds=odds,
+                odds=odds_input,
                 elo=elo_state,
                 competition=comp,
                 context=context,
@@ -111,7 +121,10 @@ def init_router(math_engine, odds_engine, cache_collection, limiter, archive_col
                 user_points=payload.get("user_points", pool_context.get("user_points", 0)),
                 leader_points=payload.get("leader_points", pool_context.get("leader_points", 0)),
                 remaining_srf_max_points=payload.get("remaining_srf_max_points", pool_context.get("remaining_srf_max_points", 1)),
+                observed_at=odds_observed_at,
             )
+            if odds and not odds_observed_at:
+                result["observed_at"] = None
             matrix = result.pop("score_matrix_df", None)
             result["max_prob"] = float(matrix.to_numpy().max()) if matrix is not None else 0.0
             return result

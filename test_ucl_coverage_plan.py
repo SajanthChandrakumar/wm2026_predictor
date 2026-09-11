@@ -7,6 +7,7 @@ from src.competitions import competition_document_id
 from src.math_engine import MathEngine
 from src.routes.matches import _enrich_edge
 from src.routes.predict import init_router as predict_router
+from src.routes.custom_bot import init_router as custom_bot_router
 from src.services.maintenance import run_maintenance
 from src.services.ucl_providers import CLUBELO_URL, _parse_team_page, ingest_clubelo
 
@@ -50,6 +51,49 @@ def test_ucl_enrichment_builds_elo_only_prediction_without_bookmaker_odds():
     assert enriched["odds"] == {}
 
 
+def test_bookmaker_prediction_keeps_the_real_capture_time():
+    engine = MathEngine("data/elo_ratings.csv")
+    engine.elo_df = pd.DataFrame([
+        {"team_name": "Bayern Munich", "elo_rating": 1900.0},
+        {"team_name": "Arsenal", "elo_rating": 1800.0},
+    ])
+    captured = "2026-09-10T10:00:00+00:00"
+    match = {
+        "id": "ucl-real-odds",
+        "home_team": "Bayern Munich",
+        "away_team": "Arsenal",
+        "odds": {"home": 2.0, "draw": 3.2, "away": 4.0},
+        "odds_observed_at": captured,
+        "odds_provenance": {"source": "odds_api", "observed_at": captured},
+        "raw_match": {"round": "League Phase"},
+    }
+
+    enriched = _enrich_edge([match], engine, object(), competition="ucl2026")[0]
+
+    assert enriched["observed_at"] == captured
+    assert enriched["input_provenance"]["odds"]["observed_at"] == captured
+
+
+def test_legacy_bookmaker_odds_without_capture_time_are_marked_stale():
+    engine = MathEngine("data/elo_ratings.csv")
+    engine.elo_df = pd.DataFrame([
+        {"team_name": "Bayern Munich", "elo_rating": 1900.0},
+        {"team_name": "Arsenal", "elo_rating": 1800.0},
+    ])
+    match = {
+        "id": "ucl-legacy-odds",
+        "home_team": "Bayern Munich",
+        "away_team": "Arsenal",
+        "odds": {"home": 2.0, "draw": 3.2, "away": 4.0},
+        "raw_match": {"round": "League Phase"},
+    }
+
+    enriched = _enrich_edge([match], engine, object(), competition="ucl2026")[0]
+
+    assert enriched["source_status"] == "stale"
+    assert enriched["input_provenance"]["odds"]["observed_at"] is None
+
+
 def test_ucl_detail_prediction_uses_cached_elo_when_bookmaker_odds_are_missing():
     engine = MathEngine("data/elo_ratings.csv")
     cache = MemoryCollection([{
@@ -76,6 +120,33 @@ def test_ucl_detail_prediction_uses_cached_elo_when_bookmaker_odds_are_missing()
     assert result["source_mode"] == "elo-only"
     assert result["model_tip"]
     assert sum(result["probabilities"].values()) == pytest.approx(1.0)
+
+
+def test_ucl_custom_bot_skips_archived_match_without_real_elo():
+    class Engine:
+        calls = 0
+
+        def reload_elo_data(self, **kwargs):
+            return None
+
+        def compute_custom_bot_tip(self, *args, **kwargs):
+            self.calls += 1
+            return "1:0"
+
+    archive = MemoryCollection([{
+        "_id": "ucl-no-elo",
+        "metadata": {"home_team": "Unknown A", "away_team": "Unknown B"},
+        "pre_match_snapshot": {"odds": {"home": 2.0, "draw": 3.2, "away": 4.0}},
+        "post_match_result": {"status": "completed", "actual_score": "1:0"},
+    }])
+    engine = Engine()
+    router = custom_bot_router(engine, {"ucl2026": archive}, {"ucl2026": MemoryCollection()}, NoopLimiter())
+    endpoint = next(route.endpoint for route in router.routes if route.path == "/api/custom_bot/simulate")
+
+    result = endpoint(None, {"competition": "ucl2026"}, competition="ucl2026")
+
+    assert result["matches"] == 0
+    assert engine.calls == 0
 
 
 def test_clubelo_ingestion_supplements_ranking_with_cached_ucl_teams():
@@ -219,5 +290,7 @@ def test_ucl_daily_discovery_uses_one_h2h_totals_bulk_call(include_due_fixture):
         for match in cache.find_one({"_id": competition_document_id("ucl2026", "matches_cache")})["data"]
     }
     assert stored["ucl-discovery"]["odds"] == {"home": 2.0, "draw": 3.2, "away": 4.0}
+    assert stored["ucl-discovery"]["odds_observed_at"] == now.isoformat()
+    assert stored["ucl-discovery"]["odds_provenance"]["source"] == "odds_api"
     if include_due_fixture:
         assert stored["ucl-due"]["odds"] == {"home": 1.8, "draw": 3.5, "away": 4.6}
