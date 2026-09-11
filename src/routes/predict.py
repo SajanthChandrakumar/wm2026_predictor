@@ -72,17 +72,17 @@ def init_router(math_engine, odds_engine, cache_collection, limiter, archive_col
                     if m.get("id") == event_id and m.get("odds", {}).get("home"):
                         odds = m["odds"]
                         break
-                if not odds:
-                    raise
 
             elo_state = None
             try:
                 from src.routes.matches import build_elo_snapshot
+                elo_document = find_competition_document(cache_store, comp, "elo_ratings")
                 elo_state = build_elo_snapshot(
                     math_engine,
                     match_data.get("home_team"),
                     match_data.get("away_team"),
                     comp,
+                    elo_document,
                 )
             except Exception:
                 elo_state = None

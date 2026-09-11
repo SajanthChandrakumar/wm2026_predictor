@@ -41,7 +41,12 @@ export function FixtureRow({ match, trailing }: { match: Match; trailing?: React
                 </span>
               </span>
             ) : (
-              <ProbBar odds={match.odds} />
+              <ProbBar
+                odds={match.odds}
+                probabilities={match.probabilities}
+                sourceMode={match.source_mode}
+                observedAt={match.observed_at}
+              />
             )}
           </span>
           <span className="flex min-w-0 flex-1 items-center gap-1.5">

@@ -80,9 +80,26 @@ def _match_odds_api(lookup: dict, home: str, away: str, date: str):
     return None
 
 
-def build_elo_snapshot(math_engine, home_team: str, away_team: str, competition=None) -> dict | None:
+def build_elo_snapshot(math_engine, home_team: str, away_team: str, competition=None, elo_document: dict | None = None) -> dict | None:
     """Return known ratings, retaining WC's legacy default only for WC."""
     comp = get_competition(competition)
+    if elo_document and elo_document.get("rows"):
+        ratings = {
+            str(row.get("team_name") or row.get("team")): row.get("elo_rating", row.get("elo"))
+            for row in elo_document["rows"]
+            if isinstance(row, dict)
+        }
+        names = [TEAM_MAPPING.get(team, team) for team in (home_team, away_team)]
+        try:
+            snapshot = {"home_rating": float(ratings[names[0]]), "away_rating": float(ratings[names[1]])}
+            snapshot.update({
+                key: elo_document[key]
+                for key in ("status", "source", "observed_at", "provenance")
+                if elo_document.get(key) is not None
+            })
+            return snapshot
+        except (KeyError, TypeError, ValueError):
+            pass
     frame = getattr(math_engine, "elo_df", None)
     rows = getattr(frame, "loc", None)
     if rows is None:
@@ -188,6 +205,11 @@ def _present_cached_matches(cached_data, math_engine, odds_engine, competition, 
 def _enrich_edge(matches, math_engine, odds_engine, competition=None, pool_context_collection=None):
     comp = get_competition(competition)
     prediction_service = PredictionService(math_engine)
+    elo_document = (
+        find_competition_document(pool_context_collection, comp, "elo_ratings")
+        if comp.id == "ucl2026" and pool_context_collection is not None
+        else None
+    )
     for m in matches:
         raw_match = m.get("raw_match") or {}
         round_name = raw_match.get("round", m.get("round", "")) if isinstance(raw_match, dict) else m.get("round", "")
@@ -218,12 +240,10 @@ def _enrich_edge(matches, math_engine, odds_engine, competition=None, pool_conte
             # Completed matches must retain their archived pre-match tip; a
             # fresh prediction here would use hindsight Elo.
             continue
-        odds = m.get("odds", {})
-        if not all(k in odds for k in ("home", "draw", "away")):
-            continue
+        odds = m.get("odds") or {}
         try:
             elo_state = m.get("elo_state") or build_elo_snapshot(
-                math_engine, m.get("home_team"), m.get("away_team"), comp
+                math_engine, m.get("home_team"), m.get("away_team"), comp, elo_document
             )
             context = dict(m.get("match_context") or m.get("context") or {})
             context.setdefault("stage", m.get("stage") or infer_stage(round_name))
@@ -262,29 +282,31 @@ def _enrich_edge(matches, math_engine, odds_engine, competition=None, pool_conte
                 "provenance": prediction.get("provenance"),
                 "xg_home": prediction.get("xg_home"),
                 "xg_away": prediction.get("xg_away"),
+                "probabilities": prediction.get("probabilities"),
                 "matrix": prediction.get("matrix", m.get("matrix", {})),
                 "max_xp": float(prediction.get("max_xp") or 0.0),
                 "context": prediction.get("context") or context,
                 "match_context": prediction.get("context") or context,
             })
-            if comp.id == "ucl2026" and elo_state is None:
-                m["edge_home"] = None
+            if isinstance(elo_state, dict) and "home_rating" in elo_state and "away_rating" in elo_state:
+                m["elo_home_share"] = math_engine.get_elo_probability(
+                    float(elo_state["home_rating"]), float(elo_state["away_rating"])
+                )
+            else:
                 m["elo_home_share"] = None
+            if not all(key in odds for key in ("home", "draw", "away")):
                 m["market_home_share"] = None
+                m["edge_home"] = None
                 continue
             true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
             pool = true_probs["home"] + true_probs["away"]
             market_home_share = (true_probs["home"] / pool) if pool > 0 else 0.5
-            elo_state = m.get("elo_state") or build_elo_snapshot(math_engine, m.get("home_team"), m.get("away_team"), comp)
             # UCL has no synthetic 1500 fallback.  Without a known rating the
             # edge is unavailable; odds-only predictions remain valid.
             if comp.id == "ucl2026" and elo_state is None:
                 continue
-            if isinstance(elo_state, dict) and "home_rating" in elo_state and "away_rating" in elo_state:
-                elo_home_share = math_engine.get_elo_probability(
-                    float(elo_state["home_rating"]), float(elo_state["away_rating"])
-                )
-            else:
+            elo_home_share = m.get("elo_home_share")
+            if elo_home_share is None:
                 elo_home_share, _ = math_engine.get_match_elo_probabilities(m.get("home_team"), m.get("away_team"))
             m["elo_home_share"] = elo_home_share
             m["market_home_share"] = market_home_share

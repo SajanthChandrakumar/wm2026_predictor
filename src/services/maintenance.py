@@ -14,6 +14,7 @@ from src.services.snapshots import append_odds_snapshot, bucket_state, due_bucke
 
 
 LEASE_SECONDS = 300
+DISCOVERY_INTERVAL = timedelta(days=1)
 
 
 def run_maintenance(
@@ -99,12 +100,15 @@ def run_maintenance(
             if due:
                 due_by_event[event_id] = (fixture, due)
                 all_due.extend(due)
-        if not due_by_event:
+        discovery_due = _discovery_due(cache_collection, comp, current)
+        if not due_by_event and not discovery_due:
             return {"status": "idle", "provider_calls": 0, "mutated": bool(archived_results), "buckets": [], "fixture_status": fixture_status, "clubelo_status": clubelo_status, "archived_results": archived_results}
 
         try:
             quotes = _bulk_quotes(odds_provider, comp)
         except Exception as exc:
+            if comp.id == "ucl2026":
+                _record_discovery(cache_collection, comp, current, "failed", error=str(exc))
             for event_id, (fixture, due) in due_by_event.items():
                 for bucket in due[:-1]:
                     mark_bucket(cache_collection, comp, event_id, bucket, status="unavailable", observed_at=current, error="missed")
@@ -122,6 +126,8 @@ def run_maintenance(
             }
 
         lookup = _quote_lookup(quotes)
+        if comp.id == "ucl2026":
+            _record_discovery(cache_collection, comp, current, "fresh", events=len(quotes))
         available_by_event = {}
         for fixture in fixtures:
             event_id = str(fixture.get("id") or fixture.get("event_id") or "")
@@ -159,6 +165,7 @@ def run_maintenance(
             "fixture_status": fixture_status,
             "clubelo_status": clubelo_status,
             "archived_results": archived_results,
+            "discovery": discovery_due,
         }
     finally:
         cache_collection.delete_one({"_id": lease_id, "lease_token": lease_token})
@@ -167,6 +174,34 @@ def run_maintenance(
 def _fixtures(cache_collection, competition) -> list[dict]:
     document = find_competition_document(cache_collection, competition, "matches_cache") or {}
     return document.get("data") or []
+
+
+def _discovery_due(cache_collection, competition, current: datetime) -> bool:
+    comp = get_competition(competition)
+    if comp.id != "ucl2026":
+        return False
+    document = find_competition_document(cache_collection, comp, "odds_discovery_state") or {}
+    try:
+        observed_at = parse_time(document.get("observed_at"))
+    except (TypeError, ValueError):
+        return True
+    return current - observed_at >= DISCOVERY_INTERVAL
+
+
+def _record_discovery(cache_collection, competition, current: datetime, status: str, *, events: int = 0, error: str | None = None) -> None:
+    comp = get_competition(competition)
+    cache_collection.update_one(
+        {"_id": competition_document_id(comp, "odds_discovery_state")},
+        {"$set": {
+            "competition": comp.id,
+            "source": "odds_api",
+            "status": status,
+            "observed_at": current.isoformat(),
+            "events": events,
+            "error": error,
+        }},
+        upsert=True,
+    )
 
 
 def _refresh_fixtures(cache_collection, competition, fetcher, current) -> dict:

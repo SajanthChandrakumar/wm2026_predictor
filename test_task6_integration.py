@@ -384,8 +384,9 @@ def test_maintenance_archives_completed_ucl_results_without_inventing_tips():
         }],
     )
 
-    assert result["status"] == "idle"
-    assert provider.calls == 0
+    assert result["status"] == "success"
+    assert result["provider_calls"] == 1
+    assert provider.calls == 1
     entry = archive.find_one({"_id": "ucl-finished"})
     assert entry["metadata"]["home_team"] == "Barcelona"
     assert entry["post_match_result"] == {

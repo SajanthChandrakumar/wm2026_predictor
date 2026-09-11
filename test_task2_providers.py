@@ -466,11 +466,15 @@ def test_force_maintenance_is_a_safe_noop():
     assert cache.documents == {}
 
 
-def test_no_due_bucket_does_not_spend_credits_or_write_snapshots():
+def test_no_due_bucket_and_fresh_daily_discovery_does_not_spend_credits_or_write_snapshots():
     kickoff = datetime(2026, 9, 10, 18, tzinfo=timezone.utc)
+    now = kickoff - timedelta(days=3)
     cache = MemoryCollection([{
         "_id": competition_document_id("ucl2026", "matches_cache"),
         "data": [{"id": "e1", "commence_time": kickoff.isoformat()}],
+    }, {
+        "_id": competition_document_id("ucl2026", "odds_discovery_state"),
+        "observed_at": now.isoformat(),
     }])
 
     class Provider:
@@ -481,7 +485,7 @@ def test_no_due_bucket_does_not_spend_credits_or_write_snapshots():
             return []
 
     provider = Provider()
-    result = run_maintenance(cache, provider, competition="ucl2026", now=kickoff - timedelta(days=3))
+    result = run_maintenance(cache, provider, competition="ucl2026", now=now)
     assert result["provider_calls"] == 0
     assert provider.calls == 0
     assert not [doc for doc in cache.documents.values() if "snapshot" in doc.get("_id", "")]

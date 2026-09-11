@@ -8,16 +8,28 @@ from __future__ import annotations
 
 import json
 import os
+import re
+from html import unescape
 from html.parser import HTMLParser
 from datetime import datetime, timezone
 
 import requests
 
 from src.competitions import competition_document_id, find_competition_document, get_competition
+from src.constants import TEAM_MAPPING
 from src.services.snapshots import normalize_status
 
 
 CLUBELO_URL = os.getenv("CLUBELO_URL", "https://clubelo.com/Ranking")
+CLUBELO_TEAM_SLUGS = {
+    "AEK": "AEK",
+    "Feyenoord": "Feyenoord",
+    "LASK": "lask",
+    "Sabah FK": "",
+    "Shakhtar": "Shakhtar",
+    "Slovan": "SlovanBratislava",
+    "Viking": "Viking",
+}
 
 # Keep aliases at the provider boundary; callers use the names from their
 # fixture/provider payloads and never have to guess which spelling is canonical.
@@ -28,7 +40,7 @@ CLUBELO_ALIASES = {
     "Paris SG": "Paris Saint-Germain",
     "Inter Milan": "Inter",
     "Internazionale": "Inter",
-    "Atlético Madrid": "Atletico Madrid",
+    "Atlético Madrid": "Atlético",
 }
 
 
@@ -123,6 +135,34 @@ def _is_number(value: str) -> bool:
         return False
 
 
+def _parse_team_page(html: str, team: str) -> dict | None:
+    json_match = re.search(
+        rf'"Name"\s*:\s*"{re.escape(team)}".{{0,240}}?"Elo"\s*:\s*([0-9]{{3,4}}(?:\.[0-9]+)?)',
+        html or "",
+        re.IGNORECASE | re.DOTALL,
+    )
+    text = " ".join(unescape(re.sub(r"<[^>]+>", " ", html or "")).split())
+    team_match = re.search(rf"{re.escape(team)}\s+([0-9]{{3,4}}(?:\.[0-9]+)?)", text, re.IGNORECASE)
+    match = team_match or json_match or re.search(
+        r"(?:Current\s+)?Elo\s*:?\s*([0-9]{3,4}(?:\.[0-9]+)?)", text, re.IGNORECASE
+    )
+    if not match:
+        return None
+    elo = float(match.group(1))
+    return {"rank": None, "team": team, "team_name": team, "elo": elo, "elo_rating": elo}
+
+
+def _required_ucl_clubs(cache_collection, competition) -> set[str]:
+    fixtures = find_competition_document(cache_collection, competition, "matches_cache") or {}
+    return {
+        TEAM_MAPPING.get(str(match.get(field) or ""), str(match.get(field) or ""))
+        for match in fixtures.get("data", [])
+        if isinstance(match, dict)
+        for field in ("home_team", "away_team")
+        if match.get(field)
+    }
+
+
 def ingest_clubelo(
     cache_collection,
     competition=None,
@@ -148,13 +188,32 @@ def ingest_clubelo(
     try:
         response = getter(source_url, timeout=10, headers=_conditional_headers(previous))
         response.raise_for_status()
-        if getattr(response, "status_code", None) == 304 and previous.get("rows"):
-            document = dict(previous)
-            document.update({"status": "fresh", "observed_at": observed, "error": None})
-            return document
-        rows = parse_clubelo_html(getattr(response, "text", ""))
+        not_modified = getattr(response, "status_code", None) == 304 and previous.get("rows")
+        rows = [dict(row) for row in previous.get("rows", [])] if not_modified else parse_clubelo_html(getattr(response, "text", ""))
         if not rows:
             raise ValueError("ClubElo ranking page contained no ratings")
+        required = _required_ucl_clubs(cache_collection, comp) if comp.id == "ucl2026" else set()
+        present = {row["team"] for row in rows}
+        page_errors = {}
+        base_url = source_url.rsplit("/", 1)[0]
+        for team in sorted(required - present):
+            slug = CLUBELO_TEAM_SLUGS.get(team)
+            if slug is None:
+                page_errors[team] = "ClubElo team page is not mapped"
+                continue
+            team_url = f"{base_url}/{slug}"
+            try:
+                team_response = getter(team_url, timeout=10, headers={})
+                team_response.raise_for_status()
+                row = _parse_team_page(getattr(team_response, "text", ""), team)
+                if row is None:
+                    raise ValueError("ClubElo team page contained no current rating")
+                row["provenance"] = {"source": "clubelo", "url": team_url, "observed_at": observed}
+                rows.append(row)
+                present.add(team)
+            except Exception as exc:
+                page_errors[team] = str(exc)
+        missing = sorted(required - present)
         document = {
             "_id": cache_id,
             "competition": comp.id,
@@ -162,14 +221,20 @@ def ingest_clubelo(
             "source": "clubelo",
             "observed_at": observed,
             "rows": rows,
+            "coverage": {
+                "required": len(required),
+                "available": len(required & present),
+                "missing": missing,
+                "errors": page_errors,
+            },
             "provenance": {
                 "source": "clubelo",
                 "url": source_url,
                 "observed_at": observed,
-                "etag": _header(response, "etag"),
-                "last_modified": _header(response, "last-modified"),
+                "etag": _header(response, "etag") or previous.get("etag"),
+                "last_modified": _header(response, "last-modified") or (previous.get("provenance") or {}).get("last_modified"),
             },
-            "etag": _header(response, "etag"),
+            "etag": _header(response, "etag") or previous.get("etag"),
         }
         cache_collection.update_one(
             {"_id": cache_id},

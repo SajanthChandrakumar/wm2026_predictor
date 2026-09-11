@@ -18,6 +18,12 @@ export interface Odds {
   under25?: number
 }
 
+export interface Probabilities {
+  home: number
+  draw: number
+  away: number
+}
+
 export interface TeamForm {
   form: ('W' | 'D' | 'L')[]
   on_fire: boolean
@@ -68,7 +74,8 @@ export interface Match {
   home_logo?: string | null
   away_logo?: string | null
   logo?: string | null
-  odds: Odds
+  odds?: Odds
+  probabilities?: Probabilities | null
   top_tip: string
   model_tip?: string | null
   pool_tip?: string | null
@@ -141,6 +148,7 @@ export interface Prediction {
   model_version?: string | null
   input_provenance?: Record<string, unknown>
   provenance?: Record<string, unknown>
+  probabilities?: Probabilities | null
   /** Dict-of-dicts keyed by home/away goal count (backend serializes the DataFrame). */
   matrix?: Record<number, Record<number, number>>
   xp_tips?: XpTip[]
