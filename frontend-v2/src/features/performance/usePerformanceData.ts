@@ -33,6 +33,7 @@ export interface ScoreRow {
 
 export interface PerformanceTotals {
   completed: number
+  userCount: number
   totalPoints: number
   correctTendency: number
   algoTotal: number
@@ -48,7 +49,7 @@ function entryDate(e: ArchiveEntry): string {
 export function aggregate(archive: Archive | undefined) {
   const completed: CompletedMatch[] = []
   const totals: PerformanceTotals = {
-    completed: 0, totalPoints: 0, correctTendency: 0,
+    completed: 0, userCount: 0, totalPoints: 0, correctTendency: 0,
     algoTotal: 0, algoTendency: 0, algoCount: 0, hasReconstructed: false,
   }
   const botStats: Record<BotKey, { pts: number; tipped: number; tendency: number }> = {
@@ -62,8 +63,11 @@ export function aggregate(archive: Archive | undefined) {
     if (entry.post_match_result?.status !== 'completed') continue
     const pts = entry.post_match_result.points_earned ?? 0
     totals.completed++
-    totals.totalPoints += pts
-    if (pts >= 5) totals.correctTendency++
+    if (entry.prediction?.user_tip != null) {
+      totals.userCount++
+      totals.totalPoints += pts
+      if (pts >= 5) totals.correctTendency++
+    }
 
     const ap = entry.post_match_result.algo_points
     if (ap != null) {

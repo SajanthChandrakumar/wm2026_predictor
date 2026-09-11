@@ -152,7 +152,12 @@ app.include_router(matches_router(math_engine, global_odds_engine, cache_collect
 app.include_router(predict_router(math_engine, global_odds_engine, cache_collections, limiter, archive_collections))
 app.include_router(custom_bot_router(math_engine, archive_collections, custom_bot_collections, limiter))
 app.include_router(simulate_router(math_engine, cache_collections))
-app.include_router(maintenance_router(cache_collections, global_odds_engine, archive_collections=archive_collections))
+app.include_router(maintenance_router(
+    cache_collections,
+    global_odds_engine,
+    archive_collections=archive_collections,
+    math_engine=math_engine,
+))
 app.include_router(pool_router(cache_collections, archive_collections))
 
 # ── Small endpoints (not worth extracting) ───────────────────

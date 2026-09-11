@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { competitionPath, validCompetition } from '../src/lib/competition.mjs'
 import { botFormState } from '../src/lib/customBot.mjs'
 import { validUclStandingsRows } from '../src/lib/standings.mjs'
@@ -64,4 +65,17 @@ test('withRatingBaselines makes current ClubElo ratings chartable without invent
 
   const existing = { Arsenal: [{ timestamp: 123, match_id: 'match-1', elo: 2020 }] }
   assert.deepEqual(withRatingBaselines(existing, { Arsenal: { elo: 2035 } }), existing)
+})
+
+test('performance counts only actual user tips and refreshes archive data', () => {
+  const performance = readFileSync(new URL('../src/features/performance/usePerformanceData.ts', import.meta.url), 'utf8')
+  const scoreboard = readFileSync(new URL('../src/features/performance/BotScoreboard.tsx', import.meta.url), 'utf8')
+  const view = readFileSync(new URL('../src/features/performance/PerformanceView.tsx', import.meta.url), 'utf8')
+  const queries = readFileSync(new URL('../src/hooks/queries.ts', import.meta.url), 'utf8')
+  const refresh = queries.slice(queries.indexOf('export const useRefreshData'))
+
+  assert.match(performance, /userCount/)
+  assert.match(scoreboard, /tipped: totals\.userCount/)
+  assert.match(view, /totals\.correctTendency \/ totals\.userCount/)
+  assert.match(refresh, /invalidateQueries\(\{ queryKey: \['archive', competition\] \}\)/)
 })

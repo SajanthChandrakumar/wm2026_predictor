@@ -133,6 +133,7 @@ export const useRefreshData = () => {
     mutationFn: () => api.matches(competition, true),
     onSuccess: (data) => {
       qc.setQueryData(['matches', competition], Array.isArray(data) ? data : [])
+      qc.invalidateQueries({ queryKey: ['archive', competition] })
       qc.invalidateQueries({ queryKey: ['quota', competition] })
     },
   })

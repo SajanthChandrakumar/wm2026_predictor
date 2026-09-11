@@ -16,7 +16,7 @@ export function BotScoreboard({ totals, botStats, extraBots }: {
     const out: ScoreRow[] = [
       {
         key: 'you', label: 'Du', color: 'var(--gold)', isUser: true,
-        pts: totals.totalPoints, tipped: totals.completed, tendency: totals.correctTendency,
+        pts: totals.totalPoints, tipped: totals.userCount, tendency: totals.correctTendency,
       },
       ...HOUSE_BOTS.filter((b) => botStats[b.key].tipped > 0).map((b) => ({
         key: b.key, label: b.label, color: b.color, ...botStats[b.key],

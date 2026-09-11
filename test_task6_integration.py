@@ -400,6 +400,51 @@ def test_maintenance_archives_completed_ucl_results_without_inventing_tips():
     assert "ucl-finished" in load_archive_from_db(archive)
 
 
+def test_maintenance_reconstructs_missed_ucl_performance_from_clubelo():
+    now = datetime(2026, 9, 9, 20, tzinfo=timezone.utc)
+    cache = MemoryCollection()
+
+    class ArchiveCollection(MemoryCollection):
+        def replace_one(self, query, document, upsert=False):
+            self.documents[query["_id"]] = dict(document)
+
+    archive = ArchiveCollection()
+    rows = [
+        {"team_name": "Barcelona", "elo_rating": 1900.0},
+        {"team_name": "Feyenoord", "elo_rating": 1750.0},
+    ]
+
+    result = run_maintenance(
+        {"ucl2026": cache},
+        type("Provider", (), {"get_competition_odds": lambda self, *args, **kwargs: []})(),
+        archive_collections={"ucl2026": archive},
+        competition="ucl2026",
+        now=now,
+        fixture_fetcher=lambda **kwargs: [{
+            "id": "ucl-finished",
+            "home_team": "Barcelona",
+            "away_team": "Feyenoord Rotterdam",
+            "commence_time": "2026-09-09T16:45:00Z",
+            "round": "League Phase",
+            "completed": True,
+            "actual_score": "5:1",
+        }],
+        clubelo_ingestor=lambda *args, **kwargs: {
+            "status": "fresh", "source": "clubelo", "rows": rows,
+        },
+        math_engine=MathEngine("data/elo_ratings.csv", TEAM_MAPPING),
+    )
+
+    entry = archive.find_one({"_id": "ucl-finished"})
+    assert result["reconstructed_results"] == 1
+    assert entry["prediction"]["algo_reconstructed"] is True
+    assert entry["prediction"]["source_mode"] == "elo-only"
+    assert entry["prediction"]["top_tip"]
+    assert entry["prediction"]["bots"]
+    assert entry["post_match_result"]["algo_points"] is not None
+    assert entry["post_match_result"]["bot_points"]
+
+
 def test_maintenance_snapshot_is_the_input_for_t15_freeze():
     kickoff = datetime(2026, 9, 10, 18, tzinfo=timezone.utc)
     now = kickoff - timedelta(minutes=15)

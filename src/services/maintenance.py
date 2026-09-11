@@ -8,8 +8,15 @@ from uuid import uuid4
 
 from src.competitions import collection_for, competition_document_id, find_competition_document, get_competition
 from src.constants import DISPLAY_MAPPING, TEAM_MAPPING, _is_ko_round
-from src.services.archive import invalidate_archive_mem_cache
+from src.math_engine import MathEngine
+from src.services.archive import (
+    invalidate_archive_mem_cache,
+    load_archive_from_db,
+    upsert_archive_entry,
+)
+from src.services.elo_sync import _reconstruct_completed_entries
 from src.services.odds_helpers import extract_odds
+from src.services.prediction import PredictionService
 from src.services.snapshots import append_odds_snapshot, bucket_state, due_buckets, mark_bucket, parse_time
 
 
@@ -28,6 +35,7 @@ def run_maintenance(
     lease_seconds: int = LEASE_SECONDS,
     fixture_fetcher=None,
     clubelo_ingestor=None,
+    math_engine=None,
 ) -> dict:
     """Capture due odds buckets with at most one bulk provider call.
 
@@ -85,10 +93,28 @@ def run_maintenance(
             clubelo_status = clubelo_ingestor(cache_collection, competition=comp, observed_at=current)
         fixtures = _fixtures(cache_collection, comp)
         archived_results = 0
+        reconstructed_results = 0
         if archive_collections is not None:
+            archive_collection = collection_for(archive_collections, comp)
             archived_results = _sync_completed_results(
-                collection_for(archive_collections, comp), fixtures, comp
+                archive_collection, fixtures, comp
             )
+            if comp.id == "ucl2026" and math_engine is not None:
+                rows = (clubelo_status or {}).get("rows") or []
+                if rows:
+                    import pandas as pd
+                    math_engine.elo_df = pd.DataFrame(rows)
+                archive = load_archive_from_db(archive_collection, force=True)
+                changed_entries = {}
+                reconstructed_results = _reconstruct_completed_entries(
+                    PredictionService(math_engine),
+                    archive,
+                    changed_entries,
+                    MathEngine,
+                    comp,
+                )
+                for match_id, entry in changed_entries.items():
+                    upsert_archive_entry(archive_collection, match_id, entry)
         due_by_event = {}
         all_due = []
         for fixture in fixtures:
@@ -102,7 +128,7 @@ def run_maintenance(
                 all_due.extend(due)
         discovery_due = _discovery_due(cache_collection, comp, current)
         if not due_by_event and not discovery_due:
-            return {"status": "idle", "provider_calls": 0, "mutated": bool(archived_results), "buckets": [], "fixture_status": fixture_status, "clubelo_status": clubelo_status, "archived_results": archived_results}
+            return {"status": "idle", "provider_calls": 0, "mutated": bool(archived_results or reconstructed_results), "buckets": [], "fixture_status": fixture_status, "clubelo_status": clubelo_status, "archived_results": archived_results, "reconstructed_results": reconstructed_results}
 
         try:
             quotes = _bulk_quotes(odds_provider, comp)
@@ -123,6 +149,8 @@ def run_maintenance(
                 "buckets": sorted(set(all_due), key=lambda item: list(_bucket_order()).index(item)),
                 "fixture_status": fixture_status,
                 "clubelo_status": clubelo_status,
+                "archived_results": archived_results,
+                "reconstructed_results": reconstructed_results,
             }
 
         lookup = _quote_lookup(quotes)
@@ -165,6 +193,7 @@ def run_maintenance(
             "fixture_status": fixture_status,
             "clubelo_status": clubelo_status,
             "archived_results": archived_results,
+            "reconstructed_results": reconstructed_results,
             "discovery": discovery_due,
         }
     finally:
@@ -399,7 +428,6 @@ def _sync_completed_results(archive_collection, fixtures, competition) -> int:
         post = dict(existing.get("post_match_result") or {})
         if post.get("status") == "completed" and post.get("actual_score") == actual_score:
             continue
-        from src.math_engine import MathEngine
         algo_tip = prediction.get("top_tip") or prediction.get("model_tip")
         user_tip = prediction.get("user_tip")
         bots = prediction.get("bots") or {}

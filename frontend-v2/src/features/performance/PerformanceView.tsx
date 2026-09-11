@@ -28,7 +28,7 @@ export function PerformanceView() {
     )
   }
 
-  const hitRate = ((totals.correctTendency / totals.completed) * 100).toFixed(1)
+  const hitRate = totals.userCount > 0 ? ((totals.correctTendency / totals.userCount) * 100).toFixed(1) : '0.0'
   const algoHitRate = totals.algoCount > 0 ? ((totals.algoTendency / totals.algoCount) * 100).toFixed(1) : '0.0'
   const diff = totals.totalPoints - totals.algoTotal
   const maxPts = Math.max(totals.totalPoints, totals.algoTotal, 1)
