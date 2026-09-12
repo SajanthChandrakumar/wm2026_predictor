@@ -11,7 +11,8 @@ from src.services.archive import (
     build_archive_id_index, resolve_archive_id,
 )
 from src.services import espn_data
-from src.services.prediction import PredictionService
+from src.services.prediction import PredictionService, _all_snapshots
+from src.services.snapshots import select_t15_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +40,12 @@ def _reconstruct_completed_entries(
     MathEngine,
     competition,
     commence_times=None,
-) -> int:
-    """Backfill missed completed tips through the existing Elo-only model."""
+    cache_collection=None,
+) -> tuple[int, int]:
+    """Backfill completed tips, preferring saved pre-match odds over Elo."""
     commence_times = commence_times or {}
     reconstructed = 0
+    snapshot_predictions = 0
     for mid, entry in archive.items():
         if entry.get("post_match_result", {}).get("status") != "completed":
             continue
@@ -60,22 +63,65 @@ def _reconstruct_completed_entries(
         commence_time = metadata.get("commence_time") or commence_times.get(mid)
         match_context.setdefault("commence_time", commence_time)
         is_ko = bool(match_context.get("is_ko_phase", False))
-        result = prediction_service.reconstruct(
-            home,
-            away,
-            commence_time=commence_time,
-            competition=competition,
-            is_ko=is_ko,
-            context=match_context,
-        )
+        snapshot = None
+        if cache_collection is not None and commence_time:
+            snapshot = select_t15_snapshot(
+                _all_snapshots(cache_collection, mid, competition),
+                commence_time,
+            )
+        if snapshot:
+            result = prediction_service.predict(
+                odds=snapshot,
+                elo=None,
+                competition=competition,
+                context=match_context,
+                observed_at=snapshot.get("observed_at"),
+                provenance={
+                    "snapshot_id": snapshot.get("_id"),
+                    "snapshot_bucket": snapshot.get("bucket"),
+                },
+            )
+        else:
+            result = prediction_service.reconstruct(
+                home,
+                away,
+                commence_time=commence_time,
+                competition=competition,
+                is_ko=is_ko,
+                context=match_context,
+            )
         tip = result.get("model_tip")
         if not tip:
             continue
 
         prediction = entry.setdefault("prediction", {})
         bots = result.get("bots") or {}
+        if snapshot and not bots:
+            try:
+                import pandas as pd
+                matrix = result.get("score_matrix_df")
+                xp = pd.DataFrame(result.get("xp_tips") or [])
+                odds = result.get("source_inputs", {}).get("odds") or {}
+                prob_over25 = None
+                if odds.get("over25") and odds.get("under25"):
+                    raw_over, raw_under = 1.0 / odds["over25"], 1.0 / odds["under25"]
+                    prob_over25 = raw_over / (raw_over + raw_under)
+                if matrix is not None and not xp.empty:
+                    bots = prediction_service.math_engine.compute_bot_tips(
+                        score_matrix=matrix,
+                        base_xp_df=xp,
+                        true_probs=result.get("probabilities") or {},
+                        prob_over25=prob_over25,
+                        home_team=home,
+                        away_team=away,
+                        match_id=mid,
+                        is_ko_phase=is_ko,
+                    )
+            except Exception:
+                bots = {}
         if (
-            prediction.get("top_tip") == tip
+            snapshot is None
+            and prediction.get("top_tip") == tip
             and prediction.get("algo_reconstructed") is True
             and prediction.get("bots")
         ):
@@ -86,14 +132,36 @@ def _reconstruct_completed_entries(
             "model_tip": tip,
             "pool_tip": result.get("pool_tip"),
             "pool_status": result.get("pool_status", "unavailable"),
+            "status": result.get("status"),
+            "source_status": result.get("source_status", result.get("status")),
+            "source": result.get("source"),
+            "observed_at": result.get("observed_at"),
             "source_mode": result.get("source_mode"),
             "model_version": result.get("model_version"),
             "input_provenance": result.get("input_provenance"),
+            "provenance": result.get("provenance"),
+            "source_inputs": result.get("source_inputs"),
             "context": result.get("context", match_context),
             "max_xp": result.get("max_xp", 0),
-            "algo_reconstructed": True,
+            "algo_reconstructed": snapshot is None,
+            "tip_source": "pre_match_odds_snapshot" if snapshot else "elo_reconstruction",
             "bots": bots,
         })
+        if snapshot:
+            entry["pre_match_snapshot"] = {
+                "timestamp_recorded": snapshot.get("observed_at"),
+                "odds": result.get("source_inputs", {}).get("odds"),
+                "elo_state": None,
+                "source_mode": result.get("source_mode"),
+                "status": result.get("status"),
+                "source_status": result.get("source_status", result.get("status")),
+                "source": result.get("source"),
+                "observed_at": result.get("observed_at"),
+                "model_version": result.get("model_version"),
+                "input_provenance": result.get("input_provenance"),
+                "provenance": result.get("provenance"),
+                "context": result.get("context", match_context),
+            }
         post_match = entry.setdefault("post_match_result", {})
         post_match["algo_points"] = MathEngine.calculate_actual_points(tip, actual, is_ko)
         post_match["bot_points"] = {
@@ -104,8 +172,11 @@ def _reconstruct_completed_entries(
         if user_tip:
             post_match["points_earned"] = MathEngine.calculate_actual_points(user_tip, actual, is_ko)
         changed_entries[mid] = entry
-        reconstructed += 1
-    return reconstructed
+        if snapshot:
+            snapshot_predictions += 1
+        else:
+            reconstructed += 1
+    return reconstructed, snapshot_predictions
 
 
 def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collection, data_dir, scores_cache_path, MathEngine, force: bool = False, competition=None) -> dict:
@@ -129,12 +200,13 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
         error = document.get("error") or ("ClubElo ratings cache is unavailable" if status == "unavailable" else None)
         archive = load_archive_from_db(archive_collection, force=True)
         changed_entries = {}
-        reconstructed = _reconstruct_completed_entries(
+        reconstructed, snapshot_predictions = _reconstruct_completed_entries(
             PredictionService(math_engine),
             archive,
             changed_entries,
             MathEngine,
             competition,
+            cache_collection=cache_collection,
         )
         for mid, entry in changed_entries.items():
             upsert_archive_entry(archive_collection, mid, entry)
@@ -144,7 +216,8 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
             "observed_at": observed_at,
             "error": error,
             "provenance": {"source": document.get("source", "clubelo"), "observed_at": observed_at},
-            "updates": reconstructed,
+            "updates": reconstructed + snapshot_predictions,
+            "snapshot_predictions": snapshot_predictions,
             "competition": competition.id,
         }
     prediction_service = PredictionService(math_engine)
@@ -395,7 +468,7 @@ def perform_elo_sync(math_engine, odds_engine, cache_collection, archive_collect
             if ko_backfilled:
                 print(f"KO phase backfilled: {ko_backfilled} matches updated to is_ko_phase=True.")
 
-            reconstructed = _reconstruct_completed_entries(
+            reconstructed, _ = _reconstruct_completed_entries(
                 prediction_service,
                 archive,
                 changed_entries,

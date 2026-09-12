@@ -94,6 +94,7 @@ def run_maintenance(
         fixtures = _fixtures(cache_collection, comp)
         archived_results = 0
         reconstructed_results = 0
+        snapshot_predictions = 0
         if archive_collections is not None:
             archive_collection = collection_for(archive_collections, comp)
             archived_results = _sync_completed_results(
@@ -106,12 +107,13 @@ def run_maintenance(
                     math_engine.elo_df = pd.DataFrame(rows)
                 archive = load_archive_from_db(archive_collection, force=True)
                 changed_entries = {}
-                reconstructed_results = _reconstruct_completed_entries(
+                reconstructed_results, snapshot_predictions = _reconstruct_completed_entries(
                     PredictionService(math_engine),
                     archive,
                     changed_entries,
                     MathEngine,
                     comp,
+                    cache_collection=cache_collection,
                 )
                 for match_id, entry in changed_entries.items():
                     upsert_archive_entry(archive_collection, match_id, entry)
@@ -128,7 +130,7 @@ def run_maintenance(
                 all_due.extend(due)
         discovery_due = _discovery_due(cache_collection, comp, current)
         if not due_by_event and not discovery_due:
-            return {"status": "idle", "provider_calls": 0, "mutated": bool(archived_results or reconstructed_results), "buckets": [], "fixture_status": fixture_status, "clubelo_status": clubelo_status, "archived_results": archived_results, "reconstructed_results": reconstructed_results}
+            return {"status": "idle", "provider_calls": 0, "mutated": bool(archived_results or reconstructed_results or snapshot_predictions), "buckets": [], "fixture_status": fixture_status, "clubelo_status": clubelo_status, "archived_results": archived_results, "reconstructed_results": reconstructed_results, "snapshot_predictions": snapshot_predictions}
 
         try:
             quotes = _bulk_quotes(odds_provider, comp)
@@ -151,6 +153,7 @@ def run_maintenance(
                 "clubelo_status": clubelo_status,
                 "archived_results": archived_results,
                 "reconstructed_results": reconstructed_results,
+                "snapshot_predictions": snapshot_predictions,
             }
 
         lookup = _quote_lookup(quotes)
@@ -194,6 +197,7 @@ def run_maintenance(
             "clubelo_status": clubelo_status,
             "archived_results": archived_results,
             "reconstructed_results": reconstructed_results,
+            "snapshot_predictions": snapshot_predictions,
             "discovery": discovery_due,
         }
     finally:

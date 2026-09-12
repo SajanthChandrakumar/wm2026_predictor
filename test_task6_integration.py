@@ -445,6 +445,79 @@ def test_maintenance_reconstructs_missed_ucl_performance_from_clubelo():
     assert entry["post_match_result"]["bot_points"]
 
 
+def test_maintenance_prefers_saved_pre_match_odds_over_elo_reconstruction():
+    kickoff = datetime(2026, 9, 9, 16, 45, tzinfo=timezone.utc)
+    now = datetime(2026, 9, 9, 20, tzinfo=timezone.utc)
+    cache = MemoryCollection([{
+        "_id": "ucl2026:odds_snapshot:ucl-finished:t15m:2026-09-09T16:30:00+00:00",
+        "competition": "ucl2026",
+        "event_id": "ucl-finished",
+        "bucket": "t15m",
+        "observed_at": "2026-09-09T16:30:00+00:00",
+        "source": "odds_api",
+        "status": "fresh",
+        "odds": {"home": 1.8, "draw": 3.5, "away": 4.5},
+    }])
+
+    class ArchiveCollection(MemoryCollection):
+        def replace_one(self, query, document, upsert=False):
+            self.documents[query["_id"]] = dict(document)
+
+    archive = ArchiveCollection([{
+        "_id": "ucl-finished",
+        "metadata": {
+            "home_team": "Barcelona",
+            "away_team": "Feyenoord Rotterdam",
+            "commence_time": kickoff.isoformat(),
+            "round": "League Phase",
+            "is_ko_phase": False,
+        },
+        "pre_match_snapshot": None,
+        "prediction": {
+            "top_tip": "1:0",
+            "model_tip": "1:0",
+            "source_mode": "elo-only",
+            "algo_reconstructed": True,
+            "bots": {"professor": {"tip": "1:0"}},
+        },
+        "post_match_result": {
+            "status": "completed",
+            "actual_score": "5:1",
+            "algo_points": 5,
+            "bot_points": {"professor": 5},
+        },
+    }])
+
+    result = run_maintenance(
+        {"ucl2026": cache},
+        type("Provider", (), {"get_competition_odds": lambda self, *args, **kwargs: []})(),
+        archive_collections={"ucl2026": archive},
+        competition="ucl2026",
+        now=now,
+        fixture_fetcher=lambda **kwargs: [{
+            "id": "ucl-finished",
+            "home_team": "Barcelona",
+            "away_team": "Feyenoord Rotterdam",
+            "commence_time": kickoff.isoformat(),
+            "round": "League Phase",
+            "completed": True,
+            "actual_score": "5:1",
+        }],
+        clubelo_ingestor=lambda *args, **kwargs: {"status": "fresh", "source": "clubelo", "rows": []},
+        math_engine=MathEngine("data/elo_ratings.csv", TEAM_MAPPING),
+    )
+
+    entry = archive.find_one({"_id": "ucl-finished"})
+    assert result["snapshot_predictions"] == 1
+    assert entry["pre_match_snapshot"]["odds"] == {"home": 1.8, "draw": 3.5, "away": 4.5}
+    assert entry["prediction"]["top_tip"] == "2:1"
+    assert entry["prediction"]["source_mode"] == "odds-only"
+    assert entry["prediction"]["algo_reconstructed"] is False
+    assert entry["prediction"]["tip_source"] == "pre_match_odds_snapshot"
+    assert entry["post_match_result"]["algo_points"] == 6
+    assert entry["post_match_result"]["bot_points"]
+
+
 def test_maintenance_snapshot_is_the_input_for_t15_freeze():
     kickoff = datetime(2026, 9, 10, 18, tzinfo=timezone.utc)
     now = kickoff - timedelta(minutes=15)
