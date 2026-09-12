@@ -8,6 +8,13 @@ import { hasScoreMatrix } from '../src/lib/prediction.mjs'
 import { hasUclSimulationResults } from '../src/lib/simulation.mjs'
 import { withRatingBaselines } from '../src/lib/team-form.mjs'
 
+let officialPerformance
+try {
+  ({ officialPerformance } = await import('../src/lib/performance.mjs'))
+} catch {
+  // The assertion below reports the missing implementation as a failed behavior test.
+}
+
 test('competitionPath URL-encodes the active competition', () => {
   assert.equal(competitionPath('/matches?force=true', 'ucl2026'), '/matches?force=true&competition=ucl2026')
 })
@@ -78,4 +85,40 @@ test('performance counts only actual user tips and refreshes archive data', () =
   assert.match(scoreboard, /tipped: totals\.userCount/)
   assert.match(view, /totals\.correctTendency \/ totals\.userCount/)
   assert.match(refresh, /invalidateQueries\(\{ queryKey: \['archive', competition\] \}\)/)
+})
+
+test('official performance excludes post-match Elo reconstructions', () => {
+  assert.equal(typeof officialPerformance, 'function')
+
+  const result = officialPerformance({
+    tracked: {
+      prediction: { algo_reconstructed: false },
+      post_match_result: {
+        status: 'completed', algo_points: 6,
+        bot_points: { broker: 5, professor: 6 },
+      },
+    },
+    reconstructed: {
+      prediction: { algo_reconstructed: true },
+      post_match_result: {
+        status: 'completed', algo_points: 10,
+        bot_points: { broker: 10, professor: 10 },
+      },
+    },
+    pending: {
+      prediction: { algo_reconstructed: false },
+      post_match_result: { status: 'pending', algo_points: 10 },
+    },
+  }, ['broker', 'professor'])
+
+  assert.deepEqual(result, {
+    algoTotal: 6,
+    algoCount: 1,
+    algoTendency: 1,
+    reconstructedCount: 1,
+    botStats: {
+      broker: { pts: 5, tipped: 1, tendency: 1 },
+      professor: { pts: 6, tipped: 1, tendency: 1 },
+    },
+  })
 })

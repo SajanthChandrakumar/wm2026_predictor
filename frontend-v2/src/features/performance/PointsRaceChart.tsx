@@ -3,6 +3,7 @@ import {
   CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
+import { isOfficialPerformanceEntry } from '../../lib/performance.mjs'
 import { HOUSE_BOTS, type CompletedMatch, type ScoreRow } from './usePerformanceData'
 
 /** Cumulative points per predictor over the played matches (oldest → newest). */
@@ -11,7 +12,9 @@ export function PointsRaceChart({ completed, extraBots }: {
   extraBots: ScoreRow[]
 }) {
   const { rows, series } = useMemo(() => {
-    const chrono = [...completed].sort((a, b) => a.sortDate.localeCompare(b.sortDate))
+    const chrono = completed
+      .filter(({ entry }) => isOfficialPerformanceEntry(entry))
+      .sort((a, b) => a.sortDate.localeCompare(b.sortDate))
     const series = [
       { key: 'Du', color: '#d4af37', dash: '6 3' },
       ...HOUSE_BOTS.map((b) => ({ key: b.label, color: b.color, dash: undefined as string | undefined })),
