@@ -41,6 +41,8 @@ export interface PerformanceTotals {
   algoTendency: number
   algoCount: number
   reconstructedCount: number
+  reconstructedPoints: number
+  reconstructedTendency: number
   hasReconstructed: boolean
 }
 
@@ -53,6 +55,7 @@ export function aggregate(archive: Archive | undefined) {
   const totals: PerformanceTotals = {
     completed: 0, userCount: 0, totalPoints: 0, correctTendency: 0,
     algoTotal: 0, algoTendency: 0, algoCount: 0, reconstructedCount: 0,
+    reconstructedPoints: 0, reconstructedTendency: 0,
     hasReconstructed: false,
   }
   const official = officialPerformance(archive, HOUSE_BOTS.map(({ key }) => key))
@@ -61,6 +64,8 @@ export function aggregate(archive: Archive | undefined) {
   totals.algoCount = official.algoCount
   totals.algoTendency = official.algoTendency
   totals.reconstructedCount = official.reconstructedCount
+  totals.reconstructedPoints = official.reconstructedPoints
+  totals.reconstructedTendency = official.reconstructedTendency
   totals.hasReconstructed = official.reconstructedCount > 0
 
   for (const [id, entry] of Object.entries(archive ?? {})) {

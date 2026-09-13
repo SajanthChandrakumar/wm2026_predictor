@@ -87,7 +87,7 @@ test('performance counts only actual user tips and refreshes archive data', () =
   assert.match(refresh, /invalidateQueries\(\{ queryKey: \['archive', competition\] \}\)/)
 })
 
-test('official performance excludes post-match Elo reconstructions', () => {
+test('performance includes Elo reconstructions and reports their points separately', () => {
   assert.equal(typeof officialPerformance, 'function')
 
   const result = officialPerformance({
@@ -112,13 +112,15 @@ test('official performance excludes post-match Elo reconstructions', () => {
   }, ['broker', 'professor'])
 
   assert.deepEqual(result, {
-    algoTotal: 6,
-    algoCount: 1,
-    algoTendency: 1,
+    algoTotal: 16,
+    algoCount: 2,
+    algoTendency: 2,
     reconstructedCount: 1,
+    reconstructedPoints: 10,
+    reconstructedTendency: 1,
     botStats: {
-      broker: { pts: 5, tipped: 1, tendency: 1 },
-      professor: { pts: 6, tipped: 1, tendency: 1 },
+      broker: { pts: 15, tipped: 2, tendency: 2 },
+      professor: { pts: 16, tipped: 2, tendency: 2 },
     },
   })
 })

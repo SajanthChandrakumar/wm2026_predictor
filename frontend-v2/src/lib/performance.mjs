@@ -1,6 +1,5 @@
 export function isOfficialPerformanceEntry(entry) {
   return entry?.post_match_result?.status === 'completed'
-    && entry?.prediction?.algo_reconstructed !== true
 }
 
 export function officialPerformance(archive, botKeys) {
@@ -12,6 +11,8 @@ export function officialPerformance(archive, botKeys) {
     algoCount: 0,
     algoTendency: 0,
     reconstructedCount: 0,
+    reconstructedPoints: 0,
+    reconstructedTendency: 0,
     botStats,
   }
 
@@ -19,7 +20,6 @@ export function officialPerformance(archive, botKeys) {
     if (entry?.post_match_result?.status !== 'completed') continue
     if (entry?.prediction?.algo_reconstructed === true) {
       result.reconstructedCount++
-      continue
     }
 
     const algoPoints = entry.post_match_result.algo_points
@@ -27,6 +27,10 @@ export function officialPerformance(archive, botKeys) {
       result.algoTotal += algoPoints
       result.algoCount++
       if (algoPoints >= 5) result.algoTendency++
+      if (entry?.prediction?.algo_reconstructed === true) {
+        result.reconstructedPoints += algoPoints
+        if (algoPoints >= 5) result.reconstructedTendency++
+      }
     }
 
     const botPoints = entry.post_match_result.bot_points ?? {}

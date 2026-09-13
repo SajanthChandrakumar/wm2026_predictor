@@ -90,8 +90,10 @@ export function PerformanceView() {
           </div>
           {totals.reconstructedCount > 0 && (
             <p className="mt-4 rounded-xl border border-line bg-surface px-3 py-2 text-xs leading-relaxed text-fg-3">
-              Gewertet werden nur die {totals.algoCount} vor Anpfiff gespeicherten Algo-Tipps.
-              {' '}{totals.reconstructedCount} spätere Elo-Rekonstruktionen bleiben im Verlauf sichtbar, zählen aber nicht zum Vergleich.
+              {totals.algoCount} Spiele gewertet: {totals.algoCount - totals.reconstructedCount} Vorab-Tipps
+              {' '}({totals.algoTotal - totals.reconstructedPoints} Pts) + {totals.reconstructedCount} Elo-Rekonstruktionen
+              {' '}({totals.reconstructedPoints} Pts · {totals.reconstructedTendency}/{totals.reconstructedCount} Tendenzen).
+              {' '}Rekonstruktionen sind Näherungen ohne historische Buchmacherquoten.
             </p>
           )}
         </GlassCard>

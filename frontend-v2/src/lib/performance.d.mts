@@ -13,5 +13,7 @@ export declare function officialPerformance(archive: Archive | undefined, botKey
   algoCount: number
   algoTendency: number
   reconstructedCount: number
+  reconstructedPoints: number
+  reconstructedTendency: number
   botStats: Record<BotKey, PerformanceBotStat>
 }
