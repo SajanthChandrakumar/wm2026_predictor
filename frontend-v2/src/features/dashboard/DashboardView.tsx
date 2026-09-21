@@ -46,7 +46,9 @@ export function DashboardView() {
 
   return (
     <PageTransition>
-      <PageHeader title="Tournament Fixtures" subtitle="Klick auf ein Spiel für die volle Prediction-Analyse" />
+      <div className="text-center">
+        <PageHeader title="Kommende Spiele" subtitle="Wähle ein Spiel für die vollständige Analyse" kicker="UCL 2026/27" />
+      </div>
 
       {/* Tab switcher — keeps past results out of the way */}
       <div className="mb-6 flex gap-1.5">
@@ -58,9 +60,9 @@ export function DashboardView() {
             key={key}
             onClick={() => setTab(key)}
             className={cn(
-              'rounded-xl border px-4 py-2 text-sm font-bold transition',
+              'min-h-11 rounded-xl border px-4 py-2 text-sm font-bold transition',
               tab === key
-                ? 'border-emerald-a/50 bg-emerald-dim text-emerald-a shadow-[0_0_16px_-6px_var(--emerald)]'
+                ? 'border-emerald-a/50 bg-emerald-dim text-emerald-a'
                 : 'border-line bg-surface text-fg-2 hover:bg-surface-2',
             )}
           >
