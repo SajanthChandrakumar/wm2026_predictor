@@ -101,6 +101,7 @@ export function FixtureRow({ match, trailing }: { match: Match; trailing?: React
           <span className="mt-2 block text-base leading-snug text-fg">{favoriteStatement(match, details)}</span>
           <span className="mt-1 block text-xs font-semibold text-fg-3">{details.source}</span>
         </span>
+        {trailing && <span data-mobile-trailing className="mt-3 flex justify-end sm:hidden">{trailing}</span>}
       </span>
 
       <span className="hidden sm:block">

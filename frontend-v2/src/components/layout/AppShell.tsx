@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useRefreshData } from '../../hooks/queries'
 import { useAppState } from '../../state/AppState'
@@ -18,7 +18,11 @@ const MORE_NAV = [
   { to: '/simulator', label: 'K.-o.-Simulator' },
 ] as const
 
-function MobileMoreMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
+function MobileMoreMenu({ open, onClose, menuRef }: {
+  open: boolean
+  onClose: () => void
+  menuRef: RefObject<HTMLDivElement | null>
+}) {
   const { competition, setCompetition, competitions, light, toggleTheme } = useAppState()
   const refresh = useRefreshData()
   if (!open) return null
@@ -30,8 +34,13 @@ function MobileMoreMenu({ open, onClose }: { open: boolean; onClose: () => void 
 
   return (
     <div
+      id="mobile-more-menu"
+      ref={menuRef}
+      role="dialog"
+      aria-modal="true"
       className="fixed inset-x-3 bottom-[4.75rem] z-40 max-h-[calc(100vh-8rem)] overflow-y-auto rounded-2xl border border-line bg-surface p-4 shadow-2xl lg:hidden"
       aria-label="Weitere Ansichten und Einstellungen"
+      tabIndex={-1}
     >
       <nav aria-label="Weitere Ansichten" className="grid gap-1">
         {MORE_NAV.map(({ to, label }) => (
@@ -83,29 +92,26 @@ function MobileMoreMenu({ open, onClose }: { open: boolean; onClose: () => void 
   )
 }
 
-function MobileTopBar({ onMore }: { onMore: () => void }) {
+function MobileTopBar() {
   const { competition } = useAppState()
   return (
-    <header className="flex min-h-14 items-center justify-between border-b border-line bg-surface px-4 lg:hidden">
+    <header className="flex min-h-14 items-center border-b border-line bg-surface px-4 lg:hidden">
       <div className="flex min-w-0 items-center gap-2.5">
         <span className="rounded-lg bg-emerald-a px-2 py-1 text-xs font-black text-white">
           {competition === 'ucl2026' ? 'UCL' : 'WM'}
         </span>
         <span className="truncate font-display text-lg font-extrabold text-fg">2026 Predictor</span>
       </div>
-      <button
-        type="button"
-        onClick={onMore}
-        className="min-h-11 rounded-xl px-3 text-sm font-bold text-fg-2 hover:bg-surface-2 hover:text-fg"
-        aria-label="Mehr öffnen"
-      >
-        Mehr
-      </button>
     </header>
   )
 }
 
-function MobileBottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean }) {
+function MobileBottomNav({ onMore, moreOpen, moreButtonRef, onNavigate }: {
+  onMore: () => void
+  moreOpen: boolean
+  moreButtonRef: RefObject<HTMLButtonElement | null>
+  onNavigate: () => void
+}) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-3 border-t border-line bg-surface p-2 shadow-[0_-8px_24px_-20px_rgba(15,23,42,0.8)] lg:hidden" aria-label="Hauptnavigation">
       {PRIMARY_NAV.map(({ to, label, icon }) => (
@@ -113,6 +119,7 @@ function MobileBottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: b
           key={to}
           to={to}
           end={to === '/'}
+          onClick={onNavigate}
           className={({ isActive }) => cn(
             'flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-bold transition',
             isActive ? 'bg-emerald-dim text-emerald-a' : 'text-fg-3 hover:bg-surface-2 hover:text-fg',
@@ -125,6 +132,8 @@ function MobileBottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: b
       <button
         type="button"
         onClick={onMore}
+        ref={moreButtonRef}
+        aria-controls="mobile-more-menu"
         aria-expanded={moreOpen}
         className={cn(
           'flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-bold transition',
@@ -140,21 +149,37 @@ function MobileBottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: b
 
 export function AppShell() {
   const [moreOpen, setMoreOpen] = useState(false)
+  const moreButtonRef = useRef<HTMLButtonElement>(null)
+  const moreMenuRef = useRef<HTMLDivElement>(null)
   const toggleMore = () => setMoreOpen((open) => !open)
+  const closeMore = () => setMoreOpen(false)
+
+  useEffect(() => {
+    if (!moreOpen) return
+    moreMenuRef.current?.focus()
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setMoreOpen(false)
+      requestAnimationFrame(() => moreButtonRef.current?.focus())
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [moreOpen])
 
   return (
     <div className="min-h-screen bg-bg lg:flex">
       <Sidebar />
       <div className="min-w-0 flex-1">
-        <MobileTopBar onMore={toggleMore} />
+        <MobileTopBar />
         <main className="min-w-0 flex-1 px-4 pb-24 pt-5 sm:p-6 sm:pb-24 lg:p-8">
           <div className="mx-auto max-w-6xl">
             <Outlet />
           </div>
         </main>
       </div>
-      <MobileMoreMenu open={moreOpen} onClose={() => setMoreOpen(false)} />
-      <MobileBottomNav onMore={toggleMore} moreOpen={moreOpen} />
+      <MobileMoreMenu open={moreOpen} onClose={closeMore} menuRef={moreMenuRef} />
+      <MobileBottomNav onMore={toggleMore} moreOpen={moreOpen} moreButtonRef={moreButtonRef} onNavigate={closeMore} />
     </div>
   )
 }
