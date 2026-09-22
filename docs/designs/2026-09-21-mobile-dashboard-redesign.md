@@ -52,4 +52,3 @@ This pass changes the shared visual tokens, responsive application shell, mobile
 - The UI uses the approved cobalt/navy/orange/neutral palette in light and dark modes.
 - Reduced-motion behavior remains intact.
 - `node --test tests/*.test.mjs`, `npm run typecheck`, `npm run build`, and `npm run lint` pass in `frontend-v2`.
-

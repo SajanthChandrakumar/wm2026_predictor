@@ -118,4 +118,3 @@ git commit -m "feat(ui): add mobile-first match dashboard"
 ```
 
 Before committing, omit unchanged optional files from `git add`. Confirm the two dirty Elo files are unstaged.
-
