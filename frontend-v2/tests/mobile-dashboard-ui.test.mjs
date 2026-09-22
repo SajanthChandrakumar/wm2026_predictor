@@ -47,6 +47,7 @@ test('dashboard and detail share the automatic hint component', () => {
   assert.match(card, /<details/)
   assert.match(card, /Warum\?/)
   assert.match(card, /min-h-11/)
+  assert.doesNotMatch(card, /text-(?:xs|sm)/)
   assert.match(dashboard, /<MatchHintCard match=\{match\}/)
   assert.match(detail, /<MatchHintCard match=\{match\}/)
 })

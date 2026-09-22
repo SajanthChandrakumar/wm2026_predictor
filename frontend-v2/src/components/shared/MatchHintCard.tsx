@@ -15,22 +15,22 @@ export function MatchHintCard({ match }: { match: Match }) {
   return (
     <div>
       {hint.available && (
-        <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-bold', badgeStyle)}>
+        <span className={cn('inline-flex rounded-full px-2.5 py-1 text-base font-bold', badgeStyle)}>
           Sicherheit: {hint.confidenceLabel}
         </span>
       )}
       <p className={cn('text-base font-semibold leading-snug text-fg', hint.available && 'mt-2')}>
         {hint.summary}
       </p>
-      <p className="mt-1 text-xs font-semibold text-fg-3">{hint.sourceLabel}</p>
+      <p className="mt-1 text-base font-semibold text-fg-3">{hint.sourceLabel}</p>
 
       {hint.reasons.length > 0 && (
         <details className="group/hint mt-2 border-t border-line pt-1">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-bold text-blue-a focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-a/50">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-base font-bold text-blue-a focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-a/50">
             Warum?
             <span aria-hidden="true" className="text-lg transition-transform group-open/hint:rotate-90">›</span>
           </summary>
-          <ul className="space-y-2 pb-1 text-sm leading-relaxed text-fg-2">
+          <ul className="space-y-2 pb-1 text-base leading-relaxed text-fg-2">
             {hint.reasons.map((reason) => <li key={reason}>• {reason}</li>)}
           </ul>
         </details>
