@@ -32,13 +32,23 @@ test('mobile Mehr menu has dialog, focus, Escape, and close contracts', () => {
 test('dashboard uses plain-language mobile prediction cards', () => {
   const row = read('src/features/dashboard/FixtureRow.tsx')
   assert.match(row, /Unser Tipp/)
-  assert.match(row, /Buchmacherquote/)
-  assert.match(row, /Elo-Modellquote · nicht wettbar/)
-  assert.match(row, /Nicht verfügbar/)
-  assert.match(row, /Keine Quote oder Modellwahrscheinlichkeit verfügbar\./)
   assert.match(row, /min-h-\[48px\]/)
   assert.match(row, /data-mobile-trailing/)
   assert.match(row, /\{trailing\}/)
+})
+
+test('dashboard and detail share the automatic hint component', () => {
+  const card = read('src/components/shared/MatchHintCard.tsx')
+  const dashboard = read('src/features/dashboard/FixtureRow.tsx')
+  const detail = read('src/features/detail/DetailView.tsx')
+
+  assert.match(card, /buildMatchHint/)
+  assert.match(card, /Sicherheit/)
+  assert.match(card, /<details/)
+  assert.match(card, /Warum\?/)
+  assert.match(card, /min-h-11/)
+  assert.match(dashboard, /<MatchHintCard match=\{match\}/)
+  assert.match(detail, /<MatchHintCard match=\{match\}/)
 })
 
 test('global styling uses the approved palette and removes the blueprint grid', () => {

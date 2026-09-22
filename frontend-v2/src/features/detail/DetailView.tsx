@@ -5,6 +5,7 @@ import { computeImpliedProbs, pct, flag, cn } from '../../lib/util'
 import type { BotKey, Match } from '../../lib/types'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
 import { FormBadges, TeamLogo } from '../../components/shared/Badges'
+import { MatchHintCard } from '../../components/shared/MatchHintCard'
 import { PageTransition } from '../../components/shared/PageTransition'
 import { ScoreHeatmap } from './ScoreHeatmap'
 
@@ -154,6 +155,11 @@ export function DetailView() {
           ))}
         </GlassCard>
       )}
+
+      <GlassCard className="mb-4">
+        <SectionTitle className="mb-3">Unser Tipp – einfach erklärt</SectionTitle>
+        <MatchHintCard match={match} />
+      </GlassCard>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* xG + Form */}
