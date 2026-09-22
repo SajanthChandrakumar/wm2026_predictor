@@ -285,8 +285,10 @@ Create `MatchHintCard.tsx` as a small presentational component:
 Modify `FixtureRow.tsx`:
 
 - Remove `PredictionDetails`, `predictionDetails`, `favoriteStatement`, and the now-unused probability imports.
+- Change the outer `motion.button` to a non-interactive `motion.div`, and put the existing fixture navigation content in its own full-width button.
 - Keep the existing `Unser Tipp`, top-tip badge, played score, and mobile container.
-- Replace only the old favorite sentence/source spans with `<MatchHintCard match={match} />`.
+- Render `<MatchHintCard match={match} />` outside the navigation button so the native `details` disclosure is valid HTML and can be opened without navigating away.
+- Preserve the existing desktop row, keyboard navigation, 48 px touch targets, and mobile trailing content.
 
 Modify `DetailView.tsx`:
 
