@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 import json
 import logging
 from datetime import datetime, timezone
@@ -8,6 +7,7 @@ from datetime import datetime, timezone
 import pandas as pd
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pymongo import MongoClient
 import certifi
@@ -86,6 +86,10 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
+# Compress JSON payloads and static assets (the matches/archive responses
+# are several hundred KB uncompressed).
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
 def _real_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
@@ -107,7 +111,13 @@ async def add_security_headers(request: Request, call_next):
     # unchanged). Without this, unversioned ES-module sub-imports get cached
     # indefinitely and code changes silently fail to reach the browser.
     path = request.url.path
-    if path == "/" or path.endswith((".js", ".css", ".html")):
+    if path.startswith("/assets/"):
+        # Vite emits content-hashed filenames under /assets/ — safe to cache
+        # forever; a new build changes the hash and busts the cache.
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif path == "/" or path.endswith((".js", ".css", ".html")):
+        # Everything unhashed (index.html, legacy frontend) must revalidate
+        # every load (ETag → 304), or code changes silently fail to arrive.
         response.headers["Cache-Control"] = "no-cache"
     return response
 
@@ -177,6 +187,24 @@ def get_competitions():
 def get_quota(competition: str | None = None):
     require_competition(competition)
     return {"odds": read_quota("odds"), "football": read_quota("football")}
+
+
+@app.get("/api/bonus_questions")
+def bonus_questions():
+    """SRF Tippspiel bonus questions, graded against the real tournament outcome."""
+    actual_results = {
+        "champion": "Spanien",
+        "draws_00": 8,
+        "top_scorer_goals": 10,
+        "switzerland_goals": 10,
+        "switzerland_round": "Viertelfinal",
+    }
+    try:
+        math_engine.reload_elo_data()
+        return math_engine.compute_bonus_predictions(actual_results)
+    except Exception as e:
+        logger.error(f"Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred processing your request")
 
 
 @app.post("/api/archive/user_tip")
@@ -515,8 +543,6 @@ def sync_elo(request: Request, force: bool = False, competition: str | None = No
         logger.error(f"Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An error occurred processing your request")
 
-# v2 (React/Vite build) is the live frontend; legacy frontend/ stays in the
-# repo as fallback — flip the path back to '..', 'frontend' to roll back.
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend-v2', 'dist'))
 os.makedirs(frontend_dir, exist_ok=True)
 app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")

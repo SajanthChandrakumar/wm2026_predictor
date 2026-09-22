@@ -6,6 +6,7 @@ import type { BotKey, Match } from '../../lib/types'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
 import { FormBadges, TeamLogo } from '../../components/shared/Badges'
 import { PageTransition } from '../../components/shared/PageTransition'
+import { ChartSkeleton, CardGridSkeleton } from '../../components/shared/Skeleton'
 import { ScoreHeatmap } from './ScoreHeatmap'
 
 const BOT_META: Record<BotKey, { label: string; color: string }> = {
@@ -62,7 +63,16 @@ export function DetailView() {
     })
   }, [pool.data])
 
-  if (!matches) return <p className="text-fg-2">Lade…</p>
+  if (!matches) {
+    return (
+      <PageTransition>
+        <div className="space-y-4">
+          <ChartSkeleton />
+          <CardGridSkeleton count={2} />
+        </div>
+      </PageTransition>
+    )
+  }
   if (!match) return <p className="text-red-a">Match nicht gefunden.</p>
 
   const calc = predict.data

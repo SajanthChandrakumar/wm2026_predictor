@@ -5,6 +5,7 @@ import type { Match } from '../../lib/types'
 import { dayHeading, dayKey } from '../../lib/format'
 import { cn } from '../../lib/util'
 import { PageTransition, PageHeader } from '../../components/shared/PageTransition'
+import { FixtureListSkeleton } from '../../components/shared/Skeleton'
 import { FixtureRow } from './FixtureRow'
 
 type Tab = 'upcoming' | 'played'
@@ -69,7 +70,7 @@ export function DashboardView() {
         ))}
       </div>
 
-      {isLoading && <p className="text-fg-2">Lade Spiele…</p>}
+      {isLoading && <FixtureListSkeleton days={2} rowsPerDay={4} />}
       {error && <p className="text-red-a">Fehler: {(error as Error).message}</p>}
       {!isLoading && days.length === 0 && <p className="text-fg-2">Keine Spiele in dieser Kategorie.</p>}
 

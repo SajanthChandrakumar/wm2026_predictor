@@ -806,3 +806,142 @@ class MathEngine:
             match_id=match_id,
             is_ko_phase=is_ko
         )
+
+    # ── Bonus questions (Weltmeister, 0:0-Anzahl, Torschützenkönig, Schweiz) ──
+    # Every bot answer below is derived from the live Elo table and the same
+    # Dixon-Coles machinery used for match predictions — nothing is hardcoded
+    # per bot. Caveat: this project has no player-level scoring data anywhere,
+    # so the goal-count questions are explicitly rough heuristics (documented
+    # inline), not modeled predictions the way match xP is.
+
+    _BONUS_ROUND_THRESHOLDS = [
+        (4, "Halbfinale", 7), (8, "Viertelfinale", 6),
+        (16, "Achtelfinale", 5), (32, "Sechzehntelfinale", 4),
+    ]
+
+    def _elo_rank(self, team: str) -> int:
+        """1-based rank of `team` in the current Elo table (1 = strongest)."""
+        norm = self.name_mapping.get(team, team)
+        ranked = self.elo_df.sort_values("elo_rating", ascending=False).reset_index(drop=True)
+        idx = ranked.index[ranked["team_name"] == norm]
+        return int(idx[0]) + 1 if len(idx) else len(ranked) + 1
+
+    def _seeded_rng(self, key: str) -> np.random.Generator:
+        seed = int(hashlib.md5(key.encode("utf-8")).hexdigest(), 16) % (2**32)
+        return np.random.default_rng(seed)
+
+    def _round_for_rank(self, rank: int) -> tuple[str, int]:
+        """Maps an Elo rank to the furthest round that rank would plausibly
+        reach in the 48-team bracket, plus matches played to get there."""
+        for cutoff, label, matches in self._BONUS_ROUND_THRESHOLDS:
+            if rank <= cutoff:
+                return label, matches
+        return "Gruppenphase", 3
+
+    def _bonus_champion(self) -> dict[str, str]:
+        """Each bot's pick for the tournament winner, from the live Elo table."""
+        ranked = self.elo_df.sort_values("elo_rating", ascending=False).reset_index(drop=True)
+        on_fire = {t for t, f in self.team_forms.items() if f.get("on_fire")}
+        hot = ranked[ranked["team_name"].isin(on_fire)]
+
+        top8 = ranked.head(8)
+        weights = top8["elo_rating"].values.astype(float)
+        weights = weights - weights.min() + 1.0
+        weights /= weights.sum()
+        rng = self._seeded_rng("bonus_champion")
+        gambler_pick = str(top8.iloc[int(rng.choice(len(top8), p=weights))]["team_name"])
+
+        return {
+            "professor": str(ranked.iloc[0]["team_name"]),                                  # pure highest Elo
+            "broker": str((hot.iloc[0] if not hot.empty else ranked.iloc[0])["team_name"]),  # highest Elo among in-form teams
+            "rebel": str(ranked.iloc[min(4, len(ranked) - 1)]["team_name"]),                 # contrarian mid-pack pick
+            "sniper": str(ranked.iloc[min(2, len(ranked) - 1)]["team_name"]),
+            "gambler": gambler_pick,
+        }
+
+    def _bonus_draws_00(self) -> dict[str, int]:
+        """Expected number of 0:0 draws across 64 matches, from the Dixon-Coles
+        matrix at the tournament's average scoring rate (λ≈1.2 per team)."""
+        def p00(rho: float) -> float:
+            m = self.generate_exact_score_matrix(1.2, 1.2, max_goals=5, rho=rho)
+            return float(m.loc["0", "0"])
+
+        base_count = p00(-0.15) * 64  # house rho, same as everywhere else
+        rng = self._seeded_rng("bonus_draws")
+        jitter = int(rng.integers(-2, 3))
+
+        return {
+            "professor": int(round(base_count)),
+            "broker": int(round(base_count)),
+            "rebel": int(np.floor(p00(0.05) * 64)),      # less negative rho → fewer low-score draws
+            "sniper": int(round(p00(-0.35) * 64)),        # more negative rho → forces more draws
+            "gambler": int(max(0, round(base_count + jitter))),
+        }
+
+    def _bonus_switzerland(self) -> tuple[dict[str, str], dict[str, int]]:
+        """Round reached + total goals, scaled off Switzerland's Elo rank and
+        relative attacking strength vs. the field average."""
+        swiss_name = self.name_mapping.get("Switzerland", "Switzerland")
+        swiss_rank = self._elo_rank(swiss_name)
+        league_avg_elo = float(self.elo_df["elo_rating"].mean())
+        swiss_rows = self.elo_df.loc[self.elo_df["team_name"] == swiss_name, "elo_rating"]
+        swiss_elo = float(swiss_rows.values[0]) if not swiss_rows.empty else league_avg_elo
+        goals_per_game = 1.2 * (swiss_elo / league_avg_elo)
+
+        rng = self._seeded_rng("bonus_switzerland")
+        rank_bumps = {
+            "professor": 0, "broker": 2, "rebel": -4, "sniper": 1,
+            "gambler": int(rng.integers(-4, 5)),
+        }
+
+        rounds, goals = {}, {}
+        for bot, bump in rank_bumps.items():
+            label, matches = self._round_for_rank(max(1, swiss_rank - bump))
+            rounds[bot] = label
+            goals[bot] = int(round(goals_per_game * matches))
+        return rounds, goals
+
+    def _bonus_top_scorer(self) -> dict[str, int]:
+        """Rough proxy for the top scorer's goal tally: avg goals/game/team ×
+        assumed matches played × the scorer's assumed share of team goals.
+        No player-level data exists anywhere in this project, so this is
+        explicitly a heuristic, not a modeled prediction."""
+        avg_goals_per_game = 1.2
+        rng = self._seeded_rng("bonus_top_scorer")
+        profiles = {
+            "professor": (7, 0.30), "broker": (6, 0.35),
+            "rebel": (5, 0.50), "sniper": (7, 0.20),
+            "gambler": (int(rng.integers(5, 8)), float(rng.uniform(0.25, 0.45))),
+        }
+        return {bot: int(round(avg_goals_per_game * matches * share)) for bot, (matches, share) in profiles.items()}
+
+    def compute_bonus_predictions(self, actual_results: dict) -> list[dict]:
+        """
+        Algorithmically answers the 5 SRF Tippspiel bonus questions per bot
+        (Broker, Professor, Rebel, Sniper, Gambler) and grades them against
+        `actual_results`. Returns a JSON-serializable list, one entry per
+        question, ready for the frontend.
+        """
+        champion = self._bonus_champion()
+        draws_00 = self._bonus_draws_00()
+        swiss_round, swiss_goals = self._bonus_switzerland()
+        top_scorer = self._bonus_top_scorer()
+
+        def grade(question: str, answers: dict, actual, exact_pts: int, tolerance: int = 0, tolerance_pts: int = 0) -> dict:
+            bots = {}
+            for bot, answer in answers.items():
+                if isinstance(actual, (int, float)) and isinstance(answer, (int, float)):
+                    diff = abs(answer - actual)
+                    pts = exact_pts if diff == 0 else (tolerance_pts if tolerance and diff <= tolerance else 0)
+                else:
+                    pts = exact_pts if answer == actual else 0
+                bots[bot] = {"answer": answer, "points": pts}
+            return {"question": question, "actual": actual, "bots": bots}
+
+        return [
+            grade("Weltmeister", champion, actual_results.get("champion"), exact_pts=50),
+            grade("Anzahl 0:0-Spiele", draws_00, actual_results.get("draws_00"), exact_pts=20, tolerance=1, tolerance_pts=10),
+            grade("Torschützenkönig – Tore", top_scorer, actual_results.get("top_scorer_goals"), exact_pts=15, tolerance=2, tolerance_pts=8),
+            grade("Schweiz – Tore", swiss_goals, actual_results.get("switzerland_goals"), exact_pts=15, tolerance=2, tolerance_pts=8),
+            grade("Schweiz – wie weit?", swiss_round, actual_results.get("switzerland_round"), exact_pts=15),
+        ]

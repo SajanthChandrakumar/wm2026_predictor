@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useMatches } from '../../hooks/queries'
+import { cn } from '../../lib/util'
 import { PageTransition, PageHeader } from '../../components/shared/PageTransition'
+import { FixtureListSkeleton } from '../../components/shared/Skeleton'
 import { RankBadge } from '../../components/shared/Badges'
 import { FixtureRow } from '../dashboard/FixtureRow'
 
@@ -16,9 +18,12 @@ export function ValueBetsView() {
   return (
     <PageTransition>
       <PageHeader title="Top Value Bets" subtitle="Spiele mit den höchsten erwarteten Punkten (xP)" />
-      {isLoading && <p className="text-fg-2">Lade…</p>}
+      {isLoading && <FixtureListSkeleton days={1} rowsPerDay={6} />}
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="glass overflow-hidden !p-0">
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}
+        className={cn('glass overflow-hidden !p-0', isLoading && 'hidden')}
+      >
         {ranked.map((m, i) => (
           <div key={m.id} className="flex items-center gap-3 border-b border-line pl-4 last:border-b-0">
             <RankBadge rank={i + 1} />

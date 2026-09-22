@@ -7,4 +7,17 @@ export default defineConfig({
   server: {
     proxy: { '/api': 'http://localhost:8000' },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Stable vendor chunks: app-code changes don't bust the cached
+        // framework/chart bundles (served immutable under /assets/).
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+          charts: ['recharts'],
+          motion: ['framer-motion'],
+        },
+      },
+    },
+  },
 })

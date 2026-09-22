@@ -3,6 +3,7 @@ import { useAppState } from '../../state/AppState'
 import { flag, cn } from '../../lib/util'
 import { GlassCard, SectionTitle } from '../../components/shared/GlassCard'
 import { PageTransition, PageHeader } from '../../components/shared/PageTransition'
+import { ChartSkeleton, CardGridSkeleton } from '../../components/shared/Skeleton'
 import { useTeamFormData } from './useTeamFormData'
 import { EloChart } from './EloChart'
 
@@ -25,9 +26,14 @@ export function TeamFormView() {
   return (
     <PageTransition>
       <PageHeader title="Team Form" subtitle="Elo Power Rankings & Verlauf — bis zu 4 Teams vergleichen" />
-      {isLoading && <p className="text-fg-2">Lade…</p>}
+      {isLoading && (
+        <div className="space-y-4">
+          <ChartSkeleton />
+          <CardGridSkeleton count={1} cols="grid-cols-1" />
+        </div>
+      )}
 
-      <div className="space-y-4">
+      <div className={cn('space-y-4', isLoading && 'hidden')}>
         {/* Chart + picker */}
         <GlassCard>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
