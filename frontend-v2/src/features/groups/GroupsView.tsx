@@ -1,8 +1,12 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { useArchive } from '../../hooks/queries'
+import { useArchive, useStandings } from '../../hooks/queries'
+import { useAppState } from '../../state/AppState'
 import { flag, cn } from '../../lib/util'
 import { GlassCard } from '../../components/shared/GlassCard'
+import { TeamLogo } from '../../components/shared/Badges'
+import type { StandingsRow } from '../../lib/types'
+import { validUclStandingsRows } from '../../lib/standings.mjs'
 import { PageTransition, PageHeader, staggerContainer, staggerItem } from '../../components/shared/PageTransition'
 import { CardGridSkeleton } from '../../components/shared/Skeleton'
 
@@ -42,6 +46,8 @@ interface Row {
 
 export function GroupsView() {
   const { data: archive, isLoading } = useArchive()
+  const { data: standingsData, isLoading: standingsLoading } = useStandings()
+  const { competition } = useAppState()
 
   const standings = useMemo(() => {
     const rows = new Map<string, Row>()
@@ -78,6 +84,12 @@ export function GroupsView() {
         if (gdb !== gda) return gdb - gda
         return b.gf - a.gf
       })
+
+  if (competition === 'ucl2026') {
+    const officialRows = standingsData?.flatMap((group) => group.rows ?? []) ?? []
+    const rows = validUclStandingsRows(officialRows)
+    return <UclStandings rows={rows ?? []} valid={Boolean(rows)} isLoading={standingsLoading} />
+  }
 
   return (
     <PageTransition>
@@ -134,6 +146,39 @@ export function GroupsView() {
           </motion.div>
         ))}
       </motion.div>
+    </PageTransition>
+  )
+}
+
+function UclStandings({ rows, valid, isLoading }: { rows: StandingsRow[]; valid: boolean; isLoading: boolean }) {
+  const sorted = [...rows].sort((a, b) => (a.pos ?? 999) - (b.pos ?? 999))
+  return (
+    <PageTransition>
+      <PageHeader title="UCL League Table" subtitle="36-team league phase — official standings when available" />
+      {isLoading && <p className="text-fg-2">Loading league table…</p>}
+      {!isLoading && !valid && <p className="text-fg-2">League table unavailable — expected exactly 36 unique ranked teams.</p>}
+      {valid && <GlassCard className="!p-0 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-[10px] font-bold uppercase tracking-wider text-fg-3">
+              <th className="px-5 py-2">#</th><th className="px-2 py-2">Team</th><th className="px-2 py-2 text-right">P</th><th className="px-2 py-2 text-right">S</th><th className="px-2 py-2 text-right">U</th><th className="px-2 py-2 text-right">N</th><th className="px-2 py-2 text-right">TD</th><th className="px-5 py-2 text-right">Pkt</th>
+            </tr></thead>
+            <tbody>{sorted.map((row, index) => {
+              const pos = row.pos ?? index + 1
+              return <tr key={row.team} className={cn('border-t border-line', pos <= 8 && 'bg-emerald-dim/40', pos > 24 && 'opacity-60')}>
+                <td className="px-5 py-2 tabular-nums text-fg-3">{pos}</td>
+                <td className="px-2 py-2 font-semibold text-fg"><TeamLogo name={row.team} src={row.logo} /> <span className="ml-1">{row.team}</span></td>
+                <td className="px-2 py-2 text-right tabular-nums text-fg-2">{row.p ?? '–'}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-fg-2">{row.w ?? '–'}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-fg-2">{row.d ?? '–'}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-fg-2">{row.l ?? '–'}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-fg-2">{row.gd ?? '–'}</td>
+                <td className="display-num px-5 py-2 text-right text-fg">{row.pts ?? '–'}</td>
+              </tr>
+            })}</tbody>
+          </table>
+        </div>
+      </GlassCard>}
     </PageTransition>
   )
 }

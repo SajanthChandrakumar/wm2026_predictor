@@ -14,6 +14,8 @@ import requests
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
+from src.competitions import get_competition
+
 try:
     from src.quota_store import write_quota
 except ImportError:
@@ -25,6 +27,7 @@ load_dotenv()
 class OddsApiEngine:
     BASE_URL = "https://v3.football.api-sports.io"
     WC_LEAGUE_ID = 1
+    UCL_LEAGUE_ID = int(os.getenv("ODDS_API_FOOTBALL_UCL_LEAGUE_ID", "2"))
     SEASON = 2026
 
     def __init__(self):
@@ -55,7 +58,20 @@ class OddsApiEngine:
 
     # ── Public API (matches src.odds_engine.OddsApiEngine signatures) ────────
 
-    def get_world_cup_odds(self, market: str = "h2h") -> list[dict]:
+    def get_competition_odds(self, competition=None, market: str = "h2h,totals") -> list[dict]:
+        comp = get_competition(competition)
+        if comp.id == "wc2026":
+            return self.get_world_cup_odds(market=market, sport_key=comp.odds_api_sport_key)
+        old_league, old_season = self.WC_LEAGUE_ID, self.SEASON
+        self.WC_LEAGUE_ID = self.UCL_LEAGUE_ID
+        try:
+            return self.get_world_cup_odds(market=market, sport_key=comp.odds_api_sport_key)
+        finally:
+            self.WC_LEAGUE_ID, self.SEASON = old_league, old_season
+
+    get_odds = get_competition_odds
+
+    def get_world_cup_odds(self, market: str = "h2h", sport_key: str = "soccer_fifa_world_cup") -> list[dict]:
         """
         Two requests: /fixtures (for team names + kickoff time) and /odds (for
         bookmaker quotes). Merged + normalized into the legacy Odds-API shape:
@@ -83,7 +99,7 @@ class OddsApiEngine:
             fixture = fixtures_by_id.get(fid)
             if not fixture:
                 continue
-            normalized = self._normalize_odds_entry(fixture, odd)
+            normalized = self._normalize_odds_entry(fixture, odd, sport_key=sport_key)
             if normalized:
                 # Attach team IDs so we can use them for H2H later
                 normalized["home_team_id"] = fixture.get("teams", {}).get("home", {}).get("id")
@@ -285,7 +301,7 @@ class OddsApiEngine:
     # ── Internal normalizers ─────────────────────────────────────────────────
 
     @staticmethod
-    def _normalize_odds_entry(fixture: dict, odd: dict) -> dict | None:
+    def _normalize_odds_entry(fixture: dict, odd: dict, sport_key: str = "soccer_fifa_world_cup") -> dict | None:
         teams = fixture.get("teams") or {}
         home = (teams.get("home") or {}).get("name")
         away = (teams.get("away") or {}).get("name")
@@ -337,7 +353,7 @@ class OddsApiEngine:
 
         return {
             "id": str(fixture_meta["id"]),
-            "sport_key": "soccer_fifa_world_cup",
+            "sport_key": sport_key,
             "commence_time": fixture_meta.get("date", ""),
             "home_team": home,
             "away_team": away,

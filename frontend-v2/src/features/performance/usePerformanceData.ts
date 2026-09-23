@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useArchive, useCustomBot, useSimulateBot } from '../../hooks/queries'
+import { useAppState } from '../../state/AppState'
 import { api } from '../../lib/api'
+import { officialPerformance } from '../../lib/performance.mjs'
 import type { Archive, ArchiveEntry, BotKey } from '../../lib/types'
 
 export const HOUSE_BOTS: { key: BotKey; label: string; color: string }[] = [
@@ -32,11 +34,15 @@ export interface ScoreRow {
 
 export interface PerformanceTotals {
   completed: number
+  userCount: number
   totalPoints: number
   correctTendency: number
   algoTotal: number
   algoTendency: number
   algoCount: number
+  reconstructedCount: number
+  reconstructedPoints: number
+  reconstructedTendency: number
   hasReconstructed: boolean
 }
 
@@ -47,40 +53,31 @@ function entryDate(e: ArchiveEntry): string {
 export function aggregate(archive: Archive | undefined) {
   const completed: CompletedMatch[] = []
   const totals: PerformanceTotals = {
-    completed: 0, totalPoints: 0, correctTendency: 0,
-    algoTotal: 0, algoTendency: 0, algoCount: 0, hasReconstructed: false,
+    completed: 0, userCount: 0, totalPoints: 0, correctTendency: 0,
+    algoTotal: 0, algoTendency: 0, algoCount: 0, reconstructedCount: 0,
+    reconstructedPoints: 0, reconstructedTendency: 0,
+    hasReconstructed: false,
   }
-  const botStats: Record<BotKey, { pts: number; tipped: number; tendency: number }> = {
-    broker: { pts: 0, tipped: 0, tendency: 0 },
-    professor: { pts: 0, tipped: 0, tendency: 0 },
-    sniper: { pts: 0, tipped: 0, tendency: 0 },
-    gambler: { pts: 0, tipped: 0, tendency: 0 },
-  }
+  const official = officialPerformance(archive, HOUSE_BOTS.map(({ key }) => key))
+  const botStats = official.botStats as Record<BotKey, { pts: number; tipped: number; tendency: number }>
+  totals.algoTotal = official.algoTotal
+  totals.algoCount = official.algoCount
+  totals.algoTendency = official.algoTendency
+  totals.reconstructedCount = official.reconstructedCount
+  totals.reconstructedPoints = official.reconstructedPoints
+  totals.reconstructedTendency = official.reconstructedTendency
+  totals.hasReconstructed = official.reconstructedCount > 0
 
   for (const [id, entry] of Object.entries(archive ?? {})) {
     if (entry.post_match_result?.status !== 'completed') continue
     const pts = entry.post_match_result.points_earned ?? 0
     totals.completed++
-    totals.totalPoints += pts
-    if (pts >= 5) totals.correctTendency++
-
-    const ap = entry.post_match_result.algo_points
-    if (ap != null) {
-      totals.algoTotal += ap
-      totals.algoCount++
-      if (ap >= 5) totals.algoTendency++
+    if (entry.prediction?.user_tip != null) {
+      totals.userCount++
+      totals.totalPoints += pts
+      if (pts >= 5) totals.correctTendency++
     }
-    if (entry.prediction?.algo_reconstructed) totals.hasReconstructed = true
 
-    const bp = entry.post_match_result.bot_points ?? {}
-    for (const { key } of HOUSE_BOTS) {
-      const v = bp[key]
-      if (v != null) {
-        botStats[key].pts += v
-        botStats[key].tipped++
-        if (v >= 5) botStats[key].tendency++
-      }
-    }
     completed.push({ id, entry, points: pts, sortDate: entryDate(entry) })
   }
 
@@ -89,6 +86,7 @@ export function aggregate(archive: Archive | undefined) {
 }
 
 export function usePerformanceData() {
+  const { competition } = useAppState()
   const { data: archive, isLoading } = useArchive()
   const { data: customBot } = useCustomBot()
   const simulate = useSimulateBot()
@@ -97,8 +95,8 @@ export function usePerformanceData() {
 
   // Saved build-a-bot competes alongside the house bots — replayed via simulate.
   const { data: customSim } = useQuery({
-    queryKey: ['customBotSim', customBot?.params],
-    queryFn: () => api.simulateBot(customBot!.params!),
+    queryKey: ['customBotSim', competition, customBot?.params],
+    queryFn: () => api.simulateBot(competition, customBot!.params!),
     enabled: Boolean(customBot?.exists && customBot.params),
     staleTime: 300_000,
   })

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useArchive, useEloHistory, useEloRatings } from '../../hooks/queries'
 import { normTeam } from '../../lib/util'
+import { withRatingBaselines } from '../../lib/team-form.mjs'
 import type { Archive } from '../../lib/types'
 
 export interface TeamRow {
@@ -45,15 +46,16 @@ export function useTeamFormData() {
   const { data: archive, isLoading: l3 } = useArchive()
 
   const matchInfo = useMemo(() => buildMatchInfo(archive), [archive])
+  const chartHistory = useMemo(() => withRatingBaselines(history, ratings), [history, ratings])
 
   const rows = useMemo<TeamRow[]>(() => {
     const teams = new Set<string>([
       ...Object.keys(ratings ?? {}),
-      ...Object.keys(history ?? {}),
+      ...Object.keys(chartHistory),
     ])
     const out: TeamRow[] = []
     for (const team of teams) {
-      const hist = history?.[team] ?? []
+      const hist = chartHistory[team] ?? []
       const baseline = hist.find((p) => p.match_id === 'baseline')?.elo ?? hist[0]?.elo
       const current = ratings?.[team]?.elo ?? hist[hist.length - 1]?.elo
       if (current == null) continue
@@ -70,7 +72,7 @@ export function useTeamFormData() {
       })
     }
     return out.sort((a, b) => b.elo - a.elo)
-  }, [ratings, history, matchInfo])
+  }, [ratings, chartHistory, matchInfo])
 
-  return { rows, history, matchInfo, isLoading: l1 || l2 || l3 }
+  return { rows, history: chartHistory, matchInfo, isLoading: l1 || l2 || l3 }
 }

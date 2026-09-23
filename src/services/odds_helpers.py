@@ -2,6 +2,8 @@ import time
 import statistics
 from datetime import datetime
 
+from src.competitions import competition_document_id, find_competition_document, get_competition
+
 
 def extract_odds(match):
     home_team = match.get("home_team")
@@ -11,19 +13,31 @@ def extract_odds(match):
         for market in bookie.get("markets", []):
             if market["key"] == "h2h":
                 for outcome in market.get("outcomes", []):
+                    try:
+                        price = float(outcome["price"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
                     if outcome["name"] == home_team:
-                        collected["home"].append(outcome["price"])
+                        collected["home"].append(price)
                     elif outcome["name"] == away_team:
-                        collected["away"].append(outcome["price"])
+                        collected["away"].append(price)
                     elif outcome["name"] == "Draw":
-                        collected["draw"].append(outcome["price"])
+                        collected["draw"].append(price)
             elif market["key"] == "totals":
                 for outcome in market.get("outcomes", []):
-                    if outcome.get("point") == 2.5:
+                    try:
+                        point = float(outcome.get("point"))
+                    except (TypeError, ValueError):
+                        continue
+                    try:
+                        price = float(outcome["price"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
+                    if point == 2.5:
                         if outcome["name"] == "Over":
-                            collected["over25"].append(outcome["price"])
+                            collected["over25"].append(price)
                         elif outcome["name"] == "Under":
-                            collected["under25"].append(outcome["price"])
+                            collected["under25"].append(price)
     odds = {k: statistics.median(v) for k, v in collected.items() if v}
     required_keys = ["home", "draw", "away"]
     missing_keys = [k for k in required_keys if k not in odds]
@@ -54,11 +68,21 @@ def dynamic_ttl(matches: list) -> int:
     return 900
 
 
-def fetch_or_cache_totals(event_id: str, raw_match: dict, odds_engine, cache_collection, ttl: int = 3600, fetch_if_missing: bool = True) -> dict:
-    cache_key = f"totals_{event_id}"
+def fetch_or_cache_totals(
+    event_id: str,
+    raw_match: dict,
+    odds_engine,
+    cache_collection,
+    ttl: int = 3600,
+    fetch_if_missing: bool = True,
+    competition=None,
+) -> dict:
+    comp = get_competition(competition)
+    logical_key = f"totals_{event_id}"
+    cache_key = competition_document_id(comp, logical_key)
     entry = {}
     try:
-        doc = cache_collection.find_one({"_id": cache_key})
+        doc = find_competition_document(cache_collection, comp, logical_key)
         if doc:
             entry = doc
     except Exception:

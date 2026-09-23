@@ -100,7 +100,7 @@ This project is developed **strictly for scientific, educational, and research p
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/matches` | All fixtures with odds, Elo, top tip, xP, and model edge; `?force=true` bypasses cache |
+| `GET` | `/api/matches` | Cache-only fixture/prediction view with odds, Elo, top tip, xP, and model edge; a missing cache returns an explicit `unavailable` payload |
 | `POST` | `/api/predict` | Full prediction for one match: xG, score matrix, ranked tips; accepts K.O. toggle |
 | `GET` | `/api/archive` | Complete prediction archive: all matches, user tips, algo tips, bot tips, results, and points |
 | `POST` | `/api/archive/user_tip` | Save or update a user tip; recalculates points if result is already known |
@@ -115,6 +115,18 @@ This project is developed **strictly for scientific, educational, and research p
 | `GET` | `/api/standings` | Group standings for all 12 WC 2026 groups; 1 h MongoDB cache |
 | `GET` | `/api/quota` | Remaining requests for The Odds API (ESPN is unmetered) |
 | `GET` | `/api/ping` | Keep-alive endpoint (prevents Render free-tier cold starts) |
+
+Provider collection is restricted to authenticated maintenance. Set `CRON_SECRET`
+and call `POST /api/internal/maintenance` with `Authorization: Bearer <secret>`.
+Maintenance refreshes bounded ESPN fixture windows, stores ClubElo ratings in the
+UCL-scoped cache, and makes at most one `h2h,totals` bulk odds request per run.
+Snapshot statuses are exactly `fresh`, `stale`, `unavailable`, or `failed`; every
+failure payload includes its source and observation/error metadata.
+
+For an existing deployment, run `.venv/bin/python scripts/migrate_wc_legacy.py`.
+The migration is copy-first and idempotent: it tags legacy archive/cache/custom
+bot documents as `competition=wc2026`, preserves IDs and user tips, and never
+deletes the legacy documents.
 
 ---
 

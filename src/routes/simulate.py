@@ -1,9 +1,12 @@
 import logging
 import time
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 
+from src.competitions import collection_for, competition_document_id, find_competition_document, require_competition
 from src.services.monte_carlo import simulate_knockout
+from src.services.ucl_simulation import build_cached_ucl_inputs, simulate_ucl_tournament
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +18,21 @@ def init_router(math_engine, cache_collection):
     router = APIRouter(prefix="/api")
 
     @router.get("/simulate_knockout")
-    def get_knockout_simulation(runs: int = 20_000, force: bool = False):
+    def get_knockout_simulation(
+        runs: int = 20_000,
+        force: bool = False,
+        competition: str | None = None,
+    ):
+        comp = require_competition(competition)
         runs = max(1_000, min(runs, 100_000))
+        if comp.id == "ucl2026":
+            return get_ucl_simulation(runs=runs, competition=comp.id)
+        cache_store = collection_for(cache_collection, comp)
+        cache_id = competition_document_id(comp, _CACHE_ID)
 
         if not force:
             try:
-                cached = cache_collection.find_one({"_id": _CACHE_ID})
+                cached = find_competition_document(cache_store, comp, _CACHE_ID)
                 if cached and cached.get("runs") == runs and time.time() - cached.get("timestamp", 0) < _CACHE_TTL:
                     return cached["data"]
             except Exception:
@@ -37,8 +49,8 @@ def init_router(math_engine, cache_collection):
             raise HTTPException(status_code=500, detail="Simulation fehlgeschlagen")
 
         try:
-            cache_collection.update_one(
-                {"_id": _CACHE_ID},
+            cache_store.update_one(
+                {"_id": cache_id},
                 {"$set": {"timestamp": time.time(), "runs": runs, "data": result}},
                 upsert=True,
             )
@@ -46,5 +58,45 @@ def init_router(math_engine, cache_collection):
             pass
 
         return result
+
+    @router.get("/simulate_ucl")
+    def get_ucl_simulation(
+        runs: int = 20_000,
+        competition: str | None = None,
+    ):
+        """Run the local UCL simulation from the cache-only fixture snapshot."""
+        comp = require_competition(competition)
+        if comp.id != "ucl2026":
+            raise HTTPException(status_code=400, detail="simulate_ucl requires competition=ucl2026")
+        runs = max(1_000, min(runs, 100_000))
+        cache_store = collection_for(cache_collection, comp)
+        cached = find_competition_document(cache_store, comp, "matches_cache") or {}
+        try:
+            inputs = build_cached_ucl_inputs(cached)
+            fixtures = inputs["fixtures"]
+            teams = inputs.get("teams") or sorted({team for fixture in fixtures for team in (fixture.get("home_team"), fixture.get("away_team")) if team})
+            return simulate_ucl_tournament(
+                teams,
+                fixtures,
+                inputs["score_matrices"],
+                n_runs=runs,
+                disciplinary_scores=inputs["disciplinary_scores"],
+                uefa_coefficients=inputs["uefa_coefficients"],
+                uefa_coefficient_ranks=inputs["uefa_coefficient_ranks"],
+                official_order=inputs["official_order"],
+                coefficient_version=inputs["coefficient_version"],
+                coefficient_provenance=inputs["provenance"],
+            )
+        except (AttributeError, TypeError, ValueError, KeyError) as exc:
+            return {
+                "status": "unavailable",
+                "source": "ucl_matches_cache",
+                "observed_at": datetime.now(timezone.utc).isoformat(),
+                "error": str(exc),
+                "reason": str(exc),
+                "runs": runs,
+                "n_runs": runs,
+                "seed": 20260908,
+            }
 
     return router

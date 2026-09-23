@@ -24,12 +24,12 @@ export function PerformanceView() {
     return (
       <PageTransition>
         <PageHeader title="Algorithm Performance" subtitle="Prediction accuracy vs actual results" />
-        <p className="text-fg-2">Noch keine abgeschlossenen Spiele. Nach Spielende „Sync Elo Ratings" ausführen.</p>
+        <p className="text-fg-2">Noch keine abgeschlossenen Spiele. Die geschützte Wartung synchronisiert Ergebnisse nach Spielende.</p>
       </PageTransition>
     )
   }
 
-  const hitRate = ((totals.correctTendency / totals.completed) * 100).toFixed(1)
+  const hitRate = totals.userCount > 0 ? ((totals.correctTendency / totals.userCount) * 100).toFixed(1) : '0.0'
   const algoHitRate = totals.algoCount > 0 ? ((totals.algoTendency / totals.algoCount) * 100).toFixed(1) : '0.0'
   const diff = totals.totalPoints - totals.algoTotal
   const maxPts = Math.max(totals.totalPoints, totals.algoTotal, 1)
@@ -80,7 +80,7 @@ export function PerformanceView() {
               {diff > 0 ? `Du führst +${diff} Pts` : diff < 0 ? `Algo führt +${-diff} Pts` : 'Gleichstand'}
             </div>
             <div className="text-right">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-blue-a">Algo</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-blue-a">Algo · {totals.algoCount} gewertet</div>
               <div className="display-num text-4xl text-blue-a">{totals.algoTotal}</div>
               <div className="text-xs text-fg-3">{algoHitRate}% Tendenz</div>
             </div>
@@ -89,6 +89,14 @@ export function PerformanceView() {
             <ScoreBar label="Du" pts={totals.totalPoints} max={maxPts} color="var(--gold)" />
             <ScoreBar label="Algo" pts={totals.algoTotal} max={maxPts} color="var(--blue)" />
           </div>
+          {totals.reconstructedCount > 0 && (
+            <p className="mt-4 rounded-xl border border-line bg-surface px-3 py-2 text-xs leading-relaxed text-fg-3">
+              {totals.algoCount} Spiele gewertet: {totals.algoCount - totals.reconstructedCount} Vorab-Tipps
+              {' '}({totals.algoTotal - totals.reconstructedPoints} Pts) + {totals.reconstructedCount} Elo-Rekonstruktionen
+              {' '}({totals.reconstructedPoints} Pts · {totals.reconstructedTendency}/{totals.reconstructedCount} Tendenzen).
+              {' '}Rekonstruktionen sind Näherungen ohne historische Buchmacherquoten.
+            </p>
+          )}
         </GlassCard>
 
         <div id="sec-bots" className="scroll-mt-6">

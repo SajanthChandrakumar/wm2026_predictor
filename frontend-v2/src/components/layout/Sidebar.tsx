@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { useState } from 'react'
-import { useQuota, useRefreshData, useSyncElo } from '../../hooks/queries'
+import { useQuota, useRefreshData } from '../../hooks/queries'
 import { useAppState } from '../../state/AppState'
 import { Switch } from '../ui/Switch'
 import { cn } from '../../lib/util'
@@ -55,21 +54,6 @@ function QuotaMeter() {
 
 function SidebarButtons() {
   const refresh = useRefreshData()
-  const sync = useSyncElo()
-  const [syncMsg, setSyncMsg] = useState<string | null>(null)
-
-  const onSync = () => {
-    sync.mutate(undefined, {
-      onSuccess: (r) => {
-        setSyncMsg(r.status === 'success' ? `✓ ${r.updates} updated` : '✓ Aktuell')
-        setTimeout(() => setSyncMsg(null), 3000)
-      },
-      onError: () => {
-        setSyncMsg('✗ Sync failed')
-        setTimeout(() => setSyncMsg(null), 3000)
-      },
-    })
-  }
 
   return (
     <div className="space-y-2">
@@ -84,19 +68,13 @@ function SidebarButtons() {
       >
         {refresh.isPending ? 'Lade…' : 'Refresh Data'}
       </button>
-      <button
-        onClick={onSync}
-        disabled={sync.isPending}
-        className="w-full rounded-xl border border-line-2 bg-surface px-4 py-2.5 text-sm font-semibold text-fg-2 transition hover:bg-surface-2 disabled:opacity-50"
-      >
-        {sync.isPending ? 'Synce…' : (syncMsg ?? 'Sync Elo Ratings')}
-      </button>
     </div>
   )
 }
 
 export function Sidebar() {
-  const { koPhase, setKoPhase, light, toggleTheme } = useAppState()
+  const { competition, setCompetition, competitions, competitionsLoading, light, toggleTheme } = useAppState()
+  const selected = competitions.find((item) => item.id === competition)
 
   return (
     <aside className="flex w-64 shrink-0 flex-col gap-5 border-r border-line p-5 max-lg:w-full max-lg:border-r-0 max-lg:border-b">
@@ -109,7 +87,7 @@ export function Sidebar() {
             boxShadow: '0 0 18px color-mix(in srgb, var(--emerald) 45%, transparent)',
           }}
         >
-          WC
+          {competition === 'ucl2026' ? 'UCL' : 'WC'}
         </span>
         <span className="font-display text-xl font-extrabold text-fg">
           2026 <span className="font-semibold text-fg-3">Predictor</span>
@@ -144,13 +122,23 @@ export function Sidebar() {
       </nav>
 
       <div>
-        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-3">Match Settings</div>
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-3">Competition</div>
         <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 hover:bg-surface">
           <span>
-            <span className="block text-sm font-bold text-fg">K.O. Phase</span>
-            <span className="block text-[11px] text-fg-3">Points doubled</span>
+            <span className="block text-sm font-bold text-fg">{selected?.short_name ?? (competition === 'ucl2026' ? 'UCL 2026/27' : 'WC 2026')}</span>
+            <span className="block text-[11px] text-fg-3">{competitionsLoading ? 'Loading…' : 'All data is scoped'}</span>
           </span>
-          <Switch checked={koPhase} onCheckedChange={setKoPhase} />
+          <select
+            aria-label="Competition"
+            value={competition}
+            onChange={(e) => setCompetition(e.target.value as 'wc2026' | 'ucl2026')}
+            className="max-w-24 rounded-lg border border-line bg-surface px-2 py-1 text-xs font-semibold text-fg outline-none focus:border-emerald-a/50"
+          >
+            {(competitions.length ? competitions : [
+              { id: 'wc2026', short_name: 'WC 2026', display_name: 'World Cup 2026' },
+              { id: 'ucl2026', short_name: 'UCL 2026/27', display_name: 'Champions League 2026/27' },
+            ]).map((item) => <option key={item.id} value={item.id}>{item.short_name}</option>)}
+          </select>
         </label>
       </div>
 

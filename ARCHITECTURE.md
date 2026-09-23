@@ -2,6 +2,17 @@
 
 This document explains how the **WM 2026 Predictor** works under the hood — from ingesting match odds and Elo ratings to calculating expected points (xP) and custom bot strategies.
 
+## Integration boundaries
+
+Public match reads are cache-only. Provider collection runs through the
+authenticated `POST /api/internal/maintenance` route, which refreshes bounded
+ESPN windows, stores append-only odds observations, and writes UCL ClubElo data
+only to competition-scoped Mongo documents. Snapshot/source states are limited
+to `fresh`, `stale`, `unavailable`, and `failed`, with source and timestamps
+retained for unavailable or failed results. Legacy WC documents can be migrated
+with `scripts/migrate_wc_legacy.py`; the operation is idempotent, copy-first,
+preserves match IDs/user tips, and does not delete the source documents.
+
 ---
 
 ## Pipeline Overview

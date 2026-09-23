@@ -1,11 +1,18 @@
+import { useState } from 'react'
 import { flag, cn } from '../../lib/util'
 import { pointsTier, TIER_STYLES } from '../../lib/points'
 import type { TeamForm } from '../../lib/types'
 
-export function TeamLabel({ name, disp, className }: { name: string; disp?: string; className?: string }) {
+export function TeamLogo({ name, src, className }: { name: string; src?: string | null; className?: string }) {
+  const [failed, setFailed] = useState(false)
+  if (!src || failed) return <span className={cn('shrink-0', className)} aria-hidden>{flag(name)}</span>
+  return <img src={src} alt="" aria-hidden className={cn('h-5 w-5 shrink-0 object-contain', className)} onError={() => setFailed(true)} />
+}
+
+export function TeamLabel({ name, disp, logo, className }: { name: string; disp?: string; logo?: string | null; className?: string }) {
   return (
     <span className={cn('inline-flex items-center gap-1.5 font-semibold text-fg', className)}>
-      <span aria-hidden>{flag(name)}</span>
+      <TeamLogo name={name} src={logo} />
       <span className="truncate">{disp?.replace(/^\p{RI}\p{RI}\s*/u, '') || name}</span>
     </span>
   )

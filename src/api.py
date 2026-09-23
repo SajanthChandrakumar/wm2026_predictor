@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import logging
+from datetime import datetime, timezone
 
 import pandas as pd
 from fastapi import FastAPI, Request, HTTPException
@@ -27,13 +28,26 @@ else:
 
 from src.math_engine import MathEngine
 from src.quota_store import read_quota
-from src.constants import TEAM_MAPPING
+from src.constants import TEAM_MAPPING, SCORES_CACHE_TTL, _is_ko_round
+from src.competitions import (
+    COMPETITIONS,
+    DEFAULT_COMPETITION_ID,
+    collection_for,
+    find_competition_document,
+    list_competitions,
+    require_competition,
+)
 from src.services.archive import load_archive_from_db, upsert_archive_entry
+from src.services.auth import require_cron_secret
 from src.services.elo_sync import perform_elo_sync
+from src.services.prediction import PredictionService, infer_stage, rebuild_prediction, user_tip_is_open
+from src.services.ucl_simulation import _fixture_score, _fixture_teams, build_ucl_table
 from src.routes.matches import init_router as matches_router
 from src.routes.predict import init_router as predict_router
 from src.routes.custom_bot import init_router as custom_bot_router
 from src.routes.simulate import init_router as simulate_router
+from src.routes.maintenance import init_router as maintenance_router
+from src.routes.pool import init_router as pool_router
 
 app = FastAPI(title="WM 2026 Predictor API")
 
@@ -49,6 +63,18 @@ _db = _mongo_client["wm2026_db"]
 archive_collection = _db["archive"]
 cache_collection = _db["cache"]
 custom_bot_collection = _db["custom_bot"]
+archive_collections = {
+    competition.id: _db[competition.archive_collection]
+    for competition in COMPETITIONS.values()
+}
+cache_collections = {
+    competition.id: _db[competition.cache_collection]
+    for competition in COMPETITIONS.values()
+}
+custom_bot_collections = {
+    competition.id: _db[competition.custom_bot_collection]
+    for competition in COMPETITIONS.values()
+}
 
 # ── CORS ─────────────────────────────────────────────────────
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
@@ -56,7 +82,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT"],
     allow_headers=["Content-Type"],
 )
 
@@ -80,7 +106,10 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data:"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data: https://a.espncdn.com"
+    # Force browsers to revalidate JS/CSS/HTML every load (ETag → 304 when
+    # unchanged). Without this, unversioned ES-module sub-imports get cached
+    # indefinitely and code changes silently fail to reach the browser.
     path = request.url.path
     if path.startswith("/assets/"):
         # Vite emits content-hashed filenames under /assets/ — safe to cache
@@ -104,17 +133,17 @@ if not os.path.exists(elo_csv_path):
     }).to_csv(elo_csv_path, index=False)
 
 try:
-    _elo_doc = cache_collection.find_one({"_id": "elo_ratings"})
+    _elo_doc = find_competition_document(cache_collection, DEFAULT_COMPETITION_ID, "elo_ratings")
     if _elo_doc and _elo_doc.get("rows"):
         pd.DataFrame(_elo_doc["rows"]).to_csv(elo_csv_path, index=False)
         logger.info("Startup: restored elo_ratings.csv from MongoDB")
-    _hist_doc = cache_collection.find_one({"_id": "elo_history"})
+    _hist_doc = find_competition_document(cache_collection, DEFAULT_COMPETITION_ID, "elo_history")
     if _hist_doc and _hist_doc.get("data"):
         _hist_path = os.path.join(_data_dir, 'elo_history.json')
         with open(_hist_path, 'w', encoding='utf-8') as _hf:
             json.dump(_hist_doc["data"], _hf, indent=4)
         logger.info("Startup: restored elo_history.json from MongoDB")
-    _proc_doc = cache_collection.find_one({"_id": "processed_match_ids"})
+    _proc_doc = find_competition_document(cache_collection, DEFAULT_COMPETITION_ID, "processed_match_ids")
     if _proc_doc and _proc_doc.get("ids") is not None:
         _proc_path = os.path.join(_data_dir, 'processed_matches.json')
         with open(_proc_path, 'w', encoding='utf-8') as _pf:
@@ -124,14 +153,22 @@ except Exception as _e:
     logger.warning(f"Startup: MongoDB restore skipped — {_e}")
 
 math_engine = MathEngine(elo_csv_path, TEAM_MAPPING)
+prediction_service = PredictionService(math_engine)
 global_odds_engine = OddsApiEngine()
 scores_cache_path = os.path.join(_data_dir, 'scores_cache.json')
 
 # ── Wire routers ─────────────────────────────────────────────
-app.include_router(matches_router(math_engine, global_odds_engine, cache_collection, archive_collection))
-app.include_router(predict_router(math_engine, global_odds_engine, cache_collection, limiter))
-app.include_router(custom_bot_router(math_engine, archive_collection, custom_bot_collection, limiter))
-app.include_router(simulate_router(math_engine, cache_collection))
+app.include_router(matches_router(math_engine, global_odds_engine, cache_collections, archive_collections))
+app.include_router(predict_router(math_engine, global_odds_engine, cache_collections, limiter, archive_collections))
+app.include_router(custom_bot_router(math_engine, archive_collections, custom_bot_collections, limiter))
+app.include_router(simulate_router(math_engine, cache_collections))
+app.include_router(maintenance_router(
+    cache_collections,
+    global_odds_engine,
+    archive_collections=archive_collections,
+    math_engine=math_engine,
+))
+app.include_router(pool_router(cache_collections, archive_collections))
 
 # ── Small endpoints (not worth extracting) ───────────────────
 
@@ -141,8 +178,14 @@ def ping():
     return {"ok": True}
 
 
+@app.get("/api/competitions")
+def get_competitions():
+    return list_competitions()
+
+
 @app.get("/api/quota")
-def get_quota():
+def get_quota(competition: str | None = None):
+    require_competition(competition)
     return {"odds": read_quota("odds"), "football": read_quota("football")}
 
 
@@ -166,7 +209,9 @@ def bonus_questions():
 
 @app.post("/api/archive/user_tip")
 @limiter.limit("30/minute")
-def set_user_tip(request: Request, payload: dict):
+def set_user_tip(request: Request, payload: dict, competition: str | None = None):
+    comp = require_competition(competition or payload.get("competition"))
+    archive_store = collection_for(archive_collections, comp)
     match_id  = payload.get("match_id")
     user_tip  = payload.get("user_tip", "").strip()
 
@@ -177,9 +222,13 @@ def set_user_tip(request: Request, payload: dict):
     if len(parts) != 2 or not all(p.strip().isdigit() for p in parts):
         raise HTTPException(status_code=400, detail="user_tip must be in format H:A (e.g. 2:1)")
 
-    doc = archive_collection.find_one({"_id": match_id})
+    doc = archive_store.find_one({"_id": match_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Match not in archive")
+
+    commence_time = (doc.get("metadata") or {}).get("commence_time")
+    if not user_tip_is_open(commence_time, datetime.now(timezone.utc), competition=comp):
+        raise HTTPException(status_code=409, detail="User tips are closed at T-5")
 
     entry = {k: v for k, v in doc.items() if k != "_id"}
     entry["prediction"]["user_tip"] = user_tip
@@ -192,31 +241,175 @@ def set_user_tip(request: Request, payload: dict):
     else:
         pts = None
 
-    upsert_archive_entry(archive_collection, match_id, entry)
+    upsert_archive_entry(archive_store, match_id, entry)
     return {"ok": True, "points_earned": pts}
 
 @app.get("/api/archive")
-def get_archive():
-    return load_archive_from_db(archive_collection)
+def get_archive(competition: str | None = None):
+    comp = require_competition(competition)
+    return load_archive_from_db(collection_for(archive_collections, comp))
 
 @app.get("/api/standings")
-def get_standings():
+def get_standings(competition: str | None = None):
+    comp = require_competition(competition)
+    cache_store = collection_for(cache_collections, comp)
     try:
-        doc = cache_collection.find_one({"_id": "standings_cache"})
-        if doc and doc.get("data"):
+        doc = find_competition_document(cache_store, comp, "standings_cache")
+        if comp.id != "ucl2026" and doc and doc.get("data"):
             return doc["data"]
     except Exception:
-        pass
+        doc = None
+    if comp.id == "ucl2026":
+        cached = None
+        try:
+            cached = find_competition_document(cache_store, comp, "matches_cache")
+            if doc and _valid_ucl_standings(doc.get("data")):
+                return doc["data"]
+            derived = _derive_ucl_standings(cached or {})
+            if derived:
+                return [{"name": "UCL League Phase", "rows": derived}]
+        except Exception:
+            pass
     return []
 
-@app.get("/api/elo_history")
-def get_elo_history():
+
+def _valid_ucl_standings(data) -> bool:
+    if not isinstance(data, list) or len(data) != 1 or not isinstance(data[0], dict):
+        return False
+    rows = data[0].get("rows")
+    if not isinstance(rows, list) or len(rows) != 36:
+        return False
+    teams, positions = [], []
+    for row in rows:
+        if not isinstance(row, dict) or not row.get("team"):
+            return False
+        try:
+            positions.append(int(row.get("pos")))
+        except (TypeError, ValueError):
+            return False
+        teams.append(str(row["team"]))
+    return len(set(teams)) == 36 and set(positions) == set(range(1, 37))
+
+
+def _derive_ucl_standings(cached: dict) -> list[dict]:
+    if not isinstance(cached, dict):
+        return []
+    metadata = cached.get("metadata") if isinstance(cached.get("metadata"), dict) else {}
+    fixtures = cached.get("data")
+    if not isinstance(fixtures, list) or not fixtures:
+        return []
+    league_fixtures = []
+    for fixture in fixtures:
+        if not isinstance(fixture, dict):
+            return []
+        raw_match = fixture.get("raw_match") if isinstance(fixture.get("raw_match"), dict) else {}
+        round_name = fixture.get("round") or fixture.get("stage") or raw_match.get("round", "")
+        if _is_ko_round(round_name) or infer_stage(round_name) != "league":
+            continue
+        league_fixtures.append(fixture)
+
+    def metadata_value(key):
+        return cached.get(key, metadata.get(key))
+
+    teams = cached.get("teams", metadata.get("teams"))
+    if isinstance(teams, dict):
+        teams = [row.get("team", row.get("team_name")) for row in teams.values() if isinstance(row, dict)]
+    elif isinstance(teams, (list, tuple)) and teams and isinstance(teams[0], dict):
+        teams = [row.get("team", row.get("team_name")) for row in teams]
+    if not isinstance(teams, (list, tuple)) or not teams:
+        teams = sorted({
+            team
+            for fixture in league_fixtures
+            for team in (fixture.get("home_team"), fixture.get("away_team"))
+            if team
+        })
+    teams = [str(team) for team in teams if team]
+    if len(teams) != 36 or len(set(teams)) != 36:
+        return []
+
+    official_order = metadata_value("official_order")
+    if isinstance(official_order, list) and official_order and isinstance(official_order[0], dict):
+        official_order = [row.get("team", row.get("team_name")) for row in official_order]
     try:
-        doc = cache_collection.find_one({"_id": "elo_history"})
+        table = build_ucl_table(
+            teams,
+            league_fixtures,
+            official_order=official_order,
+            disciplinary_scores=metadata_value("disciplinary_scores"),
+            uefa_coefficients=metadata_value("uefa_coefficients"),
+            uefa_coefficient_ranks=metadata_value("uefa_coefficient_ranks"),
+            coefficient_version=metadata_value("coefficient_version") or "2026",
+        )
+    except (TypeError, ValueError, KeyError):
+        return []
+
+    played = {team: 0 for team in teams}
+    draws = {team: 0 for team in teams}
+    logos = {}
+    team_metadata = metadata_value("team_metadata") or metadata_value("teams_metadata") or metadata_value("team_logos")
+    if isinstance(team_metadata, dict):
+        team_metadata = team_metadata.items()
+    if isinstance(team_metadata, (list, tuple)):
+        entries = team_metadata if team_metadata and isinstance(team_metadata[0], dict) else ()
+        if entries:
+            team_metadata = ((row.get("team", row.get("team_name")), row) for row in entries)
+        else:
+            team_metadata = ()
+    if team_metadata:
+        for team, details in team_metadata:
+            if team and isinstance(details, dict) and details.get("logo"):
+                logos[str(team)] = details["logo"]
+    for fixture in league_fixtures:
+        try:
+            home, away = _fixture_teams(fixture)
+        except (TypeError, ValueError):
+            return []
+        raw_match = fixture.get("raw_match") if isinstance(fixture.get("raw_match"), dict) else {}
+        for team, key in ((home, "home_logo"), (away, "away_logo")):
+            logo = fixture.get(key) or raw_match.get(key)
+            if logo:
+                logos.setdefault(team, logo)
+        score = _fixture_score(fixture)
+        if score is None:
+            continue
+        played[home] += 1
+        played[away] += 1
+        if score[0] == score[1]:
+            draws[home] += 1
+            draws[away] += 1
+
+    rows = []
+    for row in table:
+        team = row["team"]
+        wins = int(row.get("wins", 0))
+        draws_count = draws[team]
+        rows.append({
+            "pos": int(row["rank"]),
+            "team": team,
+            "logo": logos.get(team, ""),
+            "p": played[team],
+            "w": wins,
+            "d": draws_count,
+            "l": max(0, played[team] - wins - draws_count),
+            "gf": int(row.get("goals_for", 0)),
+            "ga": int(row.get("goals_against", 0)),
+            "gd": int(row.get("goal_difference", 0)),
+            "pts": int(row.get("points", 0)),
+        })
+    return rows if _valid_ucl_standings([{"rows": rows}]) else []
+
+@app.get("/api/elo_history")
+def get_elo_history(competition: str | None = None):
+    comp = require_competition(competition)
+    cache_store = collection_for(cache_collections, comp)
+    try:
+        doc = find_competition_document(cache_store, comp, "elo_history")
         if doc and doc.get("data"):
             return doc["data"]
     except Exception:
         pass
+    if comp.id != "wc2026":
+        return {}
     history_path = os.path.join(_data_dir, 'elo_history.json')
     if os.path.exists(history_path):
         try:
@@ -227,9 +420,30 @@ def get_elo_history():
     return {}
 
 @app.get("/api/elo_ratings")
-def get_elo_ratings():
+def get_elo_ratings(competition: str | None = None):
+    comp = require_competition(competition)
+    cache_store = collection_for(cache_collections, comp)
     csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'elo_ratings.csv')
     out = {}
+    cached_rows = None
+    try:
+        cached_doc = find_competition_document(cache_store, comp, "elo_ratings")
+        cached_rows = (cached_doc or {}).get("rows")
+    except Exception:
+        cached_rows = None
+    rows = cached_rows
+    if rows is not None:
+        for row in rows:
+            try:
+                out[row['team_name']] = {
+                    'team_code': row.get('team_code', ''),
+                    'elo': float(row['elo_rating']),
+                }
+            except (ValueError, KeyError, TypeError):
+                continue
+        return out
+    if comp.id != "wc2026":
+        return out
     try:
         import csv as _csv
         with open(csv_path, 'r', encoding='utf-8') as f:
@@ -246,8 +460,11 @@ def get_elo_ratings():
     return out
 
 @app.get("/api/recalculate_points")
-def recalculate_all_points():
-    archive = load_archive_from_db(archive_collection)
+def recalculate_all_points(request: Request, competition: str | None = None):
+    require_cron_secret(request, os.getenv("CRON_SECRET", ""))
+    comp = require_competition(competition)
+    archive_store = collection_for(archive_collections, comp)
+    archive = load_archive_from_db(archive_store)
     updated = 0
     for match_id, entry in archive.items():
         if entry.get("post_match_result", {}).get("status") == "completed":
@@ -270,72 +487,31 @@ def recalculate_all_points():
                             for bot, info in bots.items() if info.get("tip")
                         }
 
-                    upsert_archive_entry(archive_collection, match_id, entry)
+                    upsert_archive_entry(archive_store, match_id, entry)
 
     return {"status": "success", "recalculated": updated}
 
 
 @app.get("/api/rebuild_honest_tips")
-def rebuild_honest_tips():
+def rebuild_honest_tips(request: Request, competition: str | None = None):
+    require_cron_secret(request, os.getenv("CRON_SECRET", ""))
     """One-off repair: recompute every completed match's algo tip from its
     pre_match_snapshot (odds + Elo captured BEFORE kickoff) using the exact
     dashboard pipeline. Removes any hindsight tips that leaked into the
     archive, then regrades algo_points from the honest tip."""
-    import numpy as np
-    archive = load_archive_from_db(archive_collection)
+    comp = require_competition(competition)
+    archive_store = collection_for(archive_collections, comp)
+    archive = load_archive_from_db(archive_store)
     rebuilt = skipped = 0
     for match_id, entry in archive.items():
         if entry.get("post_match_result", {}).get("status") != "completed":
             continue
-        snap = entry.get("pre_match_snapshot") or {}
-        odds = snap.get("odds") or {}
-        elo = snap.get("elo_state") or {}
-        if not all(k in odds for k in ("home", "draw", "away")) or \
-           "home_rating" not in elo or "away_rating" not in elo:
-            skipped += 1
-            continue
-
         try:
-            true_probs = MathEngine.remove_margin(odds["home"], odds["draw"], odds["away"])
-            # Same blend as the dashboard: no host bonus (odds already price it in).
-            elo_home_share = math_engine.get_elo_probability(elo["home_rating"], elo["away_rating"])
-            elo_away_share = 1.0 - elo_home_share
-            pool = true_probs["home"] + true_probs["away"]
-            prob_home = (true_probs["home"] / pool * 0.7 + elo_home_share * 0.3) * pool
-            prob_away = (true_probs["away"] / pool * 0.7 + elo_away_share * 0.3) * pool
-            prob_draw = true_probs["draw"]
-
-            if "over25" in odds and "under25" in odds:
-                raw_over, raw_under = 1.0 / odds["over25"], 1.0 / odds["under25"]
-                prob_over25 = raw_over / (raw_over + raw_under)
-            else:
-                prob_over25 = None
-
-            is_ko = entry.get("metadata", {}).get("is_ko_phase", False)
-            xg_h, xg_a = math_engine.derive_xg_from_odds(prob_home, prob_draw, prob_away, prob_over25)
-            if is_ko:
-                base = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
-                et_factor = 1 + float(np.sum(np.diag(base.values))) / 3
-                xg_h *= et_factor
-                xg_a *= et_factor
-            sm = math_engine.generate_exact_score_matrix(xg_h, xg_a, max_goals=10)
-            df_xp = math_engine.calculate_expected_points(sm, is_ko_phase=is_ko)
-            if df_xp.empty:
+            rebuilt_entry = rebuild_prediction(prediction_service, entry, competition=comp)
+            if rebuilt_entry is None:
                 skipped += 1
                 continue
-
-            tip = df_xp.iloc[0]["Tipp"]
-            entry["prediction"]["top_tip"] = tip
-            entry["prediction"]["max_xp"] = float(df_xp.iloc[0]["xP"])
-            entry["prediction"]["algo_reconstructed"] = False
-            entry["prediction"]["tip_source"] = "pre_match_snapshot"
-
-            actual = entry.get("post_match_result", {}).get("actual_score")
-            if actual:
-                entry["post_match_result"]["algo_points"] = \
-                    MathEngine.calculate_actual_points(tip, actual, is_ko)
-
-            upsert_archive_entry(archive_collection, match_id, entry)
+            upsert_archive_entry(archive_store, match_id, rebuilt_entry)
             rebuilt += 1
         except Exception as e:
             logger.warning(f"rebuild_honest_tips failed for {match_id}: {e}")
@@ -346,17 +522,22 @@ def rebuild_honest_tips():
 
 @app.get("/api/sync_elo")
 @limiter.limit("5/hour")
-def sync_elo(request: Request, force: bool = False):
+def sync_elo(request: Request, force: bool = False, competition: str | None = None):
+    require_cron_secret(request, os.getenv("CRON_SECRET", ""))
+    comp = require_competition(competition)
+    archive_store = collection_for(archive_collections, comp)
+    cache_store = collection_for(cache_collections, comp)
     try:
         return perform_elo_sync(
             math_engine=math_engine,
             odds_engine=global_odds_engine,
-            cache_collection=cache_collection,
-            archive_collection=archive_collection,
+            cache_collection=cache_store,
+            archive_collection=archive_store,
             data_dir=_data_dir,
             scores_cache_path=scores_cache_path,
             MathEngine=MathEngine,
             force=force,
+            competition=comp,
         )
     except Exception as e:
         logger.error(f"Error: {e}", exc_info=True)

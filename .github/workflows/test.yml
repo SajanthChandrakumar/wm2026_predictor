@@ -26,4 +26,23 @@ jobs:
           pip install pytest
 
       - name: Run tests
-        run: python -m pytest test_math_engine.py test_pool_optimizer.py test_build_a_bot.py -v
+        run: python -m pytest -q
+
+      - name: Compile Python sources
+        run: python -m compileall -q src
+
+      - name: Install frontend dependencies
+        working-directory: frontend-v2
+        run: npm ci
+
+      - name: Frontend typecheck
+        working-directory: frontend-v2
+        run: npm run typecheck
+
+      - name: Frontend lint
+        working-directory: frontend-v2
+        run: npm run lint
+
+      - name: Frontend production build
+        working-directory: frontend-v2
+        run: npm run build
