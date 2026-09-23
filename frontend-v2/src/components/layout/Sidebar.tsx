@@ -60,10 +60,9 @@ function SidebarButtons() {
       <button
         onClick={() => refresh.mutate()}
         disabled={refresh.isPending}
-        className="w-full rounded-xl px-4 py-2.5 text-sm font-bold text-black transition hover:brightness-110 disabled:opacity-50"
+        className="min-h-11 w-full rounded-xl px-4 py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50"
         style={{
-          background: 'linear-gradient(135deg, var(--emerald), #4dd0c4)',
-          boxShadow: '0 4px 20px -6px color-mix(in srgb, var(--emerald) 60%, transparent)',
+          background: 'var(--cobalt)',
         }}
       >
         {refresh.isPending ? 'Lade…' : 'Refresh Data'}
@@ -77,14 +76,13 @@ export function Sidebar() {
   const selected = competitions.find((item) => item.id === competition)
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col gap-5 border-r border-line p-5 max-lg:w-full max-lg:border-r-0 max-lg:border-b">
+    <aside className="hidden w-64 shrink-0 flex-col gap-5 border-r border-line bg-surface p-5 lg:flex">
       {/* Brand */}
       <div className="flex items-center gap-2.5">
         <span
-          className="rounded-lg px-2 py-1 font-display text-sm font-black text-black"
+          className="rounded-lg px-2 py-1 font-display text-sm font-black text-white"
           style={{
-            background: 'linear-gradient(135deg, var(--emerald), #4dd0c4)',
-            boxShadow: '0 0 18px color-mix(in srgb, var(--emerald) 45%, transparent)',
+            background: 'var(--cobalt)',
           }}
         >
           {competition === 'ucl2026' ? 'UCL' : 'WC'}
@@ -106,9 +104,9 @@ export function Sidebar() {
                 end={to === '/'}
                 className={({ isActive }) =>
                   cn(
-                    'relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition',
+                    'relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition',
                     isActive
-                      ? 'bg-emerald-dim text-fg shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--emerald)_35%,transparent),0_0_16px_-6px_var(--emerald)]'
+                      ? 'bg-emerald-dim text-fg'
                       : 'text-fg-2 hover:bg-surface hover:text-fg',
                   )
                 }
@@ -159,7 +157,7 @@ export function Sidebar() {
           href="https://github.com/SajanthChandrakumar"
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex items-center justify-between gap-2 rounded-xl border border-emerald-a/25 bg-gradient-to-r from-emerald-dim/40 via-surface/40 to-surface p-2.5 text-[11px] font-medium text-fg-2 transition-all hover:border-emerald-a/50 hover:bg-emerald-dim/60 hover:text-fg hover:shadow-[0_0_16px_-4px_var(--emerald)]"
+          className="group flex items-center justify-between gap-2 rounded-xl border border-emerald-a/25 bg-surface p-2.5 text-[11px] font-medium text-fg-2 transition-all hover:border-emerald-a/50 hover:bg-emerald-dim/60 hover:text-fg"
         >
           <div className="flex min-w-0 items-center gap-2">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-dim text-[10px] font-bold text-emerald-a">
